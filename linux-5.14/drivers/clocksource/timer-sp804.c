@@ -149,12 +149,21 @@ static int __init sp804_clocksource_and_sched_clock_init(void __iomem *base,
 	clkevt = sp804_clkevt_get(base);
 
 	writel(0, clkevt->ctrl);
+#if SP804_TEST
 	writel(0xffffffff, clkevt->load);
 	writel(0xffffffff, clkevt->value);
 	if (clkevt->width == 64) {
 		writel(0xffffffff, clkevt->load_h);
 		writel(0xffffffff, clkevt->value_h);
 	}
+#else
+	writel(0xffffffff, clkevt->load);
+	writel(0xffffffff, clkevt->value);
+	if (clkevt->width == 64) {
+		writel(0xffffffff, clkevt->load_h);
+		writel(0xffffffff, clkevt->value_h);
+	}
+#endif
 #if SP804_TEST
 	writel(TIMER_CTRL_32BIT | TIMER_CTRL_ENABLE | TIMER_CTRL_PERIODIC ,
 		clkevt->ctrl);
@@ -162,9 +171,14 @@ static int __init sp804_clocksource_and_sched_clock_init(void __iomem *base,
 	writel(TIMER_CTRL_32BIT | TIMER_CTRL_ENABLE | TIMER_CTRL_PERIODIC,
 		clkevt->ctrl);
 #endif
+//#if 0
 #if SP804_TEST
+	//clocksource_mmio_init(clkevt->value, name,
+	//	rate, 200, 32, sp804_read_all);
 	clocksource_mmio_init(clkevt->value, name,
-		rate, 200, 32, sp804_read_all);
+		12000000, 200, 32, clocksource_mmio_readl_down);
+	//clocksource_mmio_init(clkevt->value, name,
+	//	rate, 200, 32, clocksource_mmio_readl_down);
 #else
 	clocksource_mmio_init(clkevt->value, name,
 		rate, 200, 32, clocksource_mmio_readl_down);
@@ -188,9 +202,10 @@ static int sp804_sys_init(void);
 static irqreturn_t sp804_timer_interrupt(int irq, void *dev_id)
 {
 #if SP804_TEST_IRQ
-	pr_err("sp804 timers interrupt happens ");
+//#if 0
+	//pr_err("sp804 timers interrupt happens ");
 	if(0 == ++sp804_intc_count % 10){
-	    pr_err("sp804 10 timers of interrupt happens again");
+	    //pr_err("sp804 10 timers of interrupt happens again");
 	}
 	/* clear the interrupt */
 	writel(1, common_clkevt->intclr);
@@ -208,6 +223,7 @@ static irqreturn_t sp804_timer_interrupt(int irq, void *dev_id)
 
 static inline void timer_shutdown(struct clock_event_device *evt)
 {
+// if have no riscv , can not shutdown sp804
 #if SP804_TEST_IRQ
 	    pr_err("sp804 timers shutdown \n");
 	    // to test interrupt
@@ -243,9 +259,12 @@ static int sp804_set_next_event(unsigned long next,
 	struct clock_event_device *evt)
 {
 #if SP804_TEST
-	pr_err("sp804 set next event\n");
+	//pr_err("sp804 set next event\n");
+	/* ********************************/
+	//unsigned long ctrl = TIMER_CTRL_32BIT | TIMER_CTRL_IE |
+	//		     TIMER_CTRL_ONESHOT | TIMER_CTRL_ENABLE;
 	unsigned long ctrl = TIMER_CTRL_32BIT | TIMER_CTRL_IE |
-			     TIMER_CTRL_ONESHOT | TIMER_CTRL_ENABLE ;
+			     TIMER_CTRL_PERIODIC| TIMER_CTRL_ENABLE ;
 #else
 	unsigned long ctrl = TIMER_CTRL_32BIT | TIMER_CTRL_IE |
 			     TIMER_CTRL_ONESHOT | TIMER_CTRL_ENABLE;
@@ -288,8 +307,13 @@ static int __init sp804_clockevents_init(void __iomem *base, unsigned int irq,
 
 #if SP804_TEST_IRQ
 	writel(0, common_clkevt->ctrl);
-	writel(0xffffffff, common_clkevt->load);
-	writel(0xffffffff, common_clkevt->value);
+	// 0xffffff is ok , 0xffff canot enter os
+	writel(0xffffff, common_clkevt->load);
+	writel(0xffffff, common_clkevt->value);
+	if (common_clkevt->width == 64) {
+		writel(0xffffffff, common_clkevt->load_h);
+		writel(0xffffffff, common_clkevt->value_h);
+	}
 	writel(TIMER_CTRL_32BIT | TIMER_CTRL_ENABLE | TIMER_CTRL_PERIODIC | TIMER_CTRL_IE,
 		common_clkevt->ctrl);
 #else
@@ -299,7 +323,11 @@ static int __init sp804_clockevents_init(void __iomem *base, unsigned int irq,
 	if (request_irq(irq, sp804_timer_interrupt, IRQF_TIMER | IRQF_IRQPOLL,
 			"timer", &sp804_clockevent))
 		pr_err("sp804 request_irq() failed\n");
-	clockevents_config_and_register(evt, rate, 0xf, 0xffffffff);
+#if SP804_TEST
+       	clockevents_config_and_register(evt, rate,0xf , 0xffffffff);
+#else
+       	clockevents_config_and_register(evt, rate, 0xf, 0xffffffff);
+#endif
 
 	return 0;
 }

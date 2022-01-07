@@ -31,6 +31,7 @@
 
 #define SP804_TEST  1
 #define SP804_TEST_IRQ 1
+#define SP804_TEST_DATE 1
 
 #define PHY_ADDR_OF_RESET_CTL    0x43060000
 #define PHY_ADDR_OFFSET_OF_TIMER0    0xC
@@ -99,7 +100,7 @@ static irqreturn_t sp804_timer_interrupt(int irq, void *dev_id)
 	struct sp804_private *priv = to_priv(evt);
 	common_clkevt = &(priv->sp804_clkevt);
 #if SP804_TEST_IRQ
-	pr_err("sp804 timers interrupt happens ");
+	//pr_err("sp804 timers interrupt happens ");
 	if(0 == ++sp804_intc_count % 10){
 	    pr_err("sp804 10 timers of interrupt happens again");
 	}
@@ -229,8 +230,14 @@ static int __init sp804_clockevents_init(struct sp804_private * priv, void __iom
 
 #if SP804_TEST_IRQ
 	writel(0, common_clkevt->ctrl);
-	writel(0xffffffff, common_clkevt->load);
-	writel(0xffffffff, common_clkevt->value);
+	writel(0x0fffffff, common_clkevt->load);
+	writel(0x0fffffff, common_clkevt->value);
+	//writel(0xffffffff, common_clkevt->load);
+	//writel(0xffffffff, common_clkevt->value);
+	if (common_clkevt->width == 64) {
+		writel(0xffffffff, common_clkevt->load_h);
+		writel(0xffffffff, common_clkevt->value_h);
+	}
 	writel(TIMER_CTRL_32BIT | TIMER_CTRL_ENABLE | TIMER_CTRL_PERIODIC | TIMER_CTRL_IE,
 		common_clkevt->ctrl);
 #else
@@ -271,8 +278,13 @@ static int __init sp804_clocksource_and_sched_clock_init(struct sp804_private * 
 	clkevt = sp804_clkevt_get(priv,base);
 
 	writel(0, clkevt->ctrl);
+#if SP804_TEST_DATE
+	writel(0xffffff, clkevt->load);
+	writel(0xffffff, clkevt->value);
+#else
 	writel(0xffffffff, clkevt->load);
 	writel(0xffffffff, clkevt->value);
+#endif
 	if (clkevt->width == 64) {
 		writel(0xffffffff, clkevt->load_h);
 		writel(0xffffffff, clkevt->value_h);
@@ -284,7 +296,8 @@ static int __init sp804_clocksource_and_sched_clock_init(struct sp804_private * 
 	writel(TIMER_CTRL_32BIT | TIMER_CTRL_ENABLE | TIMER_CTRL_PERIODIC,
 		clkevt->ctrl);
 #endif
-#if SP804_TEST
+#if 0
+//#if SP804_TEST
 	clocksource_mmio_init(clkevt->value, name,
 		rate, 200, 32, sp804_read_all);
 #else
@@ -403,7 +416,6 @@ static int sp804_probe(struct platform_device *pdev)
                 //clksrc = sp804_dt_init_clk(np, 0, SP804_CLKSRC);
 		//if (IS_ERR(clksrc))
 		//    goto err;
-                pr_info("tracing sp804_clockevents_init clk1\n");
 		ret = sp804_clockevents_init(priv, timer1_base, irq, clk1, name);
 		if (ret)
 			goto err;

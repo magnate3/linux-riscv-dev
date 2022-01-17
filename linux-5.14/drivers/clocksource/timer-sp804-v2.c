@@ -102,7 +102,7 @@ static irqreturn_t sp804_timer_interrupt(int irq, void *dev_id)
 #if SP804_TEST_IRQ
 	//pr_err("sp804 timers interrupt happens ");
 	if(0 == ++sp804_intc_count % 10){
-	    pr_err("sp804 10 timers of interrupt happens again");
+	    //pr_err("sp804 10 timers of interrupt happens again");
 	}
 	/* clear the interrupt */
 	writel(1, common_clkevt->intclr);
@@ -230,8 +230,8 @@ static int __init sp804_clockevents_init(struct sp804_private * priv, void __iom
 
 #if SP804_TEST_IRQ
 	writel(0, common_clkevt->ctrl);
-	writel(0x0fffffff, common_clkevt->load);
-	writel(0x0fffffff, common_clkevt->value);
+	writel(0x0ffffff, common_clkevt->load);
+	writel(0x0ffffff, common_clkevt->value);
 	//writel(0xffffffff, common_clkevt->load);
 	//writel(0xffffffff, common_clkevt->value);
 	if (common_clkevt->width == 64) {
@@ -296,13 +296,13 @@ static int __init sp804_clocksource_and_sched_clock_init(struct sp804_private * 
 	writel(TIMER_CTRL_32BIT | TIMER_CTRL_ENABLE | TIMER_CTRL_PERIODIC,
 		clkevt->ctrl);
 #endif
-#if 0
-//#if SP804_TEST
+#if SP804_TEST
+//#if 0
 	clocksource_mmio_init(clkevt->value, name,
-		rate, 200, 32, sp804_read_all);
+		rate/4, 200, 32, sp804_read_all);
 #else
 	clocksource_mmio_init(clkevt->value, name,
-		rate, 200, 32, clocksource_mmio_readl_down);
+		rate/4, 200, 32, clocksource_mmio_readl_down);
 #endif
 	if (use_sched_clock) {
 		g_sched_clkevt = clkevt;
@@ -429,7 +429,10 @@ static int sp804_probe(struct platform_device *pdev)
         pr_info("tracing sp804_probe sucessfully\n");
 	//priv->dev = &pdev->dev;
         //sp804_sys_init();
-	initialized = true;
+	if (!initialized)
+	{
+	    initialized = true;
+	}
 	return 0;
 err:
 	iounmap(base);

@@ -1,3 +1,6 @@
+ 
+ ![Image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/pic/kernl_stack.png)
+ 
  # insmod hello.ko
  
  ```

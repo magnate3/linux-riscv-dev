@@ -63,5 +63,7 @@ PING 169.254.1.1 (169.254.1.1): 56 data bytes
 64 bytes from 169.254.1.1: seq=11 ttl=64 time=1.862 ms
 QEMU: Terminated
 root@x86:/home/ubuntu/QEMU_CPUFreq_Zynq# 
+
  ```
+   ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/gem_poll/pic/poll.jpg)
   

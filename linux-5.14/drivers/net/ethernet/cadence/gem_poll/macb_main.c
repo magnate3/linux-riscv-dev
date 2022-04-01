@@ -102,7 +102,9 @@ struct sifive_fu540_macb_mgmt {
 
 #define TEST_POLL 1
 #ifdef TEST_POLL
-struct task_struct	*task_poll;
+struct task_struct	*task_poll = NULL;
+static int macb_poll_task_stop(void);
+static int macb_poll_task_start(struct net_device *dev);
 static int macb_poll_task(void * p);
 #endif 
 /* DMA buffer descriptor might be different size
@@ -1898,6 +1900,24 @@ static irqreturn_t macb_interrupt(int irq, void *dev_id)
 }
 
 #ifdef TEST_POLL
+static int macb_poll_task_start(struct net_device *dev)
+{
+       // macb_init or macb_open call macb_poll_task_start
+       if(!task_poll)
+       {
+            task_poll = kthread_run(macb_poll_task, dev, "%s-#%d", "macb poll", 0);
+       }
+       return 0;
+}
+static int macb_poll_task_stop(void)
+{
+       if(task_poll)
+       {
+           kthread_stop(task_poll);
+	   task_poll = NULL;
+       }
+       return 0;
+}
 static int macb_poll_task(void * p)
 {
         struct net_device *dev = (struct net_device *)p;
@@ -1905,7 +1925,7 @@ static int macb_poll_task(void * p)
 	struct macb_queue *queue;
 	unsigned long flags;
 	unsigned int q;
-        while(1)
+        while(!kthread_should_stop())
 	{
 	    local_irq_save(flags);
 	    for (q = 0, queue = bp->queues; q < bp->num_queues; ++q, ++queue)
@@ -2914,6 +2934,9 @@ static int macb_open(struct net_device *dev)
 
 	if (bp->ptp_info)
 		bp->ptp_info->ptp_init(dev);
+#ifdef TEST_POLL
+        macb_poll_task_start(dev);
+#endif
 
 	return 0;
 
@@ -2959,7 +2982,8 @@ static int macb_close(struct net_device *dev)
 
 	pm_runtime_put(&bp->pdev->dev);
 #ifdef TEST_POLL
-	kthread_stop(task_poll);
+	//kthread_stop(task_poll);
+	macb_poll_task_stop();
 #endif
 	return 0;
 }
@@ -4060,7 +4084,7 @@ static int macb_init(struct platform_device *pdev)
 		}
 #else
 	        dev_err(&pdev->dev, "not need to register interrupt \n");
-                task_poll = kthread_run(macb_poll_task, dev, "%s-#%d", "macb poll", 0);
+                //task_poll = kthread_run(macb_poll_task, dev, "%s-#%d", "macb poll", 0);
 #endif
 
 		INIT_WORK(&queue->tx_error_task, macb_tx_error_task);
@@ -5067,6 +5091,9 @@ static int macb_remove(struct platform_device *pdev)
 	dev = platform_get_drvdata(pdev);
 
 	if (dev) {
+#ifdef TEST_POLL
+	macb_poll_task_stop();
+#endif
 		bp = netdev_priv(dev);
 		phy_exit(bp->sgmii_phy);
 		mdiobus_unregister(bp->mii_bus);

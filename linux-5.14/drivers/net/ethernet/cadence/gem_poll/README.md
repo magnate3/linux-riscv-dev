@@ -69,10 +69,10 @@ root@x86:/home/ubuntu/QEMU_CPUFreq_Zynq#
    ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/gem_poll/pic/poll.jpg)
    
 ## telnet in xilinx-zynq-a9  
-    ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/gem_poll/pic/telnet.jpg)
+    ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/gem_poll/pic/telnet.png)
 
 ## telnet in host
-    ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/gem_poll/pic/telnet_in_xlinix.jpg)
+    ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/gem_poll/pic/telnet_in_xlinix.png)
    
    
    

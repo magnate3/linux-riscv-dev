@@ -22,7 +22,7 @@ static inline unsigned char *skb_network_header(const struct sk_buff *skb)
   
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/by_pass_arp/pic/arp.png)  
   
-  *** the vaule of  kb->network_header changes ***<br>
+  ` the vaule of  kb->network_header changes ` <br>
 ```
 [   36.619699] macb: before skb_reset_network_header, the  skb->network_header 0 
 [   36.619714] macb: after skb_reset_network_header, the  skb->network_header 80 

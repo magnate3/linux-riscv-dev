@@ -1,7 +1,7 @@
  # skb_reset_network_header to obtain arp header
-*skb_reset_mac_header*<br>
-*skb_reset_network_header*<br>
-*skb_reset_transport_header*<br>
+**skb_reset_mac_header**<br>
+**skb_reset_network_header**<br>
+**skb_reset_transport_header**<br>
 
 ## arp_hdr
 

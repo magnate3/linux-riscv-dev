@@ -2,9 +2,31 @@
 *skb_reset_mac_header*<br>
 *skb_reset_network_header*<br>
 *skb_reset_transport_header*<br>
+
+## arp_hdr
+
+```
+static inline struct arphdr *arp_hdr(const struct sk_buff *skb)
+{
+        return (struct arphdr *)skb_network_header(skb);
+}
+
+include/linux/skbuff.h
+
+
+static inline unsigned char *skb_network_header(const struct sk_buff *skb)
+{
+        return skb->head + skb->network_header;
+}
+```
   
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/by_pass_arp/pic/arp.png)  
   
+  *** the vaule of  kb->network_header changes ***<br>
+```
+[   36.619699] macb: before skb_reset_network_header, the  skb->network_header 0 
+[   36.619714] macb: after skb_reset_network_header, the  skb->network_header 80 
+```  
   
 ```
 static inline unsigned char *skb_transport_header(const struct sk_buff *skb)
@@ -46,6 +68,9 @@ static inline unsigned char *skb_mac_header(const struct sk_buff *skb)
 }
 ```
 
+
+
+
 ##  skb_get to increase  skb reference
 
 ```
@@ -64,7 +89,7 @@ static inline struct sk_buff *skb_get(struct sk_buff *skb)
 }
 ```
 
-## netif_receive_skb
+## netif_receive_skb do  skb_reset_network_header  and skb_reset_transport_header
 
 in netif_receive_skb ,even vlan ,should  skb_reset_network_header and skb_reset_transport_header
 ```
@@ -87,6 +112,116 @@ static int __netif_receive_skb_core(struct sk_buff *skb, bool pfmemalloc)
          else if (unlikely(!skb))
              goto out;
      }
+}
+```
+
+## arp_create call skb_reserve 、skb_reset_network_header
+
+```
+struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
+                           struct net_device *dev, __be32 src_ip,
+                           const unsigned char *dest_hw,
+                           const unsigned char *src_hw,
+                           const unsigned char *target_hw)
+{
+        struct sk_buff *skb;
+        struct arphdr *arp;
+        unsigned char *arp_ptr;
+        int hlen = LL_RESERVED_SPACE(dev);
+        int tlen = dev->needed_tailroom;
+
+        /*
+         *      Allocate a buffer
+         */
+
+        skb = alloc_skb(arp_hdr_len(dev) + hlen + tlen, GFP_ATOMIC);
+        if (!skb)
+                return NULL;
+
+        skb_reserve(skb, hlen);
+        skb_reset_network_header(skb);
+        arp = skb_put(skb, arp_hdr_len(dev));
+        skb->dev = dev;
+        skb->protocol = htons(ETH_P_ARP);
+        if (!src_hw)
+                src_hw = dev->dev_addr;
+        if (!dest_hw)
+                dest_hw = dev->broadcast;
+
+        /*
+         *      Fill the device header for the ARP frame
+         */
+        if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0)
+                goto out;
+
+        /*
+         * Fill out the arp protocol part.
+         *
+         * The arp hardware type should match the device type, except for FDDI,
+         * which (according to RFC 1390) should always equal 1 (Ethernet).
+         */
+        /*
+         *      Exceptions everywhere. AX.25 uses the AX.25 PID value not the
+         *      DIX code for the protocol. Make these device structure fields.
+         */
+        switch (dev->type) {
+        default:
+                arp->ar_hrd = htons(dev->type);
+                arp->ar_pro = htons(ETH_P_IP);
+                break;
+
+#if IS_ENABLED(CONFIG_AX25)
+        case ARPHRD_AX25:
+                arp->ar_hrd = htons(ARPHRD_AX25);
+                arp->ar_pro = htons(AX25_P_IP);
+                break;
+
+#if IS_ENABLED(CONFIG_NETROM)
+        case ARPHRD_NETROM:
+                arp->ar_hrd = htons(ARPHRD_NETROM);
+                arp->ar_pro = htons(AX25_P_IP);
+                break;
+#endif
+#endif
+
+#if IS_ENABLED(CONFIG_FDDI)
+        case ARPHRD_FDDI:
+                arp->ar_hrd = htons(ARPHRD_ETHER);
+                arp->ar_pro = htons(ETH_P_IP);
+                break;
+#endif
+        }
+
+        arp->ar_hln = dev->addr_len;
+        arp->ar_pln = 4;
+        arp->ar_op = htons(type);
+
+        arp_ptr = (unsigned char *)(arp + 1);
+
+        memcpy(arp_ptr, src_hw, dev->addr_len);
+        arp_ptr += dev->addr_len;
+        memcpy(arp_ptr, &src_ip, 4);
+        arp_ptr += 4;
+
+        switch (dev->type) {
+#if IS_ENABLED(CONFIG_FIREWIRE_NET)
+        case ARPHRD_IEEE1394:
+                break;
+#endif
+        default:
+                if (target_hw)
+                        memcpy(arp_ptr, target_hw, dev->addr_len);
+                else
+                        memset(arp_ptr, 0, dev->addr_len);
+                arp_ptr += dev->addr_len;
+        }
+        memcpy(arp_ptr, &dest_ip, 4);
+
+        return skb;
+
+out:
+        kfree_skb(skb);
+        return NULL;
 }
 ```
 

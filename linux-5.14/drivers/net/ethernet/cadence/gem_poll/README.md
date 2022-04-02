@@ -226,7 +226,26 @@ static int sample_netdev_poll(struct net_device *netdev, int *budget)
     return 1;
 }
 ```
-   
+# arp
+
+
+```
+drivers/net/ethernet/chelsio/cxgb/sge.c
+  /* Hmmm, assuming to catch the gratious arp... and we'll use
+                 * it to flush out stuck espi packets...
+                 */
+                if ((unlikely(!adapter->sge->espibug_skb[dev->if_port]))) {
+                        if (skb->protocol == htons(ETH_P_ARP) &&
+                            arp_hdr(skb)->ar_op == htons(ARPOP_REQUEST)) {
+                                adapter->sge->espibug_skb[dev->if_port] = skb;
+                                /* We want to re-use this skb later. We
+                                 * simply bump the reference count and it
+                                 * will not be freed...
+                                 */
+                                skb = skb_get(skb);
+                        }
+                }
+```
   
 # references
 [e100 NAPI](https://blog.csdn.net/Rong_Toa/article/details/109401935)

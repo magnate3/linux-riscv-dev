@@ -112,6 +112,7 @@ static netdev_tx_t macb_start_xmit(struct sk_buff *skb, struct net_device *dev);
 #endif
 
 #define TEST_POLL 1
+#define TEST_POLL_NO_USE_NAPI 1
 #ifdef TEST_POLL
 struct task_struct	*task_poll = NULL;
 static int macb_poll_task_stop(void);
@@ -1390,11 +1391,10 @@ static int gem_rx(struct macb_queue *queue, struct napi_struct *napi,
 	struct sk_buff		*skb;
 	struct macb_dma_desc	*desc;
 	int			count = 0;
-#ifndef TEST_POLL
+#ifndef TEST_POLL_NO_USE_NAPI
 	while (count < budget) {
 #else
-	while(1)
-	{
+	while (count < budget) {
 #endif
 		u32 ctrl;
 		dma_addr_t addr;
@@ -1899,13 +1899,12 @@ static irqreturn_t macb_interrupt(int irq, void *dev_id)
 			queue_writel(queue, IDR, bp->rx_intr_mask);
 			if (bp->caps & MACB_CAPS_ISR_CLEAR_ON_WRITE)
 				queue_writel(queue, ISR, MACB_BIT(RCOMP));
-#ifndef TEST_POLL
+#ifndef TEST_POLL_NO_USE_NAPI
 			if (napi_schedule_prep(&queue->napi)) {
 				netdev_vdbg(bp->dev, "scheduling RX softirq\n");
 				__napi_schedule(&queue->napi);
 			}
 #else
-		        //gem_rx(queue, NULL, 0);
 			if (napi_schedule_prep(&queue->napi)) {
 		                pr_err("*********** napi_schedul raise rx softirq  ************");
 				netdev_vdbg(bp->dev, "scheduling RX softirq\n");
@@ -2003,13 +2002,19 @@ static int macb_poll_task(void * p)
 	struct macb_queue *queue;
 	unsigned long flags;
 	unsigned int q;
-        while(!kthread_should_stop())
+        while(!kthread_should_stop() && netif_running(dev))
 	{
+	    unsigned long time_limit = jiffies + 2;
 	    local_irq_save(flags);
 	    for (q = 0, queue = bp->queues; q < bp->num_queues; ++q, ++queue)
+	    {
 		macb_interrupt(dev->irq, queue);
+		if (time_after_eq(jiffies, time_limit))
+		{
+	             udelay(10);
+		}
+	    }
 	    local_irq_restore(flags);
-	    msleep(10);
 	}
 	return 0;
 }

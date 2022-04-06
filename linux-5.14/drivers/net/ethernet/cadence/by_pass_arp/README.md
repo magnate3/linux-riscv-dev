@@ -237,16 +237,111 @@ static netdev_tx_t macb_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 }
 ```
+
 void kfree_skb(struct sk_buff *skb);
 void dev_kfree_skb(struct sk_buff *skb);
 void dev_kfree_skb_irq(struct sk_buff *skb);
 void dev_kfree_skb_any(struct sk_buff *skb);
+
 上述函数用于释放被alloc_skb( )函数分配的套接字缓冲区和数据缓冲区。
 inux内核内部使用 kfree_skb( ) 函数，但在网络设备驱动程序中最好用 dev_kfree_skb( )、dev_kfree_skb_irq( ) 或 
 dev_kfree_skb_any( )函数进行套接字缓冲区的释放。
 dev_kfree_skb( )用于非中断上下文， dev_kfree_skb_irq( )用于中断上下文，
 dev_kfree_skb_any( )在中断和非中断上下文中皆可使用，它其实是做一个简单地上下文判断，
- 
-  
+
+
+
+# NOHZ tick-stop error: Non-RCU local softirq work is pending, handler #08!!!
+
+```
+}
+static int macb_poll_task(void * p)
+{
+        struct net_device *dev = (struct net_device *)p;
+        struct macb *bp = netdev_priv(dev);
+        struct macb_queue *queue;
+        unsigned long flags;
+        unsigned int q;
+        while(!kthread_should_stop() && netif_running(dev))
+        {
+            unsigned long time_limit = jiffies + 2;
+            local_irq_save(flags);
+            for (q = 0, queue = bp->queues; q < bp->num_queues; ++q, ++queue)
+            {
+                macb_interrupt(dev->irq, queue);
+                if (time_after_eq(jiffies, time_limit))
+                {
+                     udelay(10);
+                }
+            }
+            local_irq_restore(flags);
+        }
+        return 0;
+}
+```
+## reference net_rx_action
+
+[Linux网络协议源码分析(六)：网卡收包流程](https://pzh2386034.github.io/Black-Jack/linux-net/2020/01/16/Linux%E7%BD%91%E7%BB%9C%E5%8D%8F%E8%AE%AE%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90(%E5%85%AD)-%E7%BD%91%E5%8D%A1%E6%94%B6%E5%8C%85%E6%B5%81%E7%A8%8B/)
+
+```
+/*
+ * 遍历中断对应CPU的 softnet_data.poll_list 上的设备结构体，将设备上的数据包发到网络协议栈处理
+ * 1. 设置软中断一次最大处理数据量、时间
+ * 2. napi_poll: 逐个处理设备结构体，其中会使用驱动初始化时注册的回调收包 poll 函数，将数据包送到网络协议栈
+ * 3. 如果最后 poll_list 上还有设备没处理，则退出前再次触发软中断
+ */
+static void net_rx_action(struct softirq_action *h)
+{
+	struct softnet_data *sd = this_cpu_ptr(&softnet_data);
+	/* 设置软中断一次允许的最大执行时间为2个jiffies */
+	unsigned long time_limit = jiffies + 2;
+	/* 设置软中断接收函数一次最多处理的报文个数为300 */
+	int budget = netdev_budget;
+	LIST_HEAD(list);
+	LIST_HEAD(repoll);
+	/* 关闭本地cpu的中断，下面判断list是否为空时防止硬中断抢占 */
+	local_irq_disable();
+	/* 将要轮询的设备链表转移到临时链表上 */
+	list_splice_init(&sd->poll_list, &list);
+	local_irq_enable();
+	/* 循环处理poll_list链表上的等待处理的napi */
+	for (;;) {
+		struct napi_struct *n;
+		/* 如果遍历完链表，则停止 */
+		if (list_empty(&list)) {
+			if (!sd_has_rps_ipi_waiting(sd) && list_empty(&repoll))
+				return;
+			break;
+		}
+		/* 获取链表中首个设备 */
+		n = list_first_entry(&list, struct napi_struct, poll_list);
+		/* 调用驱动初始化时通过 netif_napi_add 注册的回调收包 poll 函数；非NAPI为固定 process_backlog()
+		 * 处理完一个设备上的报文则要记录处理数量
+		 */
+		budget -= napi_poll(n, &repoll);
+
+		/* 如果超出预设时间或者达到处理报文最大个数则停止处理 */
+		if (unlikely(budget <= 0 ||
+			     time_after_eq(jiffies, time_limit))) {
+			sd->time_squeeze++;
+			break;
+		}
+	}
+
+	local_irq_disable();
+
+	list_splice_tail_init(&sd->poll_list, &list);
+	list_splice_tail(&repoll, &list);
+	list_splice(&list, &sd->poll_list);
+	/* 如果softnet_data.poll_list上还有未处理设备，则继续触发软中断 */
+	if (!list_empty(&sd->poll_list))
+		__raise_softirq_irqoff(NET_RX_SOFTIRQ);
+
+	net_rps_action_and_irq_enable(sd);
+}
+```
+
+
+
 # references
 [e100 NAPI](https://blog.csdn.net/Rong_Toa/article/details/109401935)

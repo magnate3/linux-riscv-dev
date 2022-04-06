@@ -340,7 +340,101 @@ static void net_rx_action(struct softirq_action *h)
 	net_rps_action_and_irq_enable(sd);
 }
 ```
+## run
 
+```
+root@zedboard-zynq7:~# ip addr add 169.254.1.2/16 dev  eth0
+root@zedboard-zynq7:~# ping 169.254.1.1
+PING 169.254.1.1 (169.254.1.1): 56 data bytes
+[   51.178740] macb: *********** recv complete call gem_rx ************
+[   51.179027] macb: *********** napi_schedul raise rx softirq  ************
+[   51.179512] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  1544 
+[   51.179611] macb: before skb_reset_network_header, the  skb->network_header 0 
+[   51.179621] macb: after skb_reset_network_header, the  skb->network_header 80 
+[   51.179666] macb: htons(ARPOP_REQUEST) 256 =? arp_hdr(skb)->ar_op  512 
+[   51.184136] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=0 ttl=64 time=23.868 ms
+[   52.179809] macb: *********** recv complete call gem_rx ************
+[   52.179816] macb: *********** napi_schedul raise rx softirq  ************
+[   52.189285] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=1 ttl=64 time=10.862 ms
+[   52.708740] macb: *********** recv complete call gem_rx ************
+[   52.708747] macb: *********** napi_schedul raise rx softirq  ************
+[   52.709260] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  1544 
+[   52.709339] macb: before skb_reset_network_header, the  skb->network_header 0 
+[   52.709342] macb: after skb_reset_network_header, the  skb->network_header 80 
+[   52.709384] macb: htons(ARPOP_REQUEST) 256 =? arp_hdr(skb)->ar_op  256 
+[   52.709489] macb: recv arp src mac de:5b:7e:e9:2:e2 
+[   52.709497] macb: recv arp send ip 169.254.1.1 
+[   53.179851] macb: *********** recv complete call gem_rx ************
+[   53.179881] macb: *********** napi_schedul raise rx softirq  ************
+[   53.189284] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=2 ttl=64 time=10.271 ms
+[   54.180001] macb: *********** recv complete call gem_rx ************
+[   54.180008] macb: *********** napi_schedul raise rx softirq  ************
+[   54.189287] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=3 ttl=64 time=9.882 ms
+[   55.180113] macb: *********** recv complete call gem_rx ************
+[   55.180120] macb: *********** napi_schedul raise rx softirq  ************
+[   55.189284] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=4 ttl=64 time=9.756 ms
+[   56.180228] macb: *********** recv complete call gem_rx ************
+[   56.180235] macb: *********** napi_schedul raise rx softirq  ************
+[   56.189283] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=5 ttl=64 time=9.635 ms
+[   57.180353] macb: *********** recv complete call gem_rx ************
+[   57.180360] macb: *********** napi_schedul raise rx softirq  ************
+[   57.189285] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=6 ttl=64 time=9.575 ms
+[   58.180479] macb: *********** recv complete call gem_rx ************
+[   58.180486] macb: *********** napi_schedul raise rx softirq  ************
+[   58.189281] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=7 ttl=64 time=9.370 ms
+[   59.180594] macb: *********** recv complete call gem_rx ************
+[   59.180601] macb: *********** napi_schedul raise rx softirq  ************
+[   59.189282] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=8 ttl=64 time=9.253 ms
+[   60.180720] macb: *********** recv complete call gem_rx ************
+[   60.180727] macb: *********** napi_schedul raise rx softirq  ************
+[   60.181185] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=9 ttl=64 time=0.681 ms
+[   61.180844] macb: *********** recv complete call gem_rx ************
+[   61.180852] macb: *********** napi_schedul raise rx softirq  ************
+[   61.189281] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=10 ttl=64 time=9.016 ms
+[   62.180970] macb: *********** recv complete call gem_rx ************
+[   62.180978] macb: *********** napi_schedul raise rx softirq  ************
+[   62.182676] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=11 ttl=64 time=1.943 ms
+[   63.181095] macb: *********** recv complete call gem_rx ************
+[   63.181102] macb: *********** napi_schedul raise rx softirq  ************
+[   63.184811] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=12 ttl=64 time=3.957 ms
+[   64.181232] macb: *********** recv complete call gem_rx ************
+[   64.181239] macb: *********** napi_schedul raise rx softirq  ************
+[   64.186974] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=13 ttl=64 time=5.985 ms
+[   64.689540] macb: *********** recv complete call gem_rx ************
+[   64.689547] macb: *********** napi_schedul raise rx softirq  ************
+[   64.699275] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  1544 
+[   64.699346] macb: before skb_reset_network_header, the  skb->network_header 0 
+[   64.699349] macb: after skb_reset_network_header, the  skb->network_header 80 
+[   64.699392] macb: htons(ARPOP_REQUEST) 256 =? arp_hdr(skb)->ar_op  256 
+[   64.699475] macb: recv arp src mac de:5b:7e:e9:2:e2 
+[   64.699478] macb: recv arp send ip 169.254.1.1 
+[   65.181358] macb: *********** recv complete call gem_rx ************
+[   65.181387] macb: *********** napi_schedul raise rx softirq  ************
+[   65.189173] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=14 ttl=64 time=8.498 ms
+[   66.181484] macb: *********** recv complete call gem_rx ************
+[   66.181491] macb: *********** napi_schedul raise rx softirq  ************
+[   66.189285] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=15 ttl=64 time=8.404 ms
+[   67.181611] macb: *********** recv complete call gem_rx ************
+[   67.181618] macb: *********** napi_schedul raise rx softirq  ************
+[   67.189282] macb: htons(ETH_P_ARP) 1544 =? skb->protocol  8 
+64 bytes from 169.254.1.1: seq=16 ttl=64 time=8.244 ms
+```
 
 
 # references

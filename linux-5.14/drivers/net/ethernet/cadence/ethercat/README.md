@@ -1,3 +1,7 @@
+#qemu
+```
+qemu-system-arm -M xilinx-zynq-a9 -serial /dev/null -serial mon:stdio -display none -kernel my.uImage.p -dtb Prebuilt_functional/my_devicetree.dtb --initrd Prebuilt_functional/ramdisk.img.gz  -net tap,ifname=qtap,script=no,downscript=no   -net nic,model=cadence_gem,macaddr=0e:b0:ba:5e:ba:12
+```
 
 # insmod  ec_master main_devices=0e:b0:ba:5e:ba:12
 ```
@@ -65,6 +69,8 @@ root@zedboard-zynq7:~# ip a
 root@zedboard-zynq7:~# 
 ```
 
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/ethercat/pic/old.png)
+
 # resotre /lib/modules/4.6.0-xilinx/macb.ko
 ##  rmmod macb_main.ko   and  insmod /lib/modules/4.6.0-xilinx/macb.ko 
 ```
@@ -104,3 +110,6 @@ PING 169.254.1.1 (169.254.1.1): 56 data bytes
 1 packets transmitted, 1 packets received, 0% packet loss
 round-trip min/avg/max = 14.847/14.847/14.847 ms
 ```
+# solve  Cannot find device "ecm0"
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/linux-5.14/drivers/net/ethernet/cadence/ethercat/pic/new.png)

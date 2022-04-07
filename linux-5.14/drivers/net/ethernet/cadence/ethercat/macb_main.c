@@ -5158,6 +5158,7 @@ static int macb_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(&bp->pdev->dev);
 	pm_runtime_put_autosuspend(&bp->pdev->dev);
 #ifdef TEST_ETHERCAT
+	pr_err("********** ethercat call ecdev_offer ***********");
 	ecdev_offer(dev, ec_poll, THIS_MODULE);
 #endif
 	return 0;

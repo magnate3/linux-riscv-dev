@@ -1,4 +1,4 @@
-#qemu
+# qemu
 ```
 qemu-system-arm -M xilinx-zynq-a9 -serial /dev/null -serial mon:stdio -display none -kernel my.uImage.p -dtb Prebuilt_functional/my_devicetree.dtb --initrd Prebuilt_functional/ramdisk.img.gz  -net tap,ifname=qtap,script=no,downscript=no   -net nic,model=cadence_gem,macaddr=0e:b0:ba:5e:ba:12
 ```

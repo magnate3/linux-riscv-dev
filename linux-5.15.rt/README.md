@@ -14,3 +14,22 @@ asmlinkage __visible void __sched schedule(void)
 }
 EXPORT_SYMBOL(schedule);
 ```
+# rcu
+
+```
+kernel/rcu/tree.c
+#define  TEST_ETHCAT_3 1
+```
+
+# core.c
+
+```
+kernel/sched/core.c
+#define TEST_ETHCAT_1 1
+```
+# rt.c
+
+```
+kernel/sched/rt.c
+#define TEST_ETHCAT_2 1
+```

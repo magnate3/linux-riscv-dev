@@ -534,7 +534,8 @@ asmlinkage __visible void __softirq_entry __do_softirq(void)
 	softirq_handle_begin();
 	in_hardirq = lockdep_softirq_start();
 	account_softirq_enter(current);
-#if TEST_ETHCAT_4
+#if 0
+//#if TEST_ETHCAT_4
 		wakeup_softirqd();
 #else
 restart:

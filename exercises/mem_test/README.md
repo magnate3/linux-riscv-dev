@@ -68,6 +68,29 @@
 [root@centos7 mem_test]# 
 ```
 
+# slab
+
+##  cat /proc/slabinfo | grep slub_test
+
+```
+[root@centos7 mem_test]# cat /proc/slabinfo | grep slub_test
+slub_test           4096   4096     16 4096    1 : tunables    0    0    0 : slabdata      1      1      0
+```
+
+## ls /sys/kernel/slab/slub_test/
+
+```
+[root@centos7 mem_test]# ls /sys/kernel/slab/slub_test/
+aliases      destroy_by_rcu   objs_per_slab             reserved           total_objects
+align        free_calls       order                     sanity_checks      trace
+alloc_calls  hwcache_align    partial                   shrink             validate
+cache_dma    min_partial      poison                    slabs
+cpu_partial  objects          reclaim_account           slabs_cpu_partial
+cpu_slabs    object_size      red_zone                  slab_size
+ctor         objects_partial  remote_node_defrag_ratio  store_user
+[root@centos7 mem_test]# 
+```
+
 # refercences
 
 [linux-socfpga/extra_modules/](https://github.com/yeshen007/linux-socfpga/tree/32226c3069f827b405ac660f33b4865bdc75dfed/extra_modules)

@@ -1,7 +1,7 @@
  
  # cat  /proc/interrupts |awk -F ":" '{print $1}'
  
- 
+ ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/irq/irq1.png)
  # insmod irq_test.ko 
  
  ```

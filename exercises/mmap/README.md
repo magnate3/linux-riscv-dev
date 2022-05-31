@@ -73,3 +73,7 @@ cc -static  mmap-test.o   -o mmap-test
 Write/Read test ...
 ```
 
+# reference
+
+https://github.com/magnate3/linux-kernel-chen/tree/master/%E3%80%8ALinux%E5%86%85%E6%A0%B8%E5%88%86%E6%9E%90%E4%B8%8E%E5%BA%94%E7%94%A8%E3%80%8B%E5%8A%A8%E6%89%8B%E5%AE%9E%E8%B7%B5%E6%BA%90%E7%A0%81/4.5%E5%8A%A8%E6%89%8B%E5%AE%9E%E8%B7%B5-Linux%E5%86%85%E5%AD%98%E6%98%A0%E5%B0%84%E5%AE%9E%E7%8E%B0
+

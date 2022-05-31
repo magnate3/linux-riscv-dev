@@ -18,3 +18,5 @@ int main(void)
     return 0;
 }
 ```
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/ioctl_mmap/dmesg.png)

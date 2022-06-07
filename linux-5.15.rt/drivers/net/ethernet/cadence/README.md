@@ -122,4 +122,74 @@ netif_napi_add(dev, &queue->napi, macb_poll, NAPI_POLL_WEIGHT);
 macb_poll
 ```
 
-#  napi_disable   napi_enable
+##  napi_disable   napi_enable
+
+
+
+# 
+
+```
+# ./tcpdrop.py
+TIME     PID    IP SADDR:SPORT          > DADDR:DPORT          STATE (FLAGS)
+20:49:06 0      4  10.32.119.56:443     > 10.66.65.252:22912   CLOSE (ACK)
+	tcp_drop+0x1
+	tcp_v4_do_rcv+0x135
+	tcp_v4_rcv+0x9c7
+	ip_local_deliver_finish+0x62
+	ip_local_deliver+0x6f
+	ip_rcv_finish+0x129
+	ip_rcv+0x28f
+	__netif_receive_skb_core+0x432
+	__netif_receive_skb+0x18
+	netif_receive_skb_internal+0x37
+	napi_gro_receive+0xc5
+	ena_clean_rx_irq+0x3c3
+	ena_io_poll+0x33f
+	net_rx_action+0x140
+	__softirqentry_text_start+0xdf
+	irq_exit+0xb6
+	do_IRQ+0x82
+	ret_from_intr+0x0
+	native_safe_halt+0x6
+	default_idle+0x20
+	arch_cpu_idle+0x15
+	default_idle_call+0x23
+	do_idle+0x17f
+	cpu_startup_entry+0x73
+	rest_init+0xae
+	start_kernel+0x4dc
+	x86_64_start_reservations+0x24
+	x86_64_start_kernel+0x74
+	secondary_startup_64+0xa5
+```
+
+# interrupt
+
+##   bp->rx_intr_mask | MACB_TX_INT_FLAGS
+
+```
+#define MACB_RX_INT_FLAGS	(MACB_BIT(RCOMP) | MACB_BIT(RXUBR)	\
+				 | MACB_BIT(ISR_ROVR))
+
+#define MACB_TX_INT_FLAGS	(MACB_TX_ERR_FLAGS | MACB_BIT(TCOMP))
+```
+
+```
+
+                if (status & bp->rx_intr_mask) {
+                        /* There's no point taking any more interrupts
+                         * until we have processed the buffers. The
+                         * scheduling call may fail if the poll routine
+                         * is already scheduled, so disable interrupts
+                         * now.
+                         */
+                        queue_writel(queue, IDR, bp->rx_intr_mask);
+                        if (bp->caps & MACB_CAPS_ISR_CLEAR_ON_WRITE)
+                                queue_writel(queue, ISR, MACB_BIT(RCOMP));
+
+                        if (napi_schedule_prep(&queue->napi)) {
+                                netdev_vdbg(bp->dev, "scheduling RX softirq\n");
+                                __napi_schedule(&queue->napi);
+                        }
+                }
+```

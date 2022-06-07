@@ -106,3 +106,91 @@ static int gem_rx(struct macb_queue *queue, struct napi_struct *napi,
 		  int budget)
 napi=NULL
 ```
+
+## napi->gro_hash
+
+```
+void netif_napi_add(struct net_device *dev, struct napi_struct *napi,
+		    int (*poll)(struct napi_struct *, int), int weight)
+{
+	int i;
+
+	INIT_LIST_HEAD(&napi->poll_list);
+	hrtimer_init(&napi->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL_PINNED);
+	napi->timer.function = napi_watchdog;
+	napi->gro_bitmask = 0;
+	for (i = 0; i < GRO_HASH_BUCKETS; i++) {
+		INIT_LIST_HEAD(&napi->gro_hash[i].list);
+		napi->gro_hash[i].count = 0;
+	}
+	napi->skb = NULL;
+	napi->poll = poll;
+	if (weight > NAPI_POLL_WEIGHT)
+		pr_err_once("netif_napi_add() called with weight %d on device %s\n",
+			    weight, dev->name);
+	napi->weight = weight;
+	napi->dev = dev;
+#ifdef CONFIG_NETPOLL
+	napi->poll_owner = -1;
+#endif
+	set_bit(NAPI_STATE_SCHED, &napi->state);
+	set_bit(NAPI_STATE_NPSVC, &napi->state);
+	list_add_rcu(&napi->dev_list, &dev->napi_list);
+	napi_hash_add(napi);
+	/* Create kthread for this napi if dev->threaded is set.
+	 * Clear dev->threaded if kthread creation failed so that
+	 * threaded mode will not be enabled in napi_enable().
+	 */
+	if (dev->threaded && napi_kthread_create(napi))
+		dev->threaded = 0;
+}
+```
+
+
+# process_backlog
+
+```
+static int process_backlog(struct napi_struct *napi, int quota)
+{
+    int work = 0;
+                                        
+    /*取得本地CPU上的softnet_data  数据*/
+    struct softnet_data *queue = &__get_cpu_var(softnet_data);
+　　
+    /*开始计时，一旦允许时间到，就退出轮询*/
+    unsigned long start_time = jiffies;
+    napi->weight = weight_p;
+　　
+    /*循环从softnet_data 的输入队列取报文并处理，直到队列中没有报文了,
+     或处理的报文数大于了允许的上限值了，
+     或轮询函数执行时间大于一个jiffies 了
+　　*/
+    do
+    {
+        struct sk_buff *skb;
+        /*禁用本地中断，要存队列中取skb,防止抢占*/
+        local_irq_disable();
+　　
+        /*从softnet_data 的输入队列中取得一个skb*/
+        skb = __skb_dequeue(&queue->input_pkt_queue);
+　　
+        /*如果队列中没有skb,则使能中断并退出轮询*/
+        if (!skb)
+        {
+            /*把napi 从 softnet_data 的 pool_list 链表上摘除*/
+            __napi_complete(napi);
+            /*使能本地CPU的中断*/
+            local_irq_enable();
+            break;
+        }
+        /*skb 已经摘下来了，使能中断*/
+        local_irq_enable();
+　　
+        /*把skb送到协议栈相关协议模块进行处理,详细处理见后续章节*/
+        netif_receive_skb(skb);
+    } while (++work < quota && jiffies == start_time);
+    /*返回处理报文个数*/
+    return work;
+}
+
+```

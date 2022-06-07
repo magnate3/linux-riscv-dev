@@ -50,3 +50,76 @@ root@Ubuntu-riscv64:~# dmesg | tail -n 20
 [ 1855.512392] [<ffffffff8000386c>] ret_from_exception+0x0/0xc
 root@Ubuntu-riscv64:~#
 ```
+
+# ping
+
+```
+
+root@Ubuntu-riscv64:~# ip a
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1000
+    link/sit 0.0.0.0 brd 0.0.0.0
+3: enx00e04c3600d7: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc pfifo_fast state DOWN group default qlen 1000
+    link/ether 00:e0:4c:36:00:d7 brd ff:ff:ff:ff:ff:ff
+    inet6 fe80::2e0:4cff:fe36:d7/64 scope link 
+       valid_lft forever preferred_lft forever
+4: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 70:b3:d5:92:fa:3c brd ff:ff:ff:ff:ff:ff
+    inet 10.11.11.80/24 brd 10.11.11.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet 169.254.116.29/16 brd 169.254.255.255 scope global noprefixroute eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::72b3:d5ff:fe92:fa3c/64 scope link 
+       valid_lft forever preferred_lft forever
+root@Ubuntu-riscv64:~# ping 10.11.11.81  
+PING 10.11.11.81 (10.11.11.81) 56(84) bytes of data.
+64 bytes from 10.11.11.81: icmp_seq=1 ttl=64 time=7.46 ms
+^C
+--- 10.11.11.81 ping statistics ---
+7 packets transmitted, 1 received, 85.7143% packet loss, time 6104ms
+rtt min/avg/max/mdev = 7.459/7.459/7.459/0.000 ms
+root@Ubuntu-riscv64:~# 
+```
+
+# macb_is_gem
+```
+     /* setup appropriated routines according to adapter type */
+        if (macb_is_gem(bp)) {
+                dev_err(&pdev->dev, "macb is gem \n");
+                bp->max_tx_length = GEM_MAX_TX_LEN;
+                bp->macbgem_ops.mog_alloc_rx_buffers = gem_alloc_rx_buffers;
+                bp->macbgem_ops.mog_free_rx_buffers = gem_free_rx_buffers;
+                bp->macbgem_ops.mog_init_rings = gem_init_rings;
+                bp->macbgem_ops.mog_rx = gem_rx;
+                dev->ethtool_ops = &gem_ethtool_ops;
+        } else {
+                dev_err(&pdev->dev, "macb is not  gem \n");
+                bp->max_tx_length = MACB_MAX_TX_LEN;
+                bp->macbgem_ops.mog_alloc_rx_buffers = macb_alloc_rx_buffers;
+                bp->macbgem_ops.mog_free_rx_buffers = macb_free_rx_buffers;
+                bp->macbgem_ops.mog_init_rings = macb_init_rings;
+                bp->macbgem_ops.mog_rx = macb_rx;
+                dev->ethtool_ops = &macb_ethtool_ops;
+        }
+```
+```
+[ 3898.170213] macb 10090000.ethernet: not need to register interrupt 
+[ 3898.170221] macb 10090000.ethernet: macb is gem 
+```
+
+# napi
+
+```
+netif_napi_add(dev, &queue->napi, macb_poll, NAPI_POLL_WEIGHT);
+```
+## macb_poll
+```
+macb_poll
+```
+
+#  napi_disable   napi_enable

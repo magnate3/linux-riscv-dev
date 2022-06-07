@@ -79,4 +79,76 @@ kthread 28486 has finished working, waiting for exit
 [87958.636007] 
 kthread 28487 has finished working, waiting for exit
  ```
+# kthread_example3.ko
 
+## insmod kthread_example3.ko
+
+```
+[root@centos7 kthread]# dmesg | tail -n 20
+[   44.980995] virbr0: port 1(virbr0-nic) entered listening state
+[   45.011475] virbr0: port 1(virbr0-nic) entered disabled state
+[   45.130083] IPv6: ADDRCONF(NETDEV_UP): docker0: link is not ready
+[89041.762988] rt_test: loading out-of-tree module taints kernel.
+[89041.768852] rt_test: module verification failed: signature and/or required key missing - tainting kernel
+[602180.619511] Initializing kernel mode thread example module
+[602180.625064] Creating Threads
+[602180.628028] Getting current CPU 118 to binding worker thread
+[602180.630921] Worker task created successfully
+[602180.635259] Getting current CPU 2 to binding default thread
+[602180.635305] Worker thread running
+[602180.635347] Default thread executing on system CPU:2 
+[602180.643813] Default thread running
+[602180.647424] Worker thread executing on system CPU:118 
+[602184.675366] Worker thread executing on system CPU:118 
+[602186.675357] Default thread executing on system CPU:2 
+[602188.755338] Worker thread executing on system CPU:118 
+[602192.835317] Worker thread executing on system CPU:118 
+[602193.075309] Default thread executing on system CPU:2 
+[602196.925286] Worker thread executing on system CPU:118 
+[root@centos7 kthread]# dmesg | tail -n 20
+[602180.628028] Getting current CPU 118 to binding worker thread
+[602180.630921] Worker task created successfully
+[602180.635259] Getting current CPU 2 to binding default thread
+[602180.635305] Worker thread running
+[602180.635347] Default thread executing on system CPU:2 
+[602180.643813] Default thread running
+[602180.647424] Worker thread executing on system CPU:118 
+[602184.675366] Worker thread executing on system CPU:118 
+[602186.675357] Default thread executing on system CPU:2 
+[602188.755338] Worker thread executing on system CPU:118 
+[602192.835317] Worker thread executing on system CPU:118 
+[602193.075309] Default thread executing on system CPU:2 
+[602196.925286] Worker thread executing on system CPU:118 
+[602199.475282] Default thread executing on system CPU:2 
+[602200.995267] Worker thread executing on system CPU:118 
+[602205.075252] Worker thread executing on system CPU:118 
+[602205.875240] Default thread executing on system CPU:2 
+[602209.155216] Worker thread executing on system CPU:118 
+[602212.275247] Default thread executing on system CPU:2 
+[602213.235193] Worker thread executing on system CPU:118 
+[root@centos7 kthread]# 
+```
+## rmmod kthread_example3.ko 
+```
+[root@centos7 kthread]# dmesg | tail -n 20
+[602254.034961] Worker thread executing on system CPU:118 
+[602257.074939] Default thread executing on system CPU:2 
+[602258.114957] Worker thread executing on system CPU:118 
+[602262.194920] Worker thread executing on system CPU:118 
+[602263.474910] Default thread executing on system CPU:2 
+[602266.274886] Worker thread executing on system CPU:118 
+[602269.874850] Default thread executing on system CPU:2 
+[602270.354848] Worker thread executing on system CPU:118 
+[602274.434787] Worker thread executing on system CPU:118 
+[602276.274801] Default thread executing on system CPU:2 
+[602278.514709] Worker thread executing on system CPU:118 
+[602282.594646] Worker thread executing on system CPU:118 
+[602282.674632] Default thread executing on system CPU:2 
+[602286.674574] Worker thread executing on system CPU:118 
+[602288.759093] Module removing from kernel, threads stopping
+[602289.074526] Default thread executing on system CPU:2 
+[602290.754516] Worker task stopped
+[602295.154431] Default task exiting
+[602295.157744] Default task stopped
+[602295.161046] Bye Bye
+```

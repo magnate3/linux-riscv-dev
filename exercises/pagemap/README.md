@@ -5,7 +5,15 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 [root@centos7 programming]# 
 ```
 
+# test1 
+```
+addr1 = 0x2c3b0010, 0x1fa10010
+[root@centos7 pagemap]# gcc test1.c -o test1
+[root@centos7 pagemap]# ./test1
+pid = 108147, virtual addr = 400c54 , physical addr = 9d760c54
+pid = 108148, virtual addr = 400c54 , physical addr = 9d760c54
 
+```
 
 # test2
 ```
@@ -35,4 +43,23 @@ success alloc on local, vaddress: 0x8c2a0000.
 page:0x81000000205feff0
 
 the physic address alloc local: 0x205feff04000 
+```
+
+
+# test3
+
+```
+[root@centos7 pagemap]# ./test3 
+addr1 = 0x2c3b0010
+phyaddr 0x205e1fa10010
+addr1 = 0x2c3b0010, 0x1fa10010
+```
+
+# test4
+
+```
+[root@centos7 pagemap]# ./test4
+Argument number is not correct!
+ pagemap PID VIRTUAL_ADDRESS
+[root@centos7 pagemap]# 
 ```

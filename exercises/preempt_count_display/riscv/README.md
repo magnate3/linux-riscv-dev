@@ -12,3 +12,7 @@ root@Ubuntu-riscv64:~#
 ```
 make  -C ~/linux-5.15.24-rt/linux-5.15.24  M=$(pwd) ARCH=riscv CROSS_COMPILE=riscv64-linux-gnu- -j64 modules
 ```
+
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/preempt_count_display/riscv/rt0.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/preempt_count_display/riscv/rt.png)

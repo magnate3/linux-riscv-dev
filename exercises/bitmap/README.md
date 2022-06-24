@@ -1,4 +1,5 @@
 
+```
 [root@centos7 bitmap]# dmesg | tail -n 16
 [683642.042893] bit 0 val 1 
 [683642.045506] bit 1 val 0 
@@ -16,3 +17,4 @@
 [683642.076831] bit 5 val 0 
 [683642.079439] bit 6 val 0 
 [683642.082047] bit 7 val 0 
+```

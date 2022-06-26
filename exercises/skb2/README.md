@@ -129,6 +129,8 @@ struct sk_buff *skb_copy(const struct sk_buff *skb, gfp_t gfp_mask)
  537 }
 ```
 
-# ```skb_copy_and_csum_dev
+# skb_copy_and_csum_dev
+skb_copy_and_csum_dev 对frag 是单独处理的
+skb_copy会把非线性skb 转换为 线性skb
 
 # skb_copy_to_linear_data_offset

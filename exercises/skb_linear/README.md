@@ -1,16 +1,210 @@
 
 # ping 10.15.17.201 -s 6400 -c 1
+***skb_copy默认会对新的skb进行skb_linearize***
 ```
-[865110.334156] ****************** skb_linearize test begin *********************
-[865110.341348] is nonlinear
-[865110.341350] sk_buff: len:6428  skb->data_len:6400  truesize:16000 head:D9DA0E80  data:D9DA0F10 tail:172 end:512
-[865110.343959] fragment fp->size 3221553152 
-[865110.354087] ping is nonlinear
-[865110.358166] after skb_copy , print skb2
-[865110.365114] is linear
-[865110.365116] sk_buff: len:6428  skb->data_len:0  truesize:8448 head:13E38000  data:13E38090 tail:6572 end:7808
-[865110.367466] after skb_linearize, print skb
-[865110.381586] is linear
-[865110.381588] sk_buff: len:6428  skb->data_len:0  truesize:23296 head:13E3A000  data:13E3A090 tail:6572 end:7808
-[865110.383938] ****************** skb_linearize test end *********************
+[886879.545442] ****************** skb_linearize test begin *********************
+[886879.552637] is nonlinear
+[886879.552639] sk_buff: len:6428  skb->data_len:6400  truesize:16000 head:D9FB1580  data:D9FB1610 tail:172 end:512
+[886879.555248] fragment fp->size 3221553152 , 1472
+[886879.565376] frag list 0
+[886879.569972] frag list 1
+[886879.572498] frag list 2
+[886879.575020] frag list 3
+[886879.577542] ping is nonlinear
+[886879.580071] after skb_copy , print skb2
+[886879.587015] is linear
+[886879.587016] sk_buff: len:6428  skb->data_len:0  truesize:8448 head:13E3A000  data:13E3A090 tail:6572 end:7808
+[886879.589369] after skb_linearize, print skb
+[886879.603488] is linear
+[886879.603490] sk_buff: len:6428  skb->data_len:0  truesize:23296 head:13E38000  data:13E38090 tail:6572 end:7808
+[886879.605837] ****************** skb_linearize test end *********************
+```
+## frag_list & nr_frags
+```
+void skb_release_data(struct sk_buff *skb)
+{
+    /* 查看skb是否被clone？skb_shinfo的dataref是否为0？
+     * 如果是，那么就释放skb非线性区域和线性区域。 */
+    if (!skb->cloned ||
+     !atomic_sub_return(skb->nohdr ? (1 << SKB_DATAREF_SHIFT) + 1 : 1,
+             &skb_shinfo(skb)->dataref)) {
+        
+        /* 释放page frags区 */
+        if (skb_shinfo(skb)->nr_frags) {
+            int i;
+            for (i = 0; i < skb_shinfo(skb)->nr_frags; i++)
+                put_page(skb_shinfo(skb)->frags[i].page);
+        }
+ 
+        /* 释放frag_list区 */
+        if (skb_shinfo(skb)->frag_list)
+            skb_drop_fraglist(skb);
+ 
+        /* 释放线性区域 */
+        kfree(skb->head);
+    }
+}
+
+```
+
+# skb_linearize
+***skb_linearize对skb进行linearize是通过skb_copy_bits 实现的****
+```
+//分配新的skb->data，将旧的skb->data、skb_shinfo(skb)->frags、skb_shinfo(skb)->frag_list中的内容拷贝到新skb->data的连续内存空间中，释放frags或frag_list
+//其中frags用于支持分散聚集IO，frags_list用于支持数据分片
+1.1 int __skb_linearize(struct sk_buff *skb, int gfp_mask)
+{
+	unsigned int size;
+	u8 *data;
+	long offset;
+	struct skb_shared_info *ninfo;
+	int headerlen = skb->data - skb->head;
+	int expand = (skb->tail + skb->data_len) - skb->end;
+	//如果此skb被共享
+	if (skb_shared(skb))
+		BUG();//产生BUG oops
+ 
+	//还需要的内存大小
+	if (expand <= 0)
+		expand = 0;
+	//新申请的skb的大小
+	size = skb->end - skb->head + expand;
+	//将size对齐到SMP_CACHE_BYTES
+	size = SKB_DATA_ALIGN(size);
+	//分配物理上联系的内存
+	data = kmalloc(size + sizeof(struct skb_shared_info), gfp_mask);
+	if (!data)
+		return -ENOMEM;
+	//拷贝
+	if (skb_copy_bits(skb, -headerlen, data, headerlen + skb->len))
+		BUG();
+ 
+	//初始化skb的skb_shared_info结构
+	ninfo = (struct skb_shared_info*)(data + size);
+	atomic_set(&ninfo->dataref, 1);
+	ninfo->tso_size = skb_shinfo(skb)->tso_size;
+	ninfo->tso_segs = skb_shinfo(skb)->tso_segs;
+	//fraglist为NULL
+	ninfo->nr_frags = 0;
+	ninfo->frag_list = NULL;
+ 
+	offset = data - skb->head;
+ 
+	//释放之前skb的data
+	skb_release_data(skb);
+ 
+	//将skb指向新的data
+	skb->head = data;
+	skb->end  = data + size;
+	//重新初始化新skb的各个报头指针
+	skb->h.raw   += offset;
+	skb->nh.raw  += offset;
+	skb->mac.raw += offset;
+	skb->tail    += offset;
+	skb->data    += offset;
+ 
+	skb->cloned    = 0;
+ 
+	skb->tail     += skb->data_len;
+	skb->data_len  = 0;
+	return 0;
+}
+
+```
+
+# skb_copy_bits
+***skb_copy_bits 会对新的skb进行linearize****
+```
+int skb_copy_bits(const struct sk_buff *skb, int offset, void *to, int len)
+{
+    int start = skb_headlen(skb);
+    struct sk_buff *frag_iter;
+    int i, copy;
+ 
+    /* 如果offset > skb->len - len，说明offset位置错误 */
+    if (offset > (int)skb->len - len)
+        goto fault;
+ 
+    /* Copy header. */
+ 
+    /* 如果copy > 0，说明拷贝的数据有一部分在skb header中，否则拷贝的数据全部在非线性空间 */
+    if ((copy = start - offset) > 0) {
+        /* 如果copy > len，那么要拷贝的数据全部在skb header中了，此时把copy = len，否则copy <= len，所以只剩下了两种可能 copy == len, copy < len */
+        if (copy > len)
+            copy = len;
+ 
+        /* 调用memcpy把skb header中offset开始的copy字节拷贝到to指向的内存区域 */
+        skb_copy_from_linear_data_offset(skb, offset, to, copy);
+ 
+        /* 如果copy == len，那么拷贝已经完成了，返回，否则len减去copy的长度，因为这部分已经被拷贝到to里面了 */
+        if ((len -= copy) == 0)
+            return 0;
+ 
+        /* 继续拷贝剩余的部分，此时offset从非线性区开始算起，目的地址to也顺势偏移copy个字节 */
+        offset += copy;
+        to     += copy;
+    }
+ 
+    /* 开始遍历skb frag数组 */
+    for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+        int end;
+ 
+        WARN_ON(start > offset + len);
+ 
+        /* end为之前计算的长度加上当前frag的大小 */
+        end = start + skb_shinfo(skb)->frags[i].size;
+        /* 如果copy > 0，说明还有数据等待拷贝 */
+        if ((copy = end - offset) > 0) {
+            u8 *vaddr;
+ 
+            /* 如果copy > len，那么要拷贝的数据全部在当前frag中了，此时把copy = len，否则copy <= len，所以只剩下了两种可能 copy == len, copy < len */
+            if (copy > len)
+                copy = len;
+ 
+            /* kmap_skb_frag/kunmap_skb_frag调用kmap_atomic/kunmap_atomic为可能的高端内存地址建立虚拟地址的临时映射 */
+            vaddr = kmap_skb_frag(&skb_shinfo(skb)->frags[i]);
+            memcpy(to,
+                   vaddr + skb_shinfo(skb)->frags[i].page_offset+
+                   offset - start, copy);
+            kunmap_skb_frag(vaddr);
+ 
+            /* 如果copy == len，那么拷贝已经完成了，返回，否则len减去copy的长度，因为这部分已经被拷贝到to里面了 */
+            if ((len -= copy) == 0)
+                return 0;
+            /* 继续增加offset, to的位置 */
+            offset += copy;
+            to     += copy;
+        }
+        start = end;
+    }
+ 
+    /* 开始遍历frag list链表 */
+    skb_walk_frags(skb, frag_iter) {
+        int end;
+ 
+        WARN_ON(start > offset + len);
+ 
+        end = start + frag_iter->len;
+        if ((copy = end - offset) > 0) {
+            if (copy > len)
+                copy = len;
+            /* 递归调用skb_copy_bits，拷贝copy大小的字节到to指向的内存区域 */
+            if (skb_copy_bits(frag_iter, offset - start, to, copy))
+                goto fault;
+            if ((len -= copy) == 0)
+                return 0;
+            offset += copy;
+            to     += copy;
+        }
+        start = end;
+    }
+ 
+    /* 此时len应该为0，否则返回-EFAULT */
+    if (!len)
+        return 0;
+ 
+fault:
+    return -EFAULT;
+}
+EXPORT_SYMBOL(skb_copy_bits);
 ```

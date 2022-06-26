@@ -112,6 +112,7 @@ void skb_release_data(struct sk_buff *skb)
 
 ```
 
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/skb_linear/skb_line.png)
 # skb_copy_bits
 ***skb_copy_bits 会对新的skb进行linearize****
 ```
@@ -208,3 +209,4 @@ fault:
 }
 EXPORT_SYMBOL(skb_copy_bits);
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/skb_linear/skb_cp.png)

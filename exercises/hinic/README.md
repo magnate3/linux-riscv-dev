@@ -44,6 +44,9 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 -bash: echo: write error: No such device
 [root@centos7 hinic]# echo -n  '0000:05:00.0' >  /sys/bus/pci/drivers/hinic/unbind
 -bash: echo: write error: No such device
+```
+## should  give product id and vendor id
+```
 [root@centos7 hinic]# lspci -n |grep '05:00.0'
 05:00.0 0200: 19e5:0200 (rev 45)
 [root@centos7 hinic]# echo 0x19e5 0x0200 > /sys/bus/pci/drivers/hinic/new_id 

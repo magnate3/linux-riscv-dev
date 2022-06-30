@@ -6,7 +6,7 @@
 Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aarch64 aarch64 aarch64 GNU/Linux
 [root@centos7 hinic]# 
 ```
-[!images](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/kernel.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/kernel.png)
 
 # pci bind
 ```
@@ -88,4 +88,4 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 ```
 
 ## ping
-[!images](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/ping.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/ping.png)

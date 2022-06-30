@@ -1,3 +1,13 @@
+
+# hinic module
+```
+[1237411.707807] hinic 0000:05:00.0 enp5s0: set rx mode work
+[root@centos7 hinic]# uname -a
+Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aarch64 aarch64 aarch64 GNU/Linux
+[root@centos7 hinic]# 
+```
+[!images](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/kernel.png)
+
 # pci bind
 ```
 [root@centos7 hinic]# insmod  hinic.ko
@@ -76,3 +86,6 @@
 [root@centos7 hinic]# echo -n  '0000:05:00.0' >  /sys/bus/pci/drivers/hinic/bind
 [root@centos7 hinic]# 
 ```
+
+## ping
+[!images](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/ping.png)

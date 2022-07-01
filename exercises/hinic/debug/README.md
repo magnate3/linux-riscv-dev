@@ -89,6 +89,26 @@ int hinic_msix_attr_set(struct hinic_hwif *hwif, u16 msix_index,
         return 0;
 }
 ```
+# ceqe
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/ceqe.png)
+
+# print_hwif_attr
+```
+static void print_hwif_attr(struct hinic_hwif *hwif)
+{
+        u32 addr, attr0, attr1;
+
+        addr   = HINIC_CSR_FUNC_ATTR0_ADDR;
+        attr0  = hinic_hwif_read_reg(hwif, addr);
+
+        addr   = HINIC_CSR_FUNC_ATTR1_ADDR;
+        attr1  = hinic_hwif_read_reg(hwif, addr);
+        pr_info("in hinic driver attr0 %8x, and attr1 %8x \n",  attr0, attr1);
+
+}
+```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/hinic_read_attr.png)
 
 # e1000_probe
 

@@ -97,6 +97,7 @@ Network devices using kernel driver
 0000:7d:00.2 'HNS GE/10GE/25GE RDMA Network Controller a222' if=enp125s0f2 drv=hns3 unused=hns_roce_hw_v2,igb_uio 
 0000:7d:00.3 'HNS GE/10GE/25GE Network Controller a221' if=enp125s0f3 drv=hns3 unused=igb_uio 
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/igb-uio/pics/insmod.png)
 
 ## ubind
 ```
@@ -106,7 +107,7 @@ Network devices using kernel driver
 
 # pci_dev->mem_resource
 
-
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/igb-uio/pics/res_to_hw.png)
 
 ```
 struct rte_mem_resource mem_resource[PCI_MAX_RESOURCE];

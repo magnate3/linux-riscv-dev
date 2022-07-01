@@ -1,6 +1,6 @@
 
 # print_hwif_attr
-![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/igb-uio/pics/hinic_read_attr.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/igb-uio/pics/igb_read_attr)
 ```
 #define rte_bswap32(x) __builtin_bswap32(x)
 #define rte_be_to_cpu_32(x) rte_bswap32(x)

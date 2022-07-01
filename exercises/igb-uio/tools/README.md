@@ -25,6 +25,21 @@
 
 - **list_sriov-vf.sh**: list VF:s of SR-IOV NIC
 
+# pcimem
+```
+[root@centos7 user]# ./pcimem r 05:00.0 
+
+Usage:  ./pcimem { op } { bfd } { bar } { offset } { width } [ data ]
+        op      : operation type: [r]ead, [w]rite 
+        bdf     : bdf of device to act on, e.g. 02:00.0 
+        bar     : pci bar/memory region to act on
+        offset  : offset into pci memory region
+        width   : number of bytes
+        data    : data to be written
+
+[root@centos7 user]# ./pcimem r 05:00.0 0 0 4 0
+[root@centos7 user]# 
+```
 
 # references
 

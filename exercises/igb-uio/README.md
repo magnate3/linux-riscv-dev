@@ -88,37 +88,26 @@ Cannot get driver information: No such device
 [root@centos7 igb-uio]# ./dpdk-devbind.py -s
 
 Network devices using DPDK-compatible driver
-============================================
 0000:05:00.0 'Hi1822 Family (2*100GE) 0200' drv=igb_uio unused=hinic
 
 Network devices using kernel driver
-===================================
 0000:06:00.0 'Hi1822 Family (2*100GE) 0200' if=enp6s0 drv=hinic unused=igb_uio 
 0000:7d:00.0 'HNS GE/10GE/25GE RDMA Network Controller a222' if=enp125s0f0 drv=hns3 unused=hns_roce_hw_v2,igb_uio *Active*
 0000:7d:00.1 'HNS GE/10GE/25GE Network Controller a221' if=enp125s0f1 drv=hns3 unused=igb_uio 
 0000:7d:00.2 'HNS GE/10GE/25GE RDMA Network Controller a222' if=enp125s0f2 drv=hns3 unused=hns_roce_hw_v2,igb_uio 
 0000:7d:00.3 'HNS GE/10GE/25GE Network Controller a221' if=enp125s0f3 drv=hns3 unused=igb_uio 
+```
 
-No 'Baseband' devices detected
-==============================
-
-No 'Crypto' devices detected
-============================
-
-No 'Eventdev' devices detected
-==============================
-
-No 'Mempool' devices detected
-=============================
-
-No 'Compress' devices detected
-==============================
-
-No 'Misc (rawdev)' devices detected
-===================================
+## ubind
+```
+[root@centos7 igb-uio]# ./dpdk-devbind.py -u  0000:05:00.0
 [root@centos7 igb-uio]# 
 ```
+
 # pci_dev->mem_resource
+
+
+
 ```
 struct rte_mem_resource mem_resource[PCI_MAX_RESOURCE];
 ```

@@ -91,4 +91,61 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 ```
 
 ## ping
+```
+[root@centos7 hinic]# echo 0x19e5 0x0200 > /sys/bus/pci/drivers/hinic/new_id 
+[root@centos7 hinic]# ip a add 192.168.10.251/24 dev enp6s0
+[root@centos7 hinic]# 
+```
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/ping.png)
+
+### ceqe
+```
+static void ceq_irq_handler(struct hinic_eq *eq)
+{
+        struct hinic_ceqs *ceqs = ceq_to_ceqs(eq);
+        u32 ceqe;
+        int i;
+
+        for (i = 0; i < eq->q_len; i++) {
+                ceqe = *(GET_CURR_CEQ_ELEM(eq));
+
+                /* Data in HW is in Big endian Format */
+                ceqe = be32_to_cpu(ceqe);
+                pr_info("***************** ceqe val is %8x ", ceqe);
+                /* HW toggles the wrapped bit, when it adds eq element event */
+                if (HINIC_EQ_ELEM_DESC_GET(ceqe, WRAPPED) == eq->wrapped)
+                        break;
+
+                ceq_event_handler(ceqs, ceqe);
+
+                eq->cons_idx++;
+
+                if (eq->cons_idx == eq->q_len) {
+                        eq->cons_idx = 0;
+                        eq->wrapped = !eq->wrapped;
+                }
+        }
+}
+```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/hinic/pic/ceqe.png)
+
+
+```
+static irqreturn_t rx_irq(int irq, void *data)
+{
+        struct hinic_rxq *rxq = (struct hinic_rxq *)data;
+        struct hinic_rq *rq = rxq->rq;
+        struct hinic_dev *nic_dev;
+
+        /* Disable the interrupt until napi will be completed */
+        disable_irq_nosync(rq->irq);
+
+        nic_dev = netdev_priv(rxq->netdev);
+        hinic_hwdev_msix_cnt_set(nic_dev->hwdev, rq->msix_entry);
+
+        napi_schedule(&rxq->napi);
+        return IRQ_HANDLED;
+}
+```
+
+ 

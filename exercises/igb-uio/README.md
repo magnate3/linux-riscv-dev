@@ -118,4 +118,23 @@ No 'Misc (rawdev)' devices detected
 ===================================
 [root@centos7 igb-uio]# 
 ```
+# pci_dev->mem_resource
+```
+struct rte_mem_resource mem_resource[PCI_MAX_RESOURCE];
+```
+
+```
+eth_em_dev_init(struct rte_eth_dev *eth_dev)
+{
+        hw->hw_addr = (void *)pci_dev->mem_resource[0].addr; //////////////
+        hw->device_id = pci_dev->id.device_id;
+        adapter->stopped = 0;
+
+        /* For ICH8 support we'll need to map the flash memory BAR */
+        if (eth_em_dev_is_ich8(hw))
+                hw->flash_address = (void *)pci_dev->mem_resource[1].addr;//////////////
+
+```
+
+
 

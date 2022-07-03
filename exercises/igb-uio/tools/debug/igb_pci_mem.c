@@ -12,7 +12,12 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <linux/limits.h>
-
+#define UIO_DEV "/dev/uio0"
+#define UIO_ADDR "/sys/class/uio/uio0/maps/map0/addr"
+#define UIO_SIZE "/sys/class/uio/uio0/maps/map0/size"
+/* HW interface registers */
+#define HINIC_CSR_FUNC_ATTR0_ADDR                       0x0
+#define HINIC_CSR_FUNC_ATTR1_ADDR                       0x4
 /** IO resource type: */
 #define IORESOURCE_IO         0x00000100
 #define IORESOURCE_MEM        0x00000200
@@ -258,98 +263,50 @@ static inline uint32_t hinic_hwif_read_reg(void *  reg)
 {
         return  rte_be_to_cpu_32(rte_read32(reg));
 }
+static char uio_addr_buf[64]={0};
+static char uio_size_buf[64]={0};
 int main(int argc, char *argv[]) {
-        struct pci_device dev = { 0 };
-        int op = 'w';
-        int bar, width, offset, data;
-        uint8_t *addr;
-        int ret;
+    int uio_fd,addr_fd,size_fd;
+    uint64_t uio_size;
+    uint64_t *uio_addr;
+    void *access_address;
+    void *addr0, *addr1;
+    int n=0;
+    uio_fd = open(UIO_DEV,O_RDWR);
+    addr_fd = open(UIO_ADDR,O_RDONLY);
+    size_fd = open(UIO_SIZE,O_RDONLY);
+    u_int32_t status = 0;
+    if(addr_fd < 0 || size_fd < 0 || uio_fd < 0){
+        fprintf(stderr,"mmap:%d\n",errno);
+        exit(-1);
+    }
 
-        /* Parse options */
-        if(argc < 6) {
-                print_usage(argc, argv);
-                exit(1);
-        }
+    n=read(addr_fd,uio_addr_buf,sizeof(uio_addr_buf));
+    if(n<0){
+        fprintf(stderr, "%d\n", errno);
+        exit(-1);
+    }
+    n=read(size_fd,uio_size_buf,sizeof(uio_size_buf));
+    if(n<0){
+        fprintf(stderr, "%d\n", errno);
+        exit(-1);
+    }
+    uio_addr = (uint64_t*)strtoull(uio_addr_buf,NULL,16);
+    uio_size = (uint64_t)strtoull(uio_size_buf,NULL,16);
 
-        if (!strcmp(argv[1], "r") || !strcmp(argv[1], "read"))
-                op = 'r';
-        else if (!strcmp(argv[1], "w") || !strcmp(argv[1], "write")) {
-                op = 'w';
-                if (argc < 7) {
-                        print_usage(argc, argv);
-                        exit(1);
-                }
-        } else {
-                fprintf(stderr, "Illegal op type '%c'\n", argv[1]);
-                exit(1);
-        }
-
-        ret = sscanf(argv[2], "%x:%x.%x",
-                     &dev.loc.bus, &dev.loc.devid, &dev.loc.function);
-        if (ret != 3) {
-                fprintf(stderr, "Illegal pci address: %s\n", argv[2]);
-                exit(1);
-        }
-
-        bar = strtol(argv[3], NULL, 0);
-        offset = strtol(argv[4], NULL, 0);
-        width = strtol(argv[5], NULL, 0);
-        if (op == 'w') {
-                data = strtol(argv[6], NULL, 0);
-        }
-        /* mmap */
-        ret = pci_parse_sysfs_resource(&dev);
-        if (ret)
-                exit(1);
-
-        ret = pci_resource_mmap(&dev, bar);
-        if (ret)
-                exit(1);
-
-        printf("\n");
-
-        /* read/write */
-        addr = (uint8_t *)dev.mem_resource[bar].addr + offset;
-
-        if (op == 'w') {
-                switch (width) {
-                case 1:
-                        *((uint8_t*)addr) = data;
-                        break;
-                case 2:
-                        *((uint16_t*)addr) = data;
-                        break;
-                case 4:
-                        *((uint32_t*)addr) = data;
-                        break;
-                case 8:
-                        *((uint64_t*)addr) = data;
-                        break;
-                default:
-                        fprintf(stderr, "Illegal width\n");
-                        exit(1);
-                }
-        }
-
-        switch (width) {
-        case 1:
-                printf("@0x%08x = 0x%02x\n", offset, *((uint8_t*)addr));
-                break;
-        case 2:
-                printf("@0x%08x = 0x%04x\n", offset, *((uint16_t*)addr));
-                break;
-        case 4:
-                //printf("@0x%08x = 0x%08x\n", offset, *((uint32_t*)addr));
-                printf("@0x%08x = 0x%08x\n", offset, hinic_hwif_read_reg(addr));
-                break;
-        case 8:
-                printf("@0x%08x = 0x%016x\n", offset, *((uint64_t*)addr));
-                break;
-        default:
-                fprintf(stderr, "Illegal width\n");
-                exit(1);
-        }
-
+    access_address = mmap(NULL,uio_size,PROT_READ | PROT_WRITE,
+                            MAP_SHARED,uio_fd,0);
+    if(access_address == (void*)-1){
+        fprintf(stderr,"mmap:%d\n",errno);
+        exit(-1);
+    }
+    addr0 = access_address + HINIC_CSR_FUNC_ATTR0_ADDR;
+    addr1 = access_address + HINIC_CSR_FUNC_ATTR1_ADDR;
+    printf("The device address %p (lenth %016xl)\n"
+        "can be accessed over\n"
+        "logical address %p\n",uio_addr,uio_size,access_address);
+        printf("@0x%08x = 0x%08x\n",HINIC_CSR_FUNC_ATTR0_ADDR,  hinic_hwif_read_reg(addr0));
+        printf("@0x%08x = 0x%08x\n",HINIC_CSR_FUNC_ATTR1_ADDR,  hinic_hwif_read_reg(addr1));
         return 0;
 }
 

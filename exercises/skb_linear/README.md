@@ -210,3 +210,70 @@ fault:
 EXPORT_SYMBOL(skb_copy_bits);
 ```
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/skb_linear/skb_cp.png)
+
+
+# Linux 网卡如何支持TSO GSO
+ 对TSO的简单理解就是：
+   比如：我们要用汽车把3000本书送到另一个城市，每趟车只能装下1000本书，
+   那么我们就要书分成3次来发。如何把3000本书分成3份的事情是我们做的，汽车司机只负责运输。
+   TSO的概念就是：我们把3000本书一起给司机，由他去负责拆分的事情，这样我们就有更多的时间处理其他事情。
+   对应到计算机系统中，“我们”就是CPU，“司机”就是网卡。
+
+  在网络系统中，发送tcp数据之前，CPU需要根据MTU（一般为1500）来将数据放到多个包中发送，对每个数据包都要添加ip头，tcp头，分别计算IP校验和，TCP校验和。
+  如果有了支持TSO的网卡，CPU可以直接将要发送的大数据发送到网卡上，由网卡硬件去负责分片和计算校验和。
+ 2. TSO GSO网卡驱动与系统的接口：
+
+ 
+
+步骤1.       设置支持TSO support flag， 同时需要支持SG
+
+     netdev->features |= NETIF_F_TSO;
+
+     netdev->features |= NETIF_F_SG | NETIF_F_IP_CSUM;
+
+步骤2       设置GSO最大值
+
+netdev ->gso_max_size = 8*1024;  //网卡支持的gso size，通知系统每个tcp数据块的最大长度。
+
+                                                    //TCP的窗口大小最大为64K，
+
+步骤3：  发送函数需要处理skb数据。
+
+ 支持tso的skb数据存储格式如下：
+
+第一块数据存储在skb的data->tail之间，其他分块存储在skb_shinfo(skb)->frags中。
+
+代码示例如下：
+```
+
+int xmit_support_sg_tso(struct sk_buff *skb)
+{
+    size = (skb->tail - skb->data);  // the first fragment is stored in the skb.
+    for (f = 0; f < skb_shinfo(skb)->nr_frags; f++)    {
+            size += skb_shinfo(skb)->frags[f].size; ////other frags .
+    }
+
+    memcpy(dbg_send_queue, skb->data,   skb->tail - skb->data);   //real first frag
+    for (f = 0; f < skb_shinfo(skb)->nr_frags; f++)  //process frags.
+    {
+            struct skb_frag_struct *frag;
+            int f_offset = 0;
+            int f_len = 0;
+            char *addr;
+            
+            frag = &skb_shinfo(skb)->frags[f];
+            f_len = frag->size;
+            f_offset = frag->page_offset;
+
+            addr = (char *)page_address(frag->page) ;  //change page addr to virt addr.
+            
+           memcpy(dbg_send_queue, addr + f_offset,         f_len);             
+           offset += f_len;
+    }
+}
+```
+## 驱动对tso gso的支持完成
+
+1.支持tso需要同时声明支持scattle / gather, 因为skb的分片数据不是存储在一个连续的地址上。当然：网卡硬件可以不支持scattle/gather这种DMA方式。
+2. 需要同时支持硬件校验和。
+   

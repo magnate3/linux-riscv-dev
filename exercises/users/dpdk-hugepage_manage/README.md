@@ -30,10 +30,7 @@ static inline void rte_pause(void)
 
 #endif /* _RTE_PAUSE_ARM64_H_ */
 ```
-
-
-
-#mkdir objs
+#  mkdir objs
 
 ```
 [root@centos7 dpdk-hugepage_manage]# ls objs/

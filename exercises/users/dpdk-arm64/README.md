@@ -148,3 +148,4 @@ Missing separate debuginfos, use: debuginfo-install glibc-2.17-325.el7_9.aarch64
 (gdb) 
 
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/dpdk-arm64/rte_pause.png)

@@ -1,6 +1,8 @@
 
 # test.c
 
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/huagepage/pic.png)
+
 #  hugepage-addr 
 ```
 [root@centos7 hugepage-addr]# touch /mnt/huge

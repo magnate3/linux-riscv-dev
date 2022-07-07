@@ -79,3 +79,5 @@ heap_3 total_size:8589933568 alloc_counter:0
 Free_list_11:[elem0-size:536870848]->[elem1-size:536870848]->[elem2-size:536870848]->[elem3-size:536870848]->[elem4-size:536870848]->[elem5-size:536870848]->[elem6-size:536870848]->[elem7-size:536870848]->[elem8-size:536870848]->[elem9-size:536870848]->[elem10-size:536870848]->[elem11-size:536870848]->[elem12-size:536870848]->[elem13-size:536870848]->[elem14-size:536870848]->[elem15-size:536870848]
 [root@centos7 dpdk-hugepage_manage]# 
 ```
+
+[dpdk大页内存实现](https://blog.csdn.net/wangquan1992/article/details/103988667)

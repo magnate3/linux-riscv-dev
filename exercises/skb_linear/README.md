@@ -115,6 +115,7 @@ void skb_release_data(struct sk_buff *skb)
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/skb_linear/skb_line.png)
 # skb_copy_bits
 ***skb_copy_bits 会对新的skb进行linearize****
+
 ```
 int skb_copy_bits(const struct sk_buff *skb, int offset, void *to, int len)
 {
@@ -210,6 +211,16 @@ fault:
 EXPORT_SYMBOL(skb_copy_bits);
 ```
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/skb_linear/skb_cp.png)
+
+## 注意区别frags和frag_list，     
+//前者是将多的数据放到单独分配的页面中，sk_buff只有一个。而后者则是连接多个sk_buff
+```
+/* Copy paged appendix. Hmm... why does this look so complicated? */
+	for (i = 0; i < skb_shinfo(skb)->nr_frags; i++) {
+		int end;
+		skb_frag_t *frag = &skb_shinfo(skb)->frags[i];
+		struct page *page = skb_frag_page(frag);
+```
 
 
 # Linux 网卡如何支持TSO GSO

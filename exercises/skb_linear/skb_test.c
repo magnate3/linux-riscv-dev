@@ -43,6 +43,7 @@
 
 void print_skb(struct sk_buff* skb)
 {
+    int index =0;
     if (skb_is_nonlinear(skb)) {
         printk("is nonlinear");
     } else {
@@ -57,7 +58,13 @@ void print_skb(struct sk_buff* skb)
    {
       skb_frag_t *frag = &sp->frags[i];
       byte_count = skb_frag_size(frag);
-      pr_err("fragment fp->size %u ", be32_to_cpu(byte_count));
+      pr_err("fragment fp->size %u , %u", be32_to_cpu(byte_count), byte_count);
+   }
+   struct sk_buff *list;
+   index = 0;
+   for (list = skb_shinfo(skb)->frag_list; list; list = list->next)
+   {
+      pr_err("frag list %d", index++);
    }
 }
 
@@ -112,7 +119,12 @@ unsigned int test_hookfn(unsigned int hooknum,
          printk("after skb_linearize, print skb\n");
          print_skb(skb);
            }
-         printk("****************** skb_linearize test end *********************\n");
+        struct iphdr *iph = ip_hdr(skb);
+        if ( (iph->frag_off & htons(IP_MF)) || (iph->frag_off & IP_MF) )
+        {
+            printk("****************** have more fragment *********************\n");
+        }
+        printk("****************** skb_linearize test end *********************\n");
         kfree_skb(skb2);
     }
 #endif
@@ -122,6 +134,8 @@ unsigned int test_hookfn(unsigned int hooknum,
         //return NF_ACCEPT;
     }
     else {
+        //iph = ip_hdr(skb);
+        //tcph = (struct tcphdr *)(skb_network_header(skb) + ip_hdrlen(skb))
         struct iphdr *iph = ip_hdr(skb);
         print_skb(skb);
         if(iph->protocol == IPPROTO_TCP) {

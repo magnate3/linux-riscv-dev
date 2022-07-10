@@ -27,5 +27,21 @@ uio_open -> igbuio_pci_open -> igbuio_pci_enable_interrupts
 lspci -v可以查看设备支持的capability, 如果有MSI或者MSI-x或者message signal interrupt的描述，并且这些描述后面都有一个enable的flag, 
 “+”表示enable，"-"表示disable。
 
+##  igb uio interrupt
+```
+igb-uio:
+rte_intr_disable->uio_intr_disable->igbuio_pci_irqcontrol->pci_msi_mask_irq
+rte_intr_enable->uio_intr_enable->igbuio_pci_irqcontrol->pci_msi_unmask_irq
+
+igbuio_pci_open->igbuio_pci_enable_interrupts->pci_alloc_irq_vectors/request_irq
+igbuio_pci_release->igbuio_pci_disable_interrupts->free_irq->pci_free_irq_vectors
+
+vfio-pci:
+rte_intr_disable->vfio_disable_msix->vfio_pci_ioctl->vfio_msi_disable->pci_free_irq_vectors
+rte_intr_enable->vfio_enable_msix->vfio_pci_ioctl->vfio_msi_enable->pci_alloc_irq_vectors/vfio_msi_set_vector_signal->request_irq
+```
+
+# references
+
 [DPDK 中断处理流程](https://www.jianshu.com/p/9eb47110cf91)
 [PCIe学习笔记之MSI/MSI-x中断及代码分析](https://blog.csdn.net/yhb1047818384/article/details/106676560)

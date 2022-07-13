@@ -25,6 +25,8 @@
 [2353073.313273] MSI-X: 0x801f
 [2353073.318835] MSI-X: 0x801f
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/msi/pci-test/pic/b_en.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/msi/pci-test/pic/a_en.png)
 
 # pci_msi_set_enable
 

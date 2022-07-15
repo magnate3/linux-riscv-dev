@@ -165,6 +165,7 @@ vfio_gfd =  open("/dev/vfio/N", O_RDWR)
 vfio_fd = ioctl(vfio_gfd, VFIO_GROUP_GET_DEVICE_FD, pci_addr)
 
 *(3)* 对设备进行read/write/mmap等操作
+
   ioctl(vfio_fd, VFIO_DEVICE_GET_REGION_INFO, &region_info)
  
  

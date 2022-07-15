@@ -127,6 +127,29 @@ VFIO_PCI_CONFIG_REGION_INDEX
 [root@centos7 kernel]# 
 ```
 
+# IOMMU
+
+```
+ubuntu@ubuntux86:/boot$ uname -a
+Linux ubuntux86 5.13.0-39-generic #44~20.04.1-Ubuntu SMP Thu Mar 24 16:43:35 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+ubuntu@ubuntux86:/boot$ grep CONFIG_DMAR_DEFAULT_ON  config-5.13.0-39-generic
+ubuntu@ubuntux86:/boot$ dmesg | grep -e DMAR -e IOMMU
+[    0.005215] ACPI: DMAR 0x0000000066683000 000088 (v02 INTEL  Dell Inc 00000002      01000013)
+[    0.005239] ACPI: Reserving DMAR table memory at [mem 0x66683000-0x66683087]
+[    0.102389] DMAR: Host address width 39
+[    0.102390] DMAR: DRHD base: 0x000000fed90000 flags: 0x0
+[    0.102394] DMAR: dmar0: reg_base_addr fed90000 ver 1:0 cap 1c0000c40660462 ecap 19e2ff0505e
+[    0.102395] DMAR: DRHD base: 0x000000fed91000 flags: 0x1
+[    0.102397] DMAR: dmar1: reg_base_addr fed91000 ver 1:0 cap d2008c40660462 ecap f050da
+[    0.102398] DMAR: RMRR base: 0x0000006a000000 end: 0x0000006e7fffff
+[    0.102400] DMAR-IR: IOAPIC id 2 under DRHD base  0xfed91000 IOMMU 1
+[    0.102400] DMAR-IR: HPET id 0 under DRHD base 0xfed91000
+[    0.102401] DMAR-IR: Queued invalidation will be enabled to support x2apic and Intr-remapping.
+[    0.103884] DMAR-IR: Enabled IRQ remapping in x2apic mode
+ubuntu@ubuntux86:/boot$ 
+```
+
+
 逻辑上来说，IOMMU group是IOMMU操作的最小对象。某些IOMMU硬件支持将若干IOMMU group组成更大的单元。VFIO据此做出container的概念，可容纳多个IOMMU group。打开/dev/vfio文件即新建一个空的container。在VFIO中，container是IOMMU操作的最小对象。
 
 要使用VFIO，需先将设备与原驱动拨离，并与VFIO绑定。
@@ -142,7 +165,9 @@ vfio_gfd =  open("/dev/vfio/N", O_RDWR)
 vfio_fd = ioctl(vfio_gfd, VFIO_GROUP_GET_DEVICE_FD, pci_addr)
 
 *(3)* 对设备进行read/write/mmap等操作
-
+  ioctl(vfio_fd, VFIO_DEVICE_GET_REGION_INFO, &region_info)
+ 
+ 
 
 ***用VFIO配置IOMMU的步骤***
 

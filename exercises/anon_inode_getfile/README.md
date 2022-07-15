@@ -37,6 +37,8 @@ lrwx------ 1 root root 64 Jul 14 08:20 5 -> anon_inode:hiboma-anon
 [root@centos7 ~]# 
 
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_inode_getfile/fd.png)
+
 # ./ioctl2 
 ```
 [root@centos7 anon_inode_getfile]# ls
@@ -57,3 +59,4 @@ lrwx------ 1 root root 64 Jul 14 23:20 4 -> anon_inode:hiboma-anon
 lrwx------ 1 root root 64 Jul 14 23:20 5 -> anon_inode:hiboma-anon
 
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_inode_getfile/fd2.png)

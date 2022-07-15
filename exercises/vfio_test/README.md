@@ -118,3 +118,36 @@ VFIO_PCI_CONFIG_REGION_INDEX
 0x0000080000300000 0x0000080007afffff 0x000000000014220c
 0x0000000000000000 0x0000000000000000 0x0000000000000000
 ```
+
+# vfio
+
+```
+[root@centos7 kernel]# ls /dev/vfio/
+24  27  vfio
+[root@centos7 kernel]# 
+```
+
+逻辑上来说，IOMMU group是IOMMU操作的最小对象。某些IOMMU硬件支持将若干IOMMU group组成更大的单元。VFIO据此做出container的概念，可容纳多个IOMMU group。打开/dev/vfio文件即新建一个空的container。在VFIO中，container是IOMMU操作的最小对象。
+
+要使用VFIO，需先将设备与原驱动拨离，并与VFIO绑定。
+
+***用VFIO访问硬件的步骤***
+
+*(1)* 打开设备所在IOMMU group在/dev/vfio/N目录下的文件
+vfio_gfd =  open("/dev/vfio/N", O_RDWR)
+*(2)* 使用VFIO_GROUP_GET_DEVICE_FD得到表示设备的文件描述 (参数为设备名称，一个典型的PCI设备名形如0000:03.00.01)
+vfio_fd = ioctl(vfio_gfd, VFIO_GROUP_GET_DEVICE_FD, pci_addr)
+*(3)* 对设备进行read/write/mmap等操作
+
+***用VFIO配置IOMMU的步骤***
+
+*(1)* 打开/dev/vfio，得到container文件描述符
+ cfd =  open("/dev/vfio/vfio", O_RDWR)
+*(2)* 用VFIO_SET_IOMMU绑定一种IOMMU实现层
+ioctl(cfd, VFIO_SET_IOMMU, VFIO_TYPE1_IOMMU)
+*(3)*  打开/dev/vfio/N，得到IOMMU group文件描述符
+ vfio_gfd =  open("/dev/vfio/N", O_RDWR)
+*(4)*  用VFIO_GROUP_SET_CONTAINER将IOMMU group加入container
+ioctl(vfio_gfd, VFIO_GROUP_SET_CONTAINER, &cfd)
+*(5)* 用VFIO_IOMMU_MAP_DMA将此IOMMU group的DMA地址映射至进程虚拟地址空间
+ ioctl(cfd, VFIO_IOMMU_MAP_DMA, &dma_map)

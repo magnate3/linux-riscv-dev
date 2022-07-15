@@ -1,7 +1,7 @@
 /*
  * PCIe Configuration Space
  *
- * (C) 2019.10.24 BuddyZhang1 <buddy.zhang@aliyun.com>
+ * (C)  
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as

@@ -37,3 +37,23 @@ lrwx------ 1 root root 64 Jul 14 08:20 5 -> anon_inode:hiboma-anon
 [root@centos7 ~]# 
 
 ```
+# ./ioctl2 
+```
+[root@centos7 anon_inode_getfile]# ls
+anon_inode_getfile.c  ioctl  ioctl2.c  ioctl.c  Makefile
+[root@centos7 anon_inode_getfile]# gcc ioctl2.c  -o ioctl2
+[root@centos7 anon_inode_getfile]# ./ioctl2 
+version = 110
+fd = 4
+fd = 5
+total 0
+dr-x------ 2 root root  0 Jul 14 23:20 .
+dr-xr-xr-x 9 root root  0 Jul 14 23:20 ..
+lrwx------ 1 root root 64 Jul 14 23:20 0 -> /dev/pts/0
+lrwx------ 1 root root 64 Jul 14 23:20 1 -> /dev/pts/0
+lrwx------ 1 root root 64 Jul 14 23:20 2 -> /dev/pts/0
+l-wx------ 1 root root 64 Jul 14 23:20 3 -> /dev/hiboma
+lrwx------ 1 root root 64 Jul 14 23:20 4 -> anon_inode:hiboma-anon
+lrwx------ 1 root root 64 Jul 14 23:20 5 -> anon_inode:hiboma-anon
+
+```

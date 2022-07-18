@@ -36,6 +36,37 @@
 ```
 
 
+# iommu_domain_alloc
+
+```
+struct iommu_domain *iommu_domain_alloc(struct bus_type *bus)
+{
+    return __iommu_domain_alloc(bus, IOMMU_DOMAIN_UNMANAGED);
+}
+
+static struct iommu_domain *__iommu_domain_alloc(struct bus_type *bus,
+                         unsigned type)
+{
+    struct iommu_domain *domain;
+        //判断bus和bus->iommu_ops  不能为null后
+    if (bus == NULL || bus->iommu_ops == NULL)
+        return NULL;
+
+    //调用bus->iommu_ops->domain_alloc 申请domain
+    domain = bus->iommu_ops->domain_alloc(type);
+    if (!domain)
+        return NULL;
+
+//给domain的ops赋值为bus->iommu_ops
+    domain->ops  = bus->iommu_ops;
+    domain->type = type;
+    /* Assume all sizes by default; the driver may override this later */
+    domain->pgsize_bitmap  = bus->iommu_ops->pgsize_bitmap;
+
+    return domain;
+}
+```
+
 # arm_smmu_ops
 
 ```

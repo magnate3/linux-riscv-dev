@@ -77,3 +77,7 @@ ffff000008ecec38 d arm_smmu_ops
 
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/iommu/pic/ops.png)
 
+
+#  iommu_map
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/iommu/pic/dma_map.png)

@@ -21,7 +21,7 @@ static int my_fault(struct vm_fault *vmf)
 		pages[vmf->pgoff] = alloc_page(GFP_KERNEL);
 
         pr_info("vma->vm_end %lx vm_start %lx len %lx \n", vma->vm_end, vma->vm_start, vma->vm_end - vma->vm_start);
-        pr_info("*********** my_fault3 *******vma->vm_start:  %lx , pgoff :%lx , page addr: %p \n",  vmf->address, vmf->pgoff,  page_address(pages[vmf->pgoff]));
+        pr_info("*********** my_fault3 *******vmf->address:  %lx , pgoff :%lx , page addr: %p \n",  vmf->address, vmf->pgoff,  page_address(pages[vmf->pgoff]));
 	ret = vm_insert_page(vma, vmf->address, pages[vmf->pgoff]);
 	if (ret)
 		return VM_FAULT_SIGBUS;

@@ -59,14 +59,13 @@ Write/Read test ...
 #  insmod   mmap-test3.ko
 
 ```
-[10986.567927] ---[ end trace 63aa51e5eb532fbe ]---
 [12934.561016] ******* mmap 3 ********** 
 [12938.351397] vma->vm_end ffffa0650000 vm_start ffffa0620000 len 30000 
-[12938.357822] *********** my_fault3 *******vma->vm_start:  ffffa0620000 , pgoff :0 , page addr: ffffa03fd9870000 
+[12938.357822] *********** my_fault3 *******vmf->address:  ffffa0620000 , pgoff :0 , page addr: ffffa03fd9870000 
 [12938.367876] vma->vm_end ffffa0650000 vm_start ffffa0620000 len 30000 
-[12938.374294] *********** my_fault3 *******vma->vm_start:  ffffa0630000 , pgoff :1 , page addr: ffffa03fd8960000 
+[12938.374294] *********** my_fault3 *******vmf->address:  ffffa0630000 , pgoff :1 , page addr: ffffa03fd8960000 
 [12938.384339] vma->vm_end ffffa0650000 vm_start ffffa0620000 len 30000 
-[12938.390749] *********** my_fault3 *******vma->vm_start:  ffffa0640000 , pgoff :2 , page addr: ffffa03fd61b0000 
+[12938.390749] *********** my_fault3 *******vmf->address:  ffffa0640000 , pgoff :2 , page addr: ffffa03fd61b0000 
 [root@centos7 kernel]# 
 [root@centos7 kernel]# 
 ```
@@ -82,6 +81,12 @@ Write/Read test ...
 0x66616365
 ```
 
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/mmap2/vm.png)
+
+pr_info("*********** my_fault3 *******vmf->address:  %lx , pgoff :%lx , page addr: %p \n",  vmf->address, vmf->pgoff,  page_address(pages[vmf->pgoff]));
+
+vma->vm_end and  vma->vm_start not change, but vmf->address changes
+ 
 # insmod mmap-test4.ko
 
 ```

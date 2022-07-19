@@ -1,3 +1,5 @@
+#zero page
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/mmap_fault/pic/zero_page.png)
 
 #only write
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/mmap_fault/pic/fault.png)

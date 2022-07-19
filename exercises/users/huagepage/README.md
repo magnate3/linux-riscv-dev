@@ -100,3 +100,26 @@ Physical address is 35581119692800
 The value of the first byte is: 1
 All the values are correct
 ```
+
+# test2
+
+```
+[root@centos7 hugepage]# gcc  test2.c  -o test2
+[root@centos7 hugepage]# ./test2
+Returned address is 0x400000000000
+First hex is 0
+First hex is 3020100
+input char 
+
+Returned address is 0x400180000000
+First hex is 0
+First hex is 3020100
+input char 
+
+munmap addr1 0x400000000000, addr2 0x400180000000
+```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/huagepage/fault1.png)
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/huagepage/fault2.png)
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/users/huagepage/fault3.png)

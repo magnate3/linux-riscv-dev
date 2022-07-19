@@ -104,6 +104,7 @@ All the values are correct
 # test2
 
 ```
+echo 64 > /sys/kernel/mm/hugepages/hugepages-524288kB/nr_hugepages
 [root@centos7 hugepage]# gcc  test2.c  -o test2
 [root@centos7 hugepage]# ./test2
 Returned address is 0x400000000000

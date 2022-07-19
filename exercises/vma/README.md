@@ -105,6 +105,8 @@
 [root@centos7 vma]# 
 ```
 
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm1.png)
+
 #  echo "findvma0xb7f2b001" > /proc/mtest 
 
 ```
@@ -122,6 +124,14 @@
 [99286.204746] no vma found for b7f2b001
 [root@centos7 vma]# 
 ```
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm2.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm3.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm4.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm5.png)
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm51.png)
+
+
+
 #  findpage
 
 ```
@@ -162,3 +172,5 @@
 [99894.247091] find  0xffffa9f11000 to kernel address 0xffffa03fe8e21000
 [root@centos7 vma]# 
 ```
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm6.png)

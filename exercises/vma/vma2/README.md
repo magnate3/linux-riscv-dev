@@ -146,7 +146,7 @@ before read...
 [  559.167430]  vma count : 14 
 ```
 
-***compare before count = 14  and after count =14 ***
+***compare before count = 14  and after count =14***
 
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vma7.png)
 

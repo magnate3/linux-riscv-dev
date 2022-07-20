@@ -174,3 +174,15 @@
 ```
 
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/vma/pic/vm6.png)
+
+
+# linux内核那些事之Sparse内存模型初始化
+
+```
+[root@centos7 boot]# grep CONFIG_SPARSEMEM_EXTREME  config-4.14.0-115.el7a.0.1.aarch64
+CONFIG_SPARSEMEM_EXTREME=y
+[root@centos7 boot]# grep CONFIG_SPARSEMEM_VMEMMAP config-4.14.0-115.el7a.0.1.aarch64
+CONFIG_SPARSEMEM_VMEMMAP_ENABLE=y
+CONFIG_SPARSEMEM_VMEMMAP=y
+[root@centos7 boot]# 
+```

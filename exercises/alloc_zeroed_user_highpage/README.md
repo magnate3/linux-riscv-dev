@@ -204,3 +204,46 @@ include/asm-generic/page.h:74:#define __va(x) ((void *)((unsigned long) (x)))
 include/asm-generic/page.h:78:#define pfn_to_virt(pfn)  __va((pfn) << PAGE_SHIFT)
 #endif
 ```
+
+```
+static void
+mtest_write_val(unsigned long addr, unsigned long val)
+{
+        struct vm_area_struct *vma;
+        struct mm_struct *mm = task->mm;
+        struct page *page;
+        unsigned long kernel_addr;
+        if (!task) {
+            pr_info("The process is not exist \n");
+            return ;
+        }
+        printk("mtest_write_val\n");
+        down_read(&mm->mmap_sem);
+        vma = find_vma(mm, addr);
+        if (vma && addr >= vma->vm_start && (addr + sizeof(val)) < vma->vm_end) {
+                if (!(vma->vm_flags & VM_WRITE)) {
+                        printk("vma is not writable for 0x%lx\n", addr);
+                        goto out;
+                }
+                page = my_follow_page(vma, addr);
+                if (!page) {
+                        printk("page not found  for 0x%lx\n", addr);
+                        goto out;
+                }
+                kernel_addr = (unsigned long)page_address(page);
+                kernel_addr += (addr&~PAGE_MASK);
+                printk("write 0x%lx to address 0x%lx\n", val, kernel_addr);
+                *(unsigned long *)kernel_addr = val;
+                put_page(page);
+        } else {
+                printk("no vma found for %lx\n", addr);
+        }
+out:
+        up_read(&mm->mmap_sem);
+}
+```
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/write.png)
+
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/read.png)

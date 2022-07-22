@@ -285,3 +285,36 @@ read kernel :  aaaaaaaaaaaa
 
 
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/read2.png)
+
+
+# spare memory model
+```
+[root@centos7 boot]# grep CONFIG_SPARSEMEM config-4.14.0-115.el7a.0.1.aarch64 
+CONFIG_SPARSEMEM_MANUAL=y
+CONFIG_SPARSEMEM=y
+CONFIG_SPARSEMEM_EXTREME=y
+CONFIG_SPARSEMEM_VMEMMAP_ENABLE=y
+CONFIG_SPARSEMEM_VMEMMAP=y
+
+
+ubuntu@ubuntux86:/boot$ grep CONFIG_SPARSEMEM config-5.13.0-30-generic 
+CONFIG_SPARSEMEM_MANUAL=y
+CONFIG_SPARSEMEM=y
+CONFIG_SPARSEMEM_EXTREME=y
+CONFIG_SPARSEMEM_VMEMMAP_ENABLE=y
+CONFIG_SPARSEMEM_VMEMMAP=y
+ubuntu@ubuntux86:/boot$ 
+```
+
+# insmod alloc_page_test.ko 
+
+```
+[69075.604959] sizeof(struct page): 64
+[69075.604962] virt : 0xffffa03f3d540000, phy:0x203f3d540000, page:0xffff7fe80fcf5500, pfn: 541015380
+[69075.617358] virt : 0xffffa03f3d550000, phy:0x203f3d550000, page:0xffff7fe80fcf5540, pfn: 541015381
+[69075.626282] virt : 0xffffa03f3d560000, phy:0x203f3d560000, page:0xffff7fe80fcf5580, pfn: 541015382
+[69075.635206] virt : 0xffffa03f3d570000, phy:0x203f3d570000, page:0xffff7fe80fcf55c0, pfn: 541015383
+[root@centos7 alloc_page]# 
+```
+
+# zone->zone_mem_map

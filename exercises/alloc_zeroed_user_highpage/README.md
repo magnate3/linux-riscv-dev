@@ -137,16 +137,16 @@ gfp_zone(gfp) = ZONE_MOVABLE
 [51606.801898] page is not  high 
 [53823.666599] alloc GFP_KERNEL page 
 [53823.669992] <0>alloc_pages Successfully!
-[53823.673906] <0>the zone is NORMAL.
+[53823.673906] <0>the zone is NORMAL.////////////////
 [53823.677294] GFP_HIGHUSER_MOVABLE page
 [53823.680940] <0>alloc_pages Successfully!
-[53823.684851] <0>the zone is NORMAL.
+[53823.684851] <0>the zone is NORMAL./////////////
 [53823.688239] GFP_DMA page
 [53823.690762] <0>alloc_pages Successfully!
 [53823.694671] <0>the zone is DMA.
-[53823.697798] GFP_HIGHMEM page
+[53823.697798] GFP_HIGHMEM page   ///////////
 [53823.700664] <0>alloc_pages Successfully!
-[53823.704575] <0>the zone is NORMAL.
+[53823.704575] <0>the zone is NORMAL.///////////
 [54435.472009] exit the module……mtest_exit 
 [54604.452038] <0>exit!
 ```

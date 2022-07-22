@@ -238,12 +238,50 @@ mtest_write_val(unsigned long addr, unsigned long val)
         } else {
                 printk("no vma found for %lx\n", addr);
         }
-out:
+out:0
         up_read(&mm->mmap_sem);
 }
 ```
+
+
 
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/write.png)
 
 
 ![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/read.png)
+
+**读的值是55，是下述命令写的**
+
+```
+            for(i=0;i <4096 *10; i++)
+                    p[4096 * i] = 0x55;
+```
+
+## user 
+
+```
+[root@centos7 vma]# ./mmap_test2 
+before mmap ->please exec: free -m
+
+
+p addr:  0xffff777f0000 
+after mmap ->please exec: free -m
+
+will read....
+after mmap ->please exec: free -m
+
+will write....
+
+
+after write ->please exec: free -m
+
+please execute 'writeval cmmd 
+
+
+read kernel :  aaaaaaaaaaaa 
+```
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/write2.png)
+
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/alloc_zeroed_user_highpage/pic/read2.png)

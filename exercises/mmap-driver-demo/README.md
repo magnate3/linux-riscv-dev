@@ -1,6 +1,10 @@
 # mmap-driver-demo
 
 ## insmod mydemodev.ko
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/mmap-driver-demo/addr.png)
+
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/mmap-driver-demo/mmap.png)
 
 ```
 root@ubuntux86:/work/kernel_learn/mmap-driver-demo# insmod mydemodev.ko
@@ -102,5 +106,7 @@ addr is : 0xffffa13b0000
 [315979.317637] vm_file->f_path.dentry->d_iname:  ld-2.17.so 
 [315979.323101] vm_file->f_path.dentry->d_iname:  ld-2.17.so 
 ```
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/mmap-driver-demo/file.png)
 
 [see blog](https://catbro666.github.io/posts/5ec4fb12/)

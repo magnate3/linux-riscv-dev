@@ -232,4 +232,8 @@ after wirte please findpage resust addr
 
 # difference of parent and child
 
-![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/file.png)
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/walk_parent.png)
+
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/walk_child.png)

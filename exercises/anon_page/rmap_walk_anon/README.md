@@ -210,3 +210,9 @@ after wirte please findpage resust addr
 
 [16812.567945]  vma count : 16 
 ```
+# difference of parent and child
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/walk_parent.png)
+
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/walk_child.png)

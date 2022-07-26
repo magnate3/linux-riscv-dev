@@ -276,3 +276,114 @@ static void validate_mm(struct mm_struct *mm)
 }
 ```
 
+
+#  page_mapped
+```
+/*
+ * Return true if this page is mapped into pagetables.
+ * For compound page it returns true if any subpage of compound page is mapped.
+ */
+bool page_mapped(struct page *page)
+{
+        int i;
+
+        if (likely(!PageCompound(page)))
+                return atomic_read(&page->_mapcount) >= 0;
+        page = compound_head(page);
+        if (atomic_read(compound_mapcount_ptr(page)) >= 0)
+                return true;
+        if (PageHuge(page))
+                return false;
+        for (i = 0; i < (1 << compound_order(page)); i++) {
+                if (atomic_read(&page[i]._mapcount) >= 0)
+                        return true;
+        }
+        return false;
+}
+EXPORT_SYMBOL(page_mapped);
+
+struct anon_vma *page_anon_vma(struct page *page)
+{
+        unsigned long mapping;
+
+        page = compound_head(page);
+        mapping = (unsigned long)page->mapping;
+        if ((mapping & PAGE_MAPPING_FLAGS) != PAGE_MAPPING_ANON)
+                return NULL;
+        return __page_rmapping(page);
+}
+```
+# collect_procs_anon
+
+```
+/*
+ * Collect processes when the error hit an anonymous page.
+ */
+static void collect_procs_anon(struct page *page, struct list_head *to_kill,
+                              struct to_kill **tkc, int force_early)
+{
+        struct vm_area_struct *vma;
+        struct task_struct *tsk;
+        struct anon_vma *av;
+        pgoff_t pgoff;
+
+        av = page_lock_anon_vma_read(page);
+        if (av == NULL) /* Not actually mapped anymore */
+                return;
+
+        pgoff = page_to_pgoff(page);
+        read_lock(&tasklist_lock);
+        for_each_process (tsk) {
+                struct anon_vma_chain *vmac;
+                struct task_struct *t = task_early_kill(tsk, force_early);
+
+                if (!t)
+                        continue;
+                anon_vma_interval_tree_foreach(vmac, &av->rb_root,
+                                               pgoff, pgoff) {
+                        vma = vmac->vma;
+                        if (!page_mapped_in_vma(page, vma))
+                                continue;
+                        if (vma->vm_mm == t->mm)
+                                add_to_kill(t, page, vma, to_kill, tkc);
+                }
+        }
+        read_unlock(&tasklist_lock);
+        page_unlock_anon_vma_read(av);
+
+```
+
+
+# page_mapping
+
+```
+
+struct address_space *page_mapping(struct page *page)
+{
+        struct address_space *mapping;
+
+        page = compound_head(page);
+
+        /* This happens if someone calls flush_dcache_page on slab page */
+        if (unlikely(PageSlab(page)))
+                return NULL;
+
+        if (unlikely(PageSwapCache(page))) {
+                swp_entry_t entry;
+
+                entry.val = page_private(page);
+                return swap_address_space(entry);
+        }
+
+        mapping = page->mapping;
+        if ((unsigned long)mapping & PAGE_MAPPING_ANON)
+                return NULL;
+
+        return (void *)((unsigned long)mapping & ~PAGE_MAPPING_FLAGS);
+}
+EXPORT_SYMBOL(page_mapping);
+
+```
+
+
+

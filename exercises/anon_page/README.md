@@ -18,3 +18,11 @@ void rmap_walk(struct page *page, struct rmap_walk_control *rwc)
         rmap_walk_file(page, rwc, false);
 }
 ```
+
+# mmap and anon
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/anon.png)
+
+# cow
+
+![image](https://github.com/magnate3/linux-riscv-dev/blob/main/exercises/anon_page/cow.png)

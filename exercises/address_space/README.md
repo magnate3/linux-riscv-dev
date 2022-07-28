@@ -1,4 +1,76 @@
 
+# insmod  vma_test1.ko 
+
+```
+       struct address_space_operations *ops=mapping->a_ops;
+       if (ops){
+           pr_info("mapping->a_ops: %p \n", ops);
+       }
+```
+
+```
+[root@centos7 address_space]# gcc mmap_fork.c -o mmap_fork
+[root@centos7 address_space]# ./mmap_fork 
+mmap: Success
+resust addr : 0xffff9fba0000, and 9fba0000lx
+integerSize addr : 0xffffd9be7e68, and d9be7e68lx
+before wirte please findpage resust addr 
+
+after wirte please findpage resust addr 
+```
+## echo 'findpage0xffff9fba0000' > /proc/mtest
+```
+[root@centos7 address_space]# rmmod  vma_test1.ko
+[root@centos7 address_space]# insmod  vma_test1.ko 
+[root@centos7 address_space]# echo 'findtask10284' > /proc/mtest
+[root@centos7 address_space]# echo 'findpage0xffff9fba0000' > /proc/mtest
+[root@centos7 address_space]# dmesg | tail -n 10
+[25199.983260] page is file and compare rmap_walk_file
+[25199.988119] mapping->a_ops: ffff0000088ded80 
+[25199.992457] vma 0xffff9fba0000-0xffffafba0000 flag fb , vma task comm: mmap_fork and pid 10284 , d_iname : dev/zero 
+[25200.002933] vma->vm_ops: ffff0000088df100 
+[25200.007013] vma 0xffff9fba0000-0xffffafba0000 flag fb , vma task comm: mmap_fork and pid 10285 , d_iname : dev/zero 
+[25200.017487] vma->vm_ops: ffff0000088df100 
+[25200.021564]  page_mapcount(page) went negative! (2)
+[25200.026422]  page->flags = 1fffff0000040038
+[25200.030586]  page->count = 9
+[25200.033452]  page->mapping = ffff805fd7282860
+[root@centos7 address_space]# 
+```
+
+### mapping->a_ops: ffff0000088ded80 
+
+```
+[root@centos7 address_space]# cat /proc/kallsyms  | grep ffff0000088ded80
+ffff0000088ded80 r shmem_aops
+```
+
+### vma->vm_ops: ffff0000088df100 
+
+```
+[root@centos7 address_space]# cat /proc/kallsyms  | grep ffff0000088df100 
+ffff0000088df100 r shmem_vm_ops
+[root@centos7 address_space]# 
+```
+
+## echo 'findpage0xffffd9be7e68' > /proc/mtest
+```
+[root@centos7 address_space]# echo 'findpage0xffffd9be7e68' > /proc/mtest
+[root@centos7 address_space]# dmesg | tail -n 10
+[25335.694250] page is anonoyous and compare  rmap_walk_anon 
+[25335.699711] vma 0xffffd9bc0000-0xffffd9bf0000 flag 100173 , vma task comm: mmap_fork and pid 10284 , d_iname : no vm file 
+[25335.710704] vma->vm_ops is null /////////////////////
+[25335.713923] vma 0xffffd9bc0000-0xffffd9bf0000 flag 100173 , vma task comm: mmap_fork and pid 10285 , d_iname : no vm file 
+[25335.724914] vma->vm_ops is null  /////////////////////
+[25335.728128]  page_mapcount(page) went negative! (1)
+[25335.732988]  page_mapcount(page) went negative! (1)
+[25335.737844]  page->flags = 1fffff000004006c
+[25335.742006]  page->count = 4
+[25335.744876]  page->mapping = ffff805fcd61c2e9
+[root@centos7 address_space]#
+```
+
+
 #  page_to_pgoff
 
 ```

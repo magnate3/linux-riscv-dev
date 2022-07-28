@@ -1,2 +1,0 @@
-Simple kernel module and userspace CLI for dumping kernel and process page
-table entries of different addresses.

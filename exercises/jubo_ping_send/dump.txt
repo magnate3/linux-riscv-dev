@@ -1,0 +1,44 @@
+[161335.354008] ===== test_init =====
+[161341.089961] ************** dump jumbo ping request skb begin: 8 
+[161341.096037] is nonlinear 
+[161341.098736] skb len=6528 headroom=16 headlen=1500 tailroom=0
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x5b23 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0800 pkttype=0 iif=0
+[161341.126927] is nonlinear 
+[161341.129624] sk_buff: len:6528  skb->data_len:5028  truesize:10496 head:CEB75800  data:CEB75810 tail:1516 end:1664
+[161341.129625]  ****************** skb frags list:
+[161341.144527]  ****************** wallk skb frags list 1 timers
+[161341.150340] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x7c9b ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.178706] is linear 
+[161341.181149] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:CEB77800  data:CEB77824 tail:1516 end:1664
+[161341.181151]  ****************** wallk skb frags list 2 timers
+[161341.196915] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xa2c1 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.225278] is linear 
+[161341.227716] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:CEB73800  data:CEB73824 tail:1516 end:1664
+[161341.227717]  ****************** wallk skb frags list 3 timers
+[161341.243484] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xc8e7 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.271847] is linear 
+[161341.274284] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:CEB74800  data:CEB74824 tail:1516 end:1664
+[161341.274285]  ****************** wallk skb frags list 4 timers
+[161341.290050] skb len=588 headroom=36 headlen=588 tailroom=16
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xbc97 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.318152] is linear 
+[161341.320594] sk_buff: len:588  skb->data_len:0  truesize:1280 head:2180FC00  data:2180FC24 tail:624 end:640
+[161341.320596] ************** remain: 6494,  offset 0, morefrag: 0 

@@ -1,0 +1,28 @@
+ dmesg | grep enet
+[    3.124224] fsl_enetc 0000:00:00.0: Adding to iommu group 3
+[    3.231492] fsl_enetc 0000:00:00.0: enabling device (0400 -> 0402)
+[    3.232423] fsl_enetc 0000:00:00.0: no MAC address specified for SI1, using fe:5e:d4:98:34:14
+[    3.232429] fsl_enetc 0000:00:00.0: no MAC address specified for SI2, using 2e:86:14:73:bc:a8
+[    3.233462] fsl_enetc 0000:00:00.0 eth0: ENETC PF driver v1.0
+[    3.233473] fsl_enetc 0000:00:00.0: enetc_tsn_init: setup done
+[    3.233547] fsl_enetc 0000:00:00.1: Adding to iommu group 4
+[    3.233567] fsl_enetc 0000:00:00.1: device is disabled, skipping
+[    3.233608] fsl_enetc 0000:00:00.2: Adding to iommu group 5
+[    3.339482] fsl_enetc 0000:00:00.2: enabling device (0400 -> 0402)
+[    3.340265] fsl_enetc 0000:00:00.2 eth1: ENETC PF driver v1.0
+[    3.340272] fsl_enetc 0000:00:00.2: enetc_tsn_init: setup done
+[    3.340341] fsl_enetc 0000:00:00.6: Adding to iommu group 6
+[    3.340359] fsl_enetc 0000:00:00.6: device is disabled, skipping
+[    3.340461] fsl_enetc_mdio 0000:00:00.3: Adding to iommu group 7
+[    3.447483] fsl_enetc_mdio 0000:00:00.3: enabling device (0400 -> 0402)
+[    3.450111] fsl_enetc_ptp 0000:00:00.4: Adding to iommu group 8
+[    3.450132] fsl_enetc_ptp 0000:00:00.4: enabling device (0404 -> 0406)
+[   12.460186] fsl_enetc 0000:00:00.2 eno2: renamed from eth1
+[   12.633798] fsl_enetc 0000:00:00.0 eno0: renamed from eth0
+[   14.383635] fsl_enetc 0000:00:00.0 eno0: Qbv PSPEED set speed link down.
+[   14.383643] fsl_enetc 0000:00:00.0 eno0: Link is Down
+[   14.433319] fsl_enetc 0000:00:00.2 eno2: Link is Up - 1Gbps/Full - flow control off
+[   17.436303] fsl_enetc 0000:00:00.0 eno0: Link is Up - 1Gbps/Full - flow control off
+[   22.555870] fsl_enetc 0000:00:00.0 eno0: Qbv PSPEED set speed link down.
+[   22.555880] fsl_enetc 0000:00:00.0 eno0: Link is Down
+[   24.604051] fsl_enetc 0000:00:00.0 eno0: Link is Up - 1Gbps/Full - flow control off

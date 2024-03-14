@@ -1,0 +1,45 @@
+== libnel ==
+
+Custom library for netlink iterface. Written on C.
+Standard libnl, libnl-route, ... are big enough for
+using on routers, so we've created a custom one.
+Like libnl-tiny in OpenWrt. Now we think that more
+useful would be to make API identical to libnl API,
+but we didin't.
+
+* libnel -- core helper library. Implements API to
+netlink.
+
+* libnel-route -- based on libnel. Implements API
+for interfaces, ip and routes management.
+
+* libnel-genl -- based on libnel, helper library.
+Implements API to generic netlink.
+
+* libnel-80211 -- based libnel-genl. Implemets API
+for management Wi-Fi/802.11.
+
+To debug define environment variable LIBNEL_DEBUG.
+
+For testing libnel-route we've created a simple cmdline util 'ip':
+Usage: [OPTIONS] OBJECT CMD [CMD_OPTIONS].
+Options: -d -- debugging, -h -- help, -s -- statistics (show verbose info)
+  $ ip link [show [IFACE]]
+  $ ip link set IFACE up|down
+  $ ip link set IFACE addr hh:hh:hh:hh:hh:hh
+  $ ip link set IFACE master MASTER_IFACE
+  $ ip link set IFACE nomaster
+  $ ip link add IFACE type bridge
+  $ ip link add IFACE type vlan LINK_IFACE VLAN_ID
+  $ ip link del IFACE 
+  $ ip addr [show [IFACE]]
+  $ ip addr add|del IFACE ADDR/BITS
+  $ ip route [show [dest ADDR/BITS] [proto PROTO] [type TYPE] [scope SCOPE]
+    [table TABLE] [gw ADDR]]
+  $ ip route show all
+  $ ip route get ADDR
+  $ ip route add|del DEST/BITS via GW
+
+For testing libnl-80211 we've created a simple cmdline util 'iw':
+Usage: iw [options] [iface]
+Options: -d -- log level info, -d2 --log level debug

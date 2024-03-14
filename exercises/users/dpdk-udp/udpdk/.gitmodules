@@ -1,0 +1,6 @@
+[submodule "dpdk"]
+	path = deps/dpdk
+	url = https://github.com/DPDK/dpdk
+[submodule "inih"]
+	path = deps/inih
+	url = https://github.com/benhoyt/inih

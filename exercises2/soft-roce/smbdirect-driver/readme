@@ -1,0 +1,9 @@
+This is a device driver that implements the SMB Direct protocol in the kernel.
+
+It is an on-going project.
+
+See design.txt for more info.
+
+smbdirect.c is the source.
+smbdirect.h contains definitions
+Makefile ...

@@ -1,0 +1,10 @@
+.vscode/
+*.out
+*.o
+
+network.txt
+
+ltest
+pcap
+bridge
+router

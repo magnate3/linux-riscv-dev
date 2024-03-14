@@ -1,0 +1,11 @@
+my_plugin_la_SOURCES =      \
+    my/my.c             \
+    my/node.c               \
+    my/my_plugin.api.h
+
+API_FILES += my/my.api
+
+nobase_apiinclude_HEADERS +=            \
+  my/my_all_api_h.h             \
+  my/my_msg_enum.h              \
+  my/my.api.h

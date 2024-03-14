@@ -1,0 +1,7 @@
+#ifndef COMMON_H
+#define COMMON_H
+enum GMACDEV_OP
+{
+     WRITE_GMAC_OP=0,READ_GMAC_OP=1,RESET_GMAC_OP=3,SET_GMAC_OP=4,CLOSE_GMAC_OP=5	      
+};
+#endif

@@ -1,0 +1,74 @@
+[    2.516704] fu740-pcie e00000000.pcie: host bridge /soc/pcie@e00000000 ranges:
+[    2.516807] fu740-pcie e00000000.pcie:       IO 0x0060080000..0x006008ffff -> 0x0060080000
+[    2.516865] fu740-pcie e00000000.pcie:      MEM 0x0060090000..0x0070ffffff -> 0x0060090000
+[    2.516890] fu740-pcie e00000000.pcie:      MEM 0x2000000000..0x3fffffffff -> 0x2000000000
+[    2.624877] fu740-pcie e00000000.pcie: invalid resource
+[    2.624893] fu740-pcie e00000000.pcie: iATU unroll: enabled
+[    2.624900] fu740-pcie e00000000.pcie: Detected iATU regions: 8 outbound, 8 inbound
+[    2.724971] fu740-pcie e00000000.pcie: Link up
+[    2.725223] fu740-pcie e00000000.pcie: PCI host bridge to bus 0000:00
+[    2.725237] pci_bus 0000:00: root bus resource [bus 00-ff]
+[    2.725252] pci_bus 0000:00: root bus resource [io  0x0000-0xffff] (bus address [0x60080000-0x6008ffff])
+[    2.725263] pci_bus 0000:00: root bus resource [mem 0x60090000-0x70ffffff]
+[    2.725273] pci_bus 0000:00: root bus resource [mem 0x2000000000-0x3fffffffff pref]
+[    2.725330] pci 0000:00:00.0: [f15e:0000] type 01 class 0x060400
+[    2.725353] pci 0000:00:00.0: reg 0x10: [mem 0x00000000-0x000fffff]
+[    2.725369] pci 0000:00:00.0: reg 0x38: [mem 0x00000000-0x0000ffff pref]
+[    2.725445] pci 0000:00:00.0: supports D1
+[    2.725453] pci 0000:00:00.0: PME# supported from D0 D1 D3hot
+[    2.726640] pci 0000:01:00.0: [1b21:2824] type 01 class 0x060400
+[    2.726741] pci 0000:01:00.0: enabling Extended Tags
+[    2.726911] pci 0000:01:00.0: PME# supported from D0 D3hot D3cold
+[    2.736417] pci 0000:01:00.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    2.736664] pci 0000:02:00.0: [1b21:2824] type 01 class 0x060400
+[    2.736768] pci 0000:02:00.0: enabling Extended Tags
+[    2.736937] pci 0000:02:00.0: PME# supported from D0 D3hot D3cold
+[    2.737503] pci 0000:02:02.0: [1b21:2824] type 01 class 0x060400
+[    2.737606] pci 0000:02:02.0: enabling Extended Tags
+[    2.737776] pci 0000:02:02.0: PME# supported from D0 D3hot D3cold
+[    2.738300] pci 0000:02:03.0: [1b21:2824] type 01 class 0x060400
+[    2.738403] pci 0000:02:03.0: enabling Extended Tags
+[    2.738571] pci 0000:02:03.0: PME# supported from D0 D3hot D3cold
+[    2.739094] pci 0000:02:04.0: [1b21:2824] type 01 class 0x060400
+[    2.739196] pci 0000:02:04.0: enabling Extended Tags
+[    2.739365] pci 0000:02:04.0: PME# supported from D0 D3hot D3cold
+[    2.740004] pci 0000:02:08.0: [1b21:2824] type 01 class 0x060400
+[    2.740107] pci 0000:02:08.0: enabling Extended Tags
+[    2.740275] pci 0000:02:08.0: PME# supported from D0 D3hot D3cold
+[    2.741205] pci 0000:02:00.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    2.741228] pci 0000:02:02.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    2.741248] pci 0000:02:03.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    2.741268] pci 0000:02:04.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    2.741287] pci 0000:02:08.0: bridge configuration invalid ([bus 00-00]), reconfiguring
+[    2.742012] pci_bus 0000:03: busn_res: [bus 03-ff] end is updated to 03
+[    2.742249] pci 0000:04:00.0: [1b21:1142] type 00 class 0x0c0330
+[    2.742308] pci 0000:04:00.0: reg 0x10: [mem 0x00000000-0x00007fff 64bit]
+[    2.742560] pci 0000:04:00.0: PME# supported from D3cold
+[    2.752392] pci_bus 0000:04: busn_res: [bus 04-ff] end is updated to 04
+[    2.753120] pci_bus 0000:05: busn_res: [bus 05-ff] end is updated to 05
+[    2.753838] pci_bus 0000:06: busn_res: [bus 06-ff] end is updated to 06
+[    2.754554] pci_bus 0000:07: busn_res: [bus 07-ff] end is updated to 07
+[    2.754574] pci_bus 0000:02: busn_res: [bus 02-ff] end is updated to 07
+[    2.754590] pci_bus 0000:01: busn_res: [bus 01-ff] end is updated to 07
+[    2.754649] pci 0000:00:00.0: BAR 0: assigned [mem 0x60100000-0x601fffff]
+[    2.754666] pci 0000:00:00.0: BAR 14: assigned [mem 0x60200000-0x602fffff]
+[    2.754679] pci 0000:00:00.0: BAR 6: assigned [mem 0x60090000-0x6009ffff pref]
+[    2.754697] pci 0000:01:00.0: BAR 14: assigned [mem 0x60200000-0x602fffff]
+[    2.754714] pci 0000:02:02.0: BAR 14: assigned [mem 0x60200000-0x602fffff]
+[    2.754726] pci 0000:02:00.0: PCI bridge to [bus 03]
+[    2.754764] pci 0000:04:00.0: BAR 0: assigned [mem 0x60200000-0x60207fff 64bit]
+[    2.754797] pci 0000:02:02.0: PCI bridge to [bus 04]
+[    2.754812] pci 0000:02:02.0:   bridge window [mem 0x60200000-0x602fffff]
+[    2.754835] pci 0000:02:03.0: PCI bridge to [bus 05]
+[    2.754863] pci 0000:02:04.0: PCI bridge to [bus 06]
+[    2.754892] pci 0000:02:08.0: PCI bridge to [bus 07]
+[    2.754919] pci 0000:01:00.0: PCI bridge to [bus 02-07]
+[    2.754933] pci 0000:01:00.0:   bridge window [mem 0x60200000-0x602fffff]
+[    2.754955] pci 0000:00:00.0: PCI bridge to [bus 01-07]
+[    2.754964] pci 0000:00:00.0:   bridge window [mem 0x60200000-0x602fffff]
+[    2.756149] pcieport 0000:00:00.0: AER: enabled with IRQ 46
+[    2.756389] pcieport 0000:01:00.0: enabling device (0000 -> 0002)
+[    2.757477] pcieport 0000:02:02.0: enabling device (0000 -> 0002)
+[    2.759700] pci 0000:04:00.0: enabling device (0000 -> 0002)
+[    2.924850] ehci-pci: EHCI PCI platform driver
+[    2.924963] ohci-pci: OHCI PCI platform driver

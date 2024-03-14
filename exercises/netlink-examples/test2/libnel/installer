@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# Installer script.
+#
+# So-libraries will be installed into "$DESTDIR/lib64",
+# C-headers into "$DESTDIR/usr/include/libnel".
+
+MANIFEST=install_manifest.txt
+
+case "$1" in
+install)
+	[ -n "$DESTDIR" ] || {
+		echo "Error: DESTDIR must be specified."
+		exit 1
+	}
+
+	DESTDIR=$(realpath "$DESTDIR")
+
+	truncate -s0 $MANIFEST
+
+	LIBDIR="$DESTDIR/lib64"
+	mkdir -p "$LIBDIR"
+	for f in *.so; do
+		cp "$f" "$LIBDIR"
+		echo "$LIBDIR/$f" >>$MANIFEST
+	done
+
+	INCDIR="$DESTDIR/usr/include/libnel"
+	mkdir -p "$INCDIR"
+	for f in *.h; do
+		cp "$f" "$INCDIR"
+		echo "$INCDIR/$f" >>$MANIFEST
+	done
+	;;
+
+uninstall)
+	[ -f $MANIFEST ] || {
+		echo "Error: \"$MANIFEST\" not found."
+		exit 1
+	}
+	# NOTE: created dirs will be left, e.g. if you install
+	# into the root, then "/usr/include/libnel" will be left
+	# empty after uninstall.
+	cat $MANIFEST | xargs rm
+	;;
+
+*)
+	echo "Usage: install|uninstall"
+	;;
+esac

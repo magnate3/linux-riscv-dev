@@ -1,0 +1,200 @@
+[1092514.074836] nvme nvme4: rdma connection establishment failed (-110)
+[1092514.083518] nvme nvme4: Failed reconnect attempt 14
+[1092514.083521] nvme nvme4: Reconnecting in 10 seconds...
+[1092527.386774] nvme nvme4: rdma connection establishment failed (-110)
+[1092527.395873] nvme nvme4: Failed reconnect attempt 15
+[1092527.395876] nvme nvme4: Reconnecting in 10 seconds...
+[1092540.698742] nvme nvme4: rdma connection establishment failed (-110)
+[1092540.707796] nvme nvme4: Failed reconnect attempt 16
+[1092540.707799] nvme nvme4: Reconnecting in 10 seconds...
+[1092552.963627] nvme nvme4: Removing ctrl: NQN "data_8"
+[1092554.010637] nvme nvme4: rdma connection establishment failed (-110)
+[1092554.019413] nvme nvme4: Failed reconnect attempt 17
+[1092679.704083] INFO: task kworker/54:1H:3628 blocked for more than 120 seconds.
+[1092679.704142]       Tainted: G           OE     5.4.0-163-generic #180-Ubuntu
+[1092679.704180] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[1092679.704223] kworker/54:1H   D    0  3628      2 0x80004000
+[1092679.704246] Workqueue: kblockd nvme_requeue_work [nvme_core]
+[1092679.704249] Call Trace:
+[1092679.704259]  __schedule+0x2e3/0x740
+[1092679.704264]  ? dma_direct_map_sg+0x44/0xb0
+[1092679.704267]  schedule+0x42/0xb0
+[1092679.704271]  blk_queue_enter+0x160/0x200
+[1092679.704276]  ? __wake_up_pollfree+0x40/0x40
+[1092679.704278]  direct_make_request+0x49/0xd0
+[1092679.704284]  nvme_ns_head_make_request+0xce/0x440 [nvme_core]
+[1092679.704287]  generic_make_request+0xcf/0x320
+[1092679.704292]  nvme_requeue_work+0x65/0x80 [nvme_core]
+[1092679.704297]  process_one_work+0x1eb/0x3b0
+[1092679.704299]  worker_thread+0x4d/0x400
+[1092679.704303]  kthread+0x104/0x140
+[1092679.704305]  ? process_one_work+0x3b0/0x3b0
+[1092679.704307]  ? kthread_park+0x90/0x90
+[1092679.704311]  ret_from_fork+0x35/0x40
+[1092679.704587] INFO: task umount:3148021 blocked for more than 120 seconds.
+[1092679.704623]       Tainted: G           OE     5.4.0-163-generic #180-Ubuntu
+[1092679.704660] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[1092679.704701] umount          D    0 3148021 3130152 0x00004004
+[1092679.704704] Call Trace:
+[1092679.704708]  __schedule+0x2e3/0x740
+[1092679.704711]  schedule+0x42/0xb0
+[1092679.704778]  __xfs_log_force_lsn+0x14a/0x260 [xfs]
+[1092679.704782]  ? wake_up_q+0xa0/0xa0
+[1092679.704820]  xfs_log_force_lsn+0x99/0x120 [xfs]
+[1092679.704857]  ? xfs_trans_commit+0x10/0x20 [xfs]
+[1092679.704891]  __xfs_trans_commit+0x2c6/0x350 [xfs]
+[1092679.704924]  xfs_trans_commit+0x10/0x20 [xfs]
+[1092679.704964]  xfs_sync_sb+0x6d/0x80 [xfs]
+[1092679.705003]  xfs_log_sbcount+0x4f/0x60 [xfs]
+[1092679.705037]  xfs_unmountfs+0x81/0x150 [xfs]
+[1092679.705072]  xfs_fs_put_super+0x3a/0x90 [xfs]
+[1092679.705078]  generic_shutdown_super+0x72/0x110
+[1092679.705080]  kill_block_super+0x27/0x50
+[1092679.705083]  deactivate_locked_super+0x3b/0x80
+[1092679.705085]  deactivate_super+0x3e/0x50
+[1092679.705088]  cleanup_mnt+0x109/0x160
+[1092679.705091]  __cleanup_mnt+0x12/0x20
+[1092679.705093]  task_work_run+0x8f/0xb0
+[1092679.705097]  exit_to_usermode_loop+0x131/0x160
+[1092679.705099]  do_syscall_64+0x168/0x190
+[1092679.705102]  entry_SYSCALL_64_after_hwframe+0x5c/0xc1
+[1092679.705105] RIP: 0033:0x7fbe8081816b
+[1092679.705113] Code: Bad RIP value.
+[1092679.705115] RSP: 002b:00007ffc1f69ecd8 EFLAGS: 00000246 ORIG_RAX: 00000000000000a6
+[1092679.705117] RAX: 0000000000000000 RBX: 00007fbe8094a204 RCX: 00007fbe8081816b
+[1092679.705118] RDX: 0000000000000015 RSI: 0000000000000000 RDI: 000055c9e3c34cc0
+[1092679.705119] RBP: 000055c9e3c2ba30 R08: 0000000000000000 R09: 000055c9e3c2a014
+[1092679.705120] R10: 000055c9e3c2a010 R11: 0000000000000246 R12: 000055c9e3c34cc0
+[1092679.705121] R13: 0000000000000000 R14: 000055c9e3c2bb28 R15: 000055c9e3c34e00
+[1092679.705127] INFO: task nvme:3148438 blocked for more than 120 seconds.
+[1092679.705163]       Tainted: G           OE     5.4.0-163-generic #180-Ubuntu
+[1092679.705198] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[1092679.705239] nvme            D    0 3148438 3148380 0x00004004
+[1092679.705241] Call Trace:
+[1092679.705244]  __schedule+0x2e3/0x740
+[1092679.705246]  ? __switch_to_asm+0x42/0x80
+[1092679.705249]  schedule+0x42/0xb0
+[1092679.705251]  schedule_timeout+0x10e/0x160
+[1092679.705254]  wait_for_completion+0xb1/0x120
+[1092679.705256]  ? wake_up_q+0xa0/0xa0
+[1092679.705259]  __synchronize_srcu.part.0+0x81/0xb0
+[1092679.705261]  ? __bpf_trace_rcu_utilization+0x10/0x10
+[1092679.705265]  ? ktime_get_mono_fast_ns+0x4e/0xa0
+[1092679.705267]  synchronize_srcu_expedited+0x28/0x30
+[1092679.705268]  synchronize_srcu+0x57/0xe0
+[1092679.705275]  nvme_ns_remove+0x93/0x180 [nvme_core]
+[1092679.705280]  nvme_remove_namespaces+0xb0/0xf0 [nvme_core]
+[1092679.705287]  nvme_do_delete_ctrl+0x49/0x66 [nvme_core]
+[1092679.705292]  nvme_sysfs_delete.cold+0x8/0xd [nvme_core]
+[1092679.705296]  dev_attr_store+0x17/0x30
+[1092679.705300]  sysfs_kf_write+0x3e/0x50
+[1092679.705302]  kernfs_fop_write+0xda/0x1b0
+[1092679.705305]  __vfs_write+0x1b/0x40
+[1092679.705306]  vfs_write+0xb9/0x1a0
+[1092679.705308]  ksys_write+0x67/0xe0
+[1092679.705310]  __x64_sys_write+0x1a/0x20
+[1092679.705313]  do_syscall_64+0x57/0x190
+[1092679.705315]  entry_SYSCALL_64_after_hwframe+0x5c/0xc1
+[1092679.705316] RIP: 0033:0x7f8a2c0d0077
+[1092679.705319] Code: Bad RIP value.
+[1092679.705320] RSP: 002b:00007ffe92ac3988 EFLAGS: 00000246 ORIG_RAX: 0000000000000001
+[1092679.705321] RAX: ffffffffffffffda RBX: 0000000000000020 RCX: 00007f8a2c0d0077
+[1092679.705322] RDX: 0000000000000001 RSI: 00005610d543b994 RDI: 0000000000000004
+[1092679.705323] RBP: 0000000000000004 R08: 00005610d543c460 R09: 00007ffe92ac3aa0
+[1092679.705324] R10: 0000000000000000 R11: 0000000000000246 R12: 00005610d5921540
+[1092679.705325] R13: 00007ffe92ac44c0 R14: 0000000000000003 R15: 00007ffe92ac39e0
+[1092786.360131] nvme nvme5: new ctrl: NQN "nqn.2014-08.org.nvmexpress.discovery", addr 10.10.10.27:6600
+[1092786.360340] nvme nvme5: Removing ctrl: NQN "nqn.2014-08.org.nvmexpress.discovery"
+[1092800.533707] INFO: task kworker/54:1H:3628 blocked for more than 241 seconds.
+[1092800.533754]       Tainted: G           OE     5.4.0-163-generic #180-Ubuntu
+[1092800.533790] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[1092800.533832] kworker/54:1H   D    0  3628      2 0x80004000
+[1092800.533849] Workqueue: kblockd nvme_requeue_work [nvme_core]
+[1092800.533851] Call Trace:
+[1092800.533859]  __schedule+0x2e3/0x740
+[1092800.533863]  ? dma_direct_map_sg+0x44/0xb0
+[1092800.533866]  schedule+0x42/0xb0
+[1092800.533870]  blk_queue_enter+0x160/0x200
+[1092800.533875]  ? __wake_up_pollfree+0x40/0x40
+[1092800.533877]  direct_make_request+0x49/0xd0
+[1092800.533882]  nvme_ns_head_make_request+0xce/0x440 [nvme_core]
+[1092800.533885]  generic_make_request+0xcf/0x320
+[1092800.533890]  nvme_requeue_work+0x65/0x80 [nvme_core]
+[1092800.533895]  process_one_work+0x1eb/0x3b0
+[1092800.533897]  worker_thread+0x4d/0x400
+[1092800.533901]  kthread+0x104/0x140
+[1092800.533903]  ? process_one_work+0x3b0/0x3b0
+[1092800.533905]  ? kthread_park+0x90/0x90
+[1092800.533909]  ret_from_fork+0x35/0x40
+[1092800.534183] INFO: task umount:3148021 blocked for more than 241 seconds.
+[1092800.534219]       Tainted: G           OE     5.4.0-163-generic #180-Ubuntu
+[1092800.534255] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[1092800.534296] umount          D    0 3148021 3130152 0x00004004
+[1092800.534298] Call Trace:
+[1092800.534300]  __schedule+0x2e3/0x740
+[1092800.534303]  schedule+0x42/0xb0
+[1092800.534343]  __xfs_log_force_lsn+0x14a/0x260 [xfs]
+[1092800.534346]  ? wake_up_q+0xa0/0xa0
+[1092800.534381]  xfs_log_force_lsn+0x99/0x120 [xfs]
+[1092800.534414]  ? xfs_trans_commit+0x10/0x20 [xfs]
+[1092800.534447]  __xfs_trans_commit+0x2c6/0x350 [xfs]
+[1092800.534479]  xfs_trans_commit+0x10/0x20 [xfs]
+[1092800.534516]  xfs_sync_sb+0x6d/0x80 [xfs]
+[1092800.534553]  xfs_log_sbcount+0x4f/0x60 [xfs]
+[1092800.534586]  xfs_unmountfs+0x81/0x150 [xfs]
+[1092800.534619]  xfs_fs_put_super+0x3a/0x90 [xfs]
+[1092800.534625]  generic_shutdown_super+0x72/0x110
+[1092800.534628]  kill_block_super+0x27/0x50
+[1092800.534630]  deactivate_locked_super+0x3b/0x80
+[1092800.534632]  deactivate_super+0x3e/0x50
+[1092800.534636]  cleanup_mnt+0x109/0x160
+[1092800.534638]  __cleanup_mnt+0x12/0x20
+[1092800.534640]  task_work_run+0x8f/0xb0
+[1092800.534644]  exit_to_usermode_loop+0x131/0x160
+[1092800.534647]  do_syscall_64+0x168/0x190
+[1092800.534649]  entry_SYSCALL_64_after_hwframe+0x5c/0xc1
+[1092800.534651] RIP: 0033:0x7fbe8081816b
+[1092800.534659] Code: Bad RIP value.
+[1092800.534661] RSP: 002b:00007ffc1f69ecd8 EFLAGS: 00000246 ORIG_RAX: 00000000000000a6
+[1092800.534663] RAX: 0000000000000000 RBX: 00007fbe8094a204 RCX: 00007fbe8081816b
+[1092800.534664] RDX: 0000000000000015 RSI: 0000000000000000 RDI: 000055c9e3c34cc0
+[1092800.534665] RBP: 000055c9e3c2ba30 R08: 0000000000000000 R09: 000055c9e3c2a014
+[1092800.534666] R10: 000055c9e3c2a010 R11: 0000000000000246 R12: 000055c9e3c34cc0
+[1092800.534667] R13: 0000000000000000 R14: 000055c9e3c2bb28 R15: 000055c9e3c34e00
+[1092800.534673] INFO: task nvme:3148438 blocked for more than 241 seconds.
+[1092800.534708]       Tainted: G           OE     5.4.0-163-generic #180-Ubuntu
+[1092800.534744] "echo 0 > /proc/sys/kernel/hung_task_timeout_secs" disables this message.
+[1092800.534784] nvme            D    0 3148438 3148380 0x00004004
+[1092800.534785] Call Trace:
+[1092800.534788]  __schedule+0x2e3/0x740
+[1092800.534791]  ? __switch_to_asm+0x42/0x80
+[1092800.534793]  schedule+0x42/0xb0
+[1092800.534795]  schedule_timeout+0x10e/0x160
+[1092800.534798]  wait_for_completion+0xb1/0x120
+[1092800.534800]  ? wake_up_q+0xa0/0xa0
+[1092800.534803]  __synchronize_srcu.part.0+0x81/0xb0
+[1092800.534805]  ? __bpf_trace_rcu_utilization+0x10/0x10
+[1092800.534808]  ? ktime_get_mono_fast_ns+0x4e/0xa0
+[1092800.534810]  synchronize_srcu_expedited+0x28/0x30
+[1092800.534812]  synchronize_srcu+0x57/0xe0
+[1092800.534818]  nvme_ns_remove+0x93/0x180 [nvme_core]
+[1092800.534823]  nvme_remove_namespaces+0xb0/0xf0 [nvme_core]
+[1092800.534829]  nvme_do_delete_ctrl+0x49/0x66 [nvme_core]
+[1092800.534834]  nvme_sysfs_delete.cold+0x8/0xd [nvme_core]
+[1092800.534838]  dev_attr_store+0x17/0x30
+[1092800.534842]  sysfs_kf_write+0x3e/0x50
+[1092800.534844]  kernfs_fop_write+0xda/0x1b0
+[1092800.534846]  __vfs_write+0x1b/0x40
+[1092800.534848]  vfs_write+0xb9/0x1a0
+[1092800.534850]  ksys_write+0x67/0xe0
+[1092800.534852]  __x64_sys_write+0x1a/0x20
+[1092800.534854]  do_syscall_64+0x57/0x190
+[1092800.534856]  entry_SYSCALL_64_after_hwframe+0x5c/0xc1
+[1092800.534858] RIP: 0033:0x7f8a2c0d0077
+[1092800.534860] Code: Bad RIP value.
+[1092800.534861] RSP: 002b:00007ffe92ac3988 EFLAGS: 00000246 ORIG_RAX: 0000000000000001
+[1092800.534863] RAX: ffffffffffffffda RBX: 0000000000000020 RCX: 00007f8a2c0d0077
+[1092800.534864] RDX: 0000000000000001 RSI: 00005610d543b994 RDI: 0000000000000004
+[1092800.534865] RBP: 0000000000000004 R08: 00005610d543c460 R09: 00007ffe92ac3aa0
+[1092800.534866] R10: 0000000000000000 R11: 0000000000000246 R12: 00005610d5921540
+[1092800.534866] R13: 00007ffe92ac44c0 R14: 0000000000000003 R15: 00007ffe92ac39e0

@@ -1,0 +1,13 @@
+ int print_eth_proto(struct sk_buff *skb)
+ {
+    struct ethhdr *eth = (struct ethhdr *)skb->data;
+    switch (eth->h_proto) {
+        case htons(ETH_P_IP):
+		pr_err("tracing proto %x ip, eth->h_proto);
+		case htons(ETH_P_ARP)：
+		pr_err("tracing proto %x arp", eth->h_proto);
+		default:
+		pr_err("tracing proto %x", eth->h_proto);
+		
+	}
+ }

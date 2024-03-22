@@ -67,7 +67,6 @@ int nvidia_p2p_get_pages(u64 vaddr, u64 size,
 
 + 1  用户态程序   
 ```
-}
 int
 main()
 {
@@ -91,7 +90,20 @@ main()
 }
 ```
 
-+ 2 执行  
++ 内核
+
+
+```
+#if 1
+       user_pages = pin_user_pages(vaddr & PAGE_MASK, nr_pages, flags, pages, NULL);
+#else
+       locked = 1;
+       user_pages = get_user_pages_locked(vaddr , nr_pages, flags,
+                        pages, &locked);
+#endif
+```
+
++ 3 执行  
 ```
 root@ubuntux86:# insmod  get_user_pages_test.ko 
 root@ubuntux86:# ./test 

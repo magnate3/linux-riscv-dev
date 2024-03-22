@@ -77,7 +77,7 @@ phy addr of ptr  0x15a273000
 Zero page frame number
 after zap_vma_ptes, phy addr of ptr 0x0 
 ```
-执行zap_vma_ptes后，phy addr of ptr从0x15a273000 变成了0x0    
+执行zap_vma_ptes后，posix_memalign分配的内存释放，phy addr of ptr从0x15a273000 变成了0x0    
 
 # tlb_flush_mmu --> __mmu_notifier_invalidate_range
 

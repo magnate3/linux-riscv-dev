@@ -1,6 +1,6 @@
 
 # 内核zap_vma_ptes
-
+my_write调用zap_vma_ptes   
 ```
 static ssize_t  my_write(struct file *file, const char __user *buf, size_t count, loff_t *off)
 {

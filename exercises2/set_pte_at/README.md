@@ -154,3 +154,50 @@ vm_area_struct 结构体 中的 vm_file 成员 是 " 内存映射 “ 中的 ”
 unmap_region() 是在 munmap() 函数内部被调用的一个子函数。它主要负责遍历指定区域中所有页表项，并调用相应的函数来处理每个页表项所对应的物理页面。具体而言，unmap_region() 会逐一检查当前页表项是否有效，如果是，则将该页表项对应的物理页面解除映射关系，并更新相关的内存管理数据结构
 ```
 
+#  do_set_pte  -->  set_pte_at
+do_set_pte() 函数将缺页异常处理流程中获取的物理地址写入页表项，完成物理地址和报异常的虚拟地址之间的连接：
+
+```
+// mm/memory.c: 3975
+void do_set_pte(struct vm_fault *vmf, struct page *page, unsigned long addr)
+{
+	...
+	/* 如果是写异常，将页表项的脏位置位，同时将写权限 W 位也置位 */
+	if (write)
+		entry = maybe_mkwrite(pte_mkdirty(entry), vma);
+	/* copy-on-write page */
+	/*
+* 如果是私有写文件映射，由于其已经独立了，不再会影响文件页，所以视为
+* 私有匿名页管理，将其加入私有匿名页的反射机制管理结构中，同时也将该
+* 页加入 LRU 不活跃链表中，第一次访问不能证明其经常会被访问，所以暂且
+* 放入不活跃链表。
+* 如果是共享的文件页，将其加入文件页反射机制管理结构中。
+* 上述两种情况都会调用 inc_mm_counter_fast() 增加该虚拟地址空间的引用
+* 次数
+*/
+	if (write && !(vma->vm_flags & VM_SHARED)) {
+		inc_mm_counter_fast(vma->vm_mm, MM_ANONPAGES);
+		page_add_new_anon_rmap(page, vma, addr, false);
+		lru_cache_add_inactive_or_unevictable(page, vma);
+	} else {
+		inc_mm_counter_fast(vma->vm_mm, mm_counter_file(page));
+		page_add_file_rmap(page, false);
+	}
+	/* 将页对应的物理地址写入页表项，完成该缺页虚拟地址到物理页的最终映射 */
+	set_pte_at(vma->vm_mm, addr, vmf->pte, entry);
+}
+```
+do_set_pte() 流程总结如下：
+
++ 如果是写文件映射的异常，将页表项的脏位置位，同时将写权限 W 位也置位。
+
++ 将新获取的页面加入对应的管理结构中：   
+
+如果是私有写文件映射，由于其已经独立了，不会影响文件页，所以视为私有匿名页管理，将其加入私有匿名页的反射机制管理结构中，同时也将该页加入 LRU 不活跃链表中，因为第一次访问不能证明其会经常被访问，所以暂且放入不活跃链表。   
+
+如果是共享文件页，将其加入文件页反射机制管理结构中。   
+
+上述两种情况都会调用 inc_mm_counter_fast() 增加该虚拟地址空间的引用次数。   
+
++ 最后调用 set_pte_at() 将页对应的物理地址写入页表项，完成该缺页的虚拟地址到物理页的最终映射。   
+

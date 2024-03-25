@@ -73,7 +73,7 @@ struct vm_ucm_operations_struct {
 	int (*is_gpu_page_dirty)(struct vm_area_struct *vma, struct page *gpu_page);
 };
 ```
-+1 get_page_from_gpu   
++ 1 get_page_from_gpu   
 ```
 struct page *get_page_from_gpu(struct address_space *mapping, pgoff_t offset,
 		struct page *page)

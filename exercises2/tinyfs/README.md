@@ -173,6 +173,108 @@ struct block_device *bdev_alloc(struct gendisk *disk, u8 partno)
 > Priority:-2 extents:1 across:999420k SS
 ```
 
+# filemap_map_pages 
+
+```
+static const struct vm_operations_struct blkdev_dax_vm_ops = {
+	.open		= blkdev_vm_open,
+	.close		= blkdev_vm_close,
+	.fault		= blkdev_dax_fault,
+	.pmd_fault	= blkdev_dax_pmd_fault,
+	.pfn_mkwrite	= blkdev_dax_fault,
+};
+
+static const struct vm_operations_struct blkdev_default_vm_ops = {
+	.open		= blkdev_vm_open,
+	.close		= blkdev_vm_close,
+	.fault		= filemap_fault,
+	.map_pages	= filemap_map_pages,
+};
+```
+
+> ## Page Cache 的插入
+
+我们在Linux内核源码分析-内存请页机制中分析了缺页中断时，当访问的 Page Table 尚未分配，即vma对应磁盘上的某一个文件时，会调用vma->vm_ops->fault(vmf)对应的文件系统的缺页处理函数。
+
+```
+page = page_cache_alloc();
+/* ... */
+__add_to_page_cache(page, mapping, index, hash);
+```
+以ext4为例，ext4_filemap_fault()为缺页处理函数，具体调用了内存管理模块的filemap_fault()来完成:
+
+
+```
+vm_fault_t filemap_fault(struct vm_fault *vmf)
+{
+        /* 查找缺页是否存在于 Page Cache.
+           mapping 为该文件的 adress_space,
+           offset 为该页的偏移量.
+         */
+        page = find_get_page(mapping, offset);
+        if (likely(page) && !(vmf->flags & FAULT_FLAG_TRIED)) {
+                /* 假如存在，进行预读 */
+                do_async_mmap_readahead(vmf->vma, ra, file, page, offset);
+        } else if (!page) {
+                /* 假如不存在，则进行预读，之后立即尝试 Page Cache 查找，
+                   假如仍然不存在，则跳转 no_cached_page.
+                 */
+                do_sync_mmap_readahead(vmf->vma, ra, file, offset);
+                count_vm_event(PGMAJFAULT);
+                count_memcg_event_mm(vmf->vma->vm_mm, PGMAJFAULT);
+                ret = VM_FAULT_MAJOR;
+retry_find:
+                page = find_get_page(mapping, offset);
+                if (!page)
+                        goto no_cached_page;
+        }
+
+        /* ... */
+
+        vmf->page = page;
+        return ret | VM_FAULT_LOCKED;
+
+no_cached_page:
+        /* 1. 申请分配一个 Page
+           2. 将该 Page 添加至Page Cache
+           3. 调用 address_space 的 readpage() 函数完成该 Page 内容的读取
+        */
+        error = page_cache_read(file, offset, vmf->gfp_mask);
+				/* ... */
+}
+EXPORT_SYMBOL(filemap_fault);
+
+
+```
+
+Page Cache 的插入主要流程如下:
+
+判断查找的 Page 是否存在于 Page Cache，存在即直接返回   
+否则通过 Linux 内核物理内存分配介绍的伙伴系统分配一个空闲的 Page.   
+将 Page 插入 Page Cache，即插入address_space的i_pages.   
+调用address_space的readpage()来读取指定 offset 的 Page.  
+
+
+> ##  find_get_page  -->  pagecache_get_page
+
+```
+/**
+ * find_get_page - find and get a page reference
+ * @mapping: the address_space to search
+ * @offset: the page index
+ *
+ * Looks up the page cache slot at @mapping & @offset.  If there is a
+ * page cache page, it is returned with an increased refcount.
+ *
+ * Otherwise, %NULL is returned.
+ */
+static inline struct page *find_get_page(struct address_space *mapping,
+                                        pgoff_t offset)
+{
+        return pagecache_get_page(mapping, offset, 0, 0);
+}
+```
+
 # references
 
 [300行代码带你实现一个Linux文件系统](https://zhuanlan.zhihu.com/p/579011810)     

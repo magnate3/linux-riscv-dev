@@ -351,6 +351,23 @@ rcu_assign_pointer(pdev->p2pdma, p2p);
 
 #  pci_alloc_p2pmem
 
+采用gen_pool_alloc_algo_owner进行分配   
+genalloc 是 linux 内核提供的通用内存分配器，源码位于 lib/genalloc.c。这个分配器为独立于内核以外的内存块提供分配方法，采用的是最先适配原则，android 最新的 ION 内存管理器对 ION_HEAP_TYPE_CARVEOUT 类型的内存就是采用的这个分配器。    
+
+```
+        addr = devm_memremap_pages(&pdev->dev, pgmap);
+        if (IS_ERR(addr)) {
+                error = PTR_ERR(addr);
+                goto pgmap_free;
+        }
+
+        p2pdma = rcu_dereference_protected(pdev->p2pdma, 1);
+        error = gen_pool_add_owner(p2pdma->pool, (unsigned long)addr,
+                        pci_bus_address(pdev, bar) + offset,
+                        range_len(&pgmap->range), dev_to_node(&pdev->dev),
+                        &pgmap->ref);
+```
+
 #  O_DIRECT  
 
 

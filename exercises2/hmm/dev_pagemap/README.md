@@ -1,0 +1,120 @@
+
+#   struct dev_pagemap
+```
+int svm_migrate_init(struct amdgpu_device *adev)
+{
+        struct kfd_dev *kfddev = adev->kfd.dev;
+        struct dev_pagemap *pgmap;
+        struct resource *res = NULL;
+        unsigned long size;
+        void *r;
+
+        /* Page migration works on Vega10 or newer */
+        if (!KFD_IS_SOC15(kfddev))
+                return -EINVAL;
+
+        pgmap = &kfddev->pgmap;
+        memset(pgmap, 0, sizeof(*pgmap));
+
+        /* TODO: register all vram to HMM for now.
+         * should remove reserved size
+         */
+        size = ALIGN(adev->gmc.real_vram_size, 2ULL << 20);
+        if (adev->gmc.xgmi.connected_to_cpu) {
+                pgmap->range.start = adev->gmc.aper_base;
+                pgmap->range.end = adev->gmc.aper_base + adev->gmc.aper_size - 1;
+                pgmap->type = MEMORY_DEVICE_COHERENT;
+        } else {
+                res = devm_request_free_mem_region(adev->dev, &iomem_resource, size);
+                if (IS_ERR(res))
+                        return -ENOMEM;
+                pgmap->range.start = res->start;
+                pgmap->range.end = res->end;
+                pgmap->type = MEMORY_DEVICE_PRIVATE;
+        }
+
+        pgmap->nr_range = 1;
+        pgmap->ops = &svm_migrate_pgmap_ops;
+        pgmap->owner = SVM_ADEV_PGMAP_OWNER(adev);
+        pgmap->flags = 0;
+        /* Device manager releases device-specific resources, memory region and
+         * pgmap when driver disconnects from device.
+         */
+        r = devm_memremap_pages(adev->dev, pgmap);
+        if (IS_ERR(r)) {
+                pr_err("failed to register HMM device memory\n");
+                /* Disable SVM support capability */
+                pgmap->type = 0;
+                if (pgmap->type == MEMORY_DEVICE_PRIVATE)
+                        devm_release_mem_region(adev->dev, res->start,
+                                                res->end - res->start + 1);
+                return PTR_ERR(r);
+        }
+        pr_debug("reserve %ldMB system memory for VRAM pages struct\n",
+                 SVM_HMM_PAGE_STRUCT_SIZE(size) >> 20);
+
+        amdgpu_amdkfd_reserve_system_mem(SVM_HMM_PAGE_STRUCT_SIZE(size));
+
+        svm_range_set_max_pages(adev);
+
+        pr_info("HMM registered %ldMB device memory\n", size >> 20);
+
+        return 0;
+}
+int
+svm_migrate_to_vram(struct svm_range *prange, uint32_t best_loc,
+                    struct mm_struct *mm, uint32_t trigger)
+{
+        if  (!prange->actual_loc)
+                return svm_migrate_ram_to_vram(prange, best_loc, mm, trigger);
+        else
+                return svm_migrate_vram_to_vram(prange, best_loc, mm, trigger);
+
+}
+```
+
++ devm_memremap_pages   
+
+
+```
+[ 2964.810650] PKRU: 55555554
+[ 2964.810651] Call Trace:
+[ 2964.810652]  <TASK>
+[ 2964.810655]  add_pages+0x17/0x70
+[ 2964.810659]  arch_add_memory+0x45/0x60
+[ 2964.810661]  memremap_pages+0x2ff/0x6a0
+[ 2964.810665]  devm_memremap_pages+0x23/0x70
+[ 2964.810667]  pci_p2pdma_add_resource+0x19c/0x580
+[ 2964.810671]  p2pmem_pci_probe+0x2c/0xb0 [p2pmem_pci]
+[ 2964.810676]  local_pci_probe+0x48/0xb0
+[ 2964.810679]  work_for_cpu_fn+0x17/0x30
+[ 2964.810681]  process_one_work+0x21c/0x430
+[ 2964.810683]  worker_thread+0x1fa/0x3c0
+[ 2964.810684]  ? __pfx_worker_thread+0x10/0x10
+[ 2964.810685]  kthread+0xee/0x120
+[ 2964.810688]  ? __pfx_kthread+0x10/0x10
+[ 2964.810690]  ret_from_fork+0x29/0x50
+[ 2964.810694]  </TASK>
+[ 2964.810695] ---[ end trace 0000000000000000 ]---
+[ 2964.818531] p2pmem_pci 0000:00:04.0: unable to add p2p resource
+```
+
+
+#  pci_alloc_p2pmem
+
+采用gen_pool_alloc_algo_owner进行分配   
+genalloc 是 linux 内核提供的通用内存分配器，源码位于 lib/genalloc.c。这个分配器为独立于内核以外的内存块提供分配方法，采用的是最先适配原则，android 最新的 ION 内存管理器对 ION_HEAP_TYPE_CARVEOUT 类型的内存就是采用的这个分配器。    
+
+```
+        addr = devm_memremap_pages(&pdev->dev, pgmap);
+        if (IS_ERR(addr)) {
+                error = PTR_ERR(addr);
+                goto pgmap_free;
+        }
+
+        p2pdma = rcu_dereference_protected(pdev->p2pdma, 1);
+        error = gen_pool_add_owner(p2pdma->pool, (unsigned long)addr,
+                        pci_bus_address(pdev, bar) + offset,
+                        range_len(&pgmap->range), dev_to_node(&pdev->dev),
+                        &pgmap->ref);
+```

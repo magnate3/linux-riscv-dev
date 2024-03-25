@@ -23,6 +23,310 @@ uvm_va_space_t *get_shared_mem_va_space(void)
 	return uvm_va_space;
 }
 ```
+
+```
+struct vm_ucm_operations_struct uvm_ucm_ops_managed =
+{
+	.get_mmaped_file = uvm_vm_get_mmaped_file,
+	.get_cpu_addr = uvm_get_cpu_addr,
+	.invalidate_cached_page = uvm_vm_invalidate_cached_page,
+	.retrive_cached_page = uvm_vm_retrive_cached_page,
+	.retrive_16cached_pages = uvm_vm_retrive_16cached_pages_multi, //uvm_vm_retrive_16cached_pages2,
+	.is_gpu_page_dirty = uvm_vm_is_gpu_page_dirty,
+};
+```
+
+```
+   vma->vm_ops = &uvm_vm_ops_managed;
+   vma->ucm_vm_ops = &uvm_ucm_ops_managed;
+```
+
+>  ## page分配   
+
+```
+static NV_STATUS phys_mem_allocate(uvm_page_tree_t *tree, NvLength size, uvm_aperture_t location, uvm_pmm_alloc_flags_t pmm_flags, uvm_mmu_page_table_alloc_t *out)
+{
+    memset(out, 0, sizeof(*out));
+
+    if (location == UVM_APERTURE_SYS)
+        return phys_mem_allocate_sysmem(tree, size, out);
+    else
+        return phys_mem_allocate_vidmem(tree, size, pmm_flags, out);
+}
+```
+
+> ## struct vm_ucm_operations_struct 
+
+[参考](https://github.com/acsl-technion/gaia_linux/blob/74ead19e60f17dc5f8a93134b23568badf368daa/include/linux/mm.h#L248)   
+
+```
+struct vm_ucm_operations_struct {
+	/* vma - current vma, start - virtual address the mapping starts at (==shared_addr)*/
+	struct file *(*get_mmaped_file)(struct vm_area_struct *vma, unsigned long start, unsigned long end);
+	unsigned long int (*get_cpu_addr)(struct vm_area_struct *vma, unsigned long start, unsigned long end);
+	int (*invalidate_cached_page)(struct vm_area_struct *vma, unsigned long virt_addr);
+	int (*retrive_cached_page)(unsigned long virt_addr, struct page *cpu_page);
+	int (*retrive_16cached_pages)(unsigned long virt_addr, struct page *pages_arr[]);
+	/* Recived the struct page of the gpu_page that was foundin page cahe and returns true if this
+	 * page is dirty on the GPU. Note that this means that 16 cpu pages corresponding to this gpu_page
+	 * have to be invalidated on CPU*/
+	int (*is_gpu_page_dirty)(struct vm_area_struct *vma, struct page *gpu_page);
+};
+```
++1 get_page_from_gpu   
+```
+struct page *get_page_from_gpu(struct address_space *mapping, pgoff_t offset,
+		struct page *page)
+{
+	struct ucm_page_data *pdata;
+	struct page *gpu_page;
+	bool allocated = false;
+	int err;
+	//UCM_ERR("Found page @offst %lld in cache but not latest version i_ino=%ld. page=0x%llx\n",offset, mapping->host->i_ino, page);
+
+	/* If I got here then latest version is on GPU and I need a CPU page.
+	 * This is because if gpu version was needed and latest is on cpu
+	 * I would have taken careof this in aquire.
+	 * so - need to bring it from gpu to cpu */
+	if (!page) {
+		UCM_ERR("Can't call this func without a backing up cpu page\n");
+		return NULL;
+	}
+	gpu_page = pagecache_get_gpu_page(mapping, offset, GPU_NVIDIA, true);
+	if (!gpu_page) {
+		return NULL;
+	}
+
+	pdata = (struct ucm_page_data *)gpu_page->private;
+	if (!pdata) {
+		UCM_ERR("pdata = NULL\n");
+		return NULL;
+	}
+	if (!pdata->gpu_maped_vma) {
+		UCM_ERR("!pdata->gpu_maped_vma\n");
+		return NULL;
+	} else if(!pdata->gpu_maped_vma->ucm_vm_ops) {
+		UCM_ERR("!pdata->gpu_maped_vma->ucm_vm_ops\n");
+		return NULL;
+	}
+	if (!pdata->gpu_maped_vma->ucm_vm_ops->retrive_cached_page) {
+		UCM_ERR("vma->ucm_vm_ops->retrive_cached_page cb is not provided. cant update page\n");
+		return NULL;
+	}
+
+	if (pdata->gpu_maped_vma->ucm_vm_ops->retrive_cached_page(pdata->shared_addr + (offset % 16)*PAGE_SIZE, page)) {
+		UCM_ERR("FAIL ++++ retrive_cached_page for offset = %lld FAILED\n", offset);
+		if (allocated) {
+			page_cache_release(page);
+			page = NULL;
+			return NULL;
+		}
+	}
+	(void)set_page_version_as_on(mapping, offset,SYS_CPU, GPU_NVIDIA);
+	PageUptodate(page);
+	return page;
+}
+struct page *pagecache_get_gpu_page(struct address_space *mapping, pgoff_t offset,
+	int gpu_id, bool ignore_version)
+{
+	void **pagep;
+	struct page *page;
+	struct radix_tree_node *node = NULL;
+
+	rcu_read_lock();
+repeat:
+	page = NULL;
+	pagep = radix_tree_lookup_slot_node(&mapping->page_tree, offset, &node);
+	if (node) {
+		int gpu_page_idx = ucm_get_gpu_idx(offset % RADIX_TREE_MAP_SIZE);
+
+		if (mapping->page_tree.rnode == node)
+			UCM_ERR("got root: num_gpu = %ld node->count = %ld\n", node->count_gpu, node->count);
+		if (node->gpu_pages[gpu_id][gpu_page_idx]) {
+			page = node->gpu_pages[gpu_id][gpu_page_idx];
+		}
+	}
+
+out:
+	rcu_read_unlock();
+
+	if (radix_tree_exceptional_entry(page))
+		page = NULL;
+	if (!page)
+		return NULL;
+
+	if (!PageonGPU(page)) {
+		UCM_ERR("Got some page but its not marked on gpu\n");
+		return NULL;
+	}
+
+	return page;
+}
+EXPORT_SYMBOL(pagecache_get_gpu_page);
+
+```
++ pagecache_get_gpu_page   
++ uvm_vm_retrive_cached_page  
+
+
+```
+#define AQUIRE_PAGES_THREASHOLD 1024
+SYSCALL_DEFINE3(maquire, unsigned long, start, size_t, len, int, flags)
+{
+	unsigned long end_byte;
+	struct mm_struct *mm = current->mm;
+	struct vm_area_struct *shared_vma, *cpu_vma;
+	int unmapped_error = 0;
+	int error = -EINVAL;
+	struct file *mfile = NULL;
+	int nr_pages;
+ 	pgoff_t index, end; 
+	unsigned i;
+	int gpu_page_idx = -1;
+	int gpu_missing = 0;
+	int *pages_idx;
+	unsigned long tagged, tagged_gpu;
+
+	struct page **cached_pages = NULL;
+
+	int stat_gpu_deleted = -1;
+	int stat_cpu_marked = 0;
+
+	struct timespec tstart, tend;
+	int ret;
+
+
+	if (flags & ~(MA_PROC_NVIDIA | MA_PROC_AMD)) {
+		UCM_ERR("What GPU should I aquire for??? Exit\n");
+		goto out;
+	}
+	if (offset_in_page(start))
+			goto out;
+	if ((flags & MS_ASYNC) && (flags & MS_SYNC))
+			goto out;
+
+	error = -ENOMEM;
+	if ( start + len <= start)
+			goto out;
+	error = 0;
+
+	/*
+	 * If the interval [start,end) covers some unmapped address ranges,
+	 * just ignore them, but return -ENOMEM at the end.
+	 */
+	down_read(&mm->mmap_sem);
+	shared_vma = find_vma(mm, start);
+	if (!shared_vma) {
+		UCM_ERR("no shared_vma found starting at 0x%llx\n", start);
+		goto out_unlock;
+	}
+	if (!shared_vma->gpu_mapped_shared) {
+		UCM_ERR("Aquire is not supported for a NOT-GPU maped vma\n");
+		error = -EINVAL;
+		goto out_unlock;
+	}
+	if (!shared_vma->ucm_vm_ops || !shared_vma->ucm_vm_ops->get_mmaped_file || !shared_vma->ucm_vm_ops->invalidate_cached_page) {
+		UCM_ERR("ucm_vm_ops not povided\n");
+		error = -EINVAL;
+		goto out_unlock;
+	}
+
+
+	unsigned long int cpu_addr = shared_vma->ucm_vm_ops->get_cpu_addr(shared_vma, start, end);
+	if (!cpu_addr) {
+		UCM_ERR("Didn't find CPU addr?!?!?\n");
+		error = -EINVAL;
+                goto out_unlock;
+	}	
+	cpu_vma = find_vma(mm, cpu_addr);
+	if (!cpu_vma) {
+		UCM_ERR("no cpu_vma found starting at 0x%llx\n", cpu_addr);
+		goto out_unlock;
+	}
+
+	index = (cpu_addr - cpu_vma->vm_start) / PAGE_SIZE;
+	end = (cpu_addr + len - cpu_vma->vm_start) / PAGE_SIZE + 1;
+
+
+	 //Do the msync here
+	 get_file(cpu_vma->vm_file);
+	up_read(&mm->mmap_sem);
+
+	if (vfs_fsync_range(cpu_vma->vm_file, index, end, 0))
+		UCM_ERR("vfs sync failed\n");
+	fput(cpu_vma->vm_file);
+	down_read(&mm->mmap_sem);
+
+	 while ((index <= end) ) {
+			/*(nr_pages = pagevec_lookup_tag(&pvec, cpu_vma->vm_file->f_mapping, &index,
+				PAGECACHE_TAG_DIRTY,
+				min(end - index, (pgoff_t)PAGEVEC_SIZE-1) + 1)) != 0)*/
+		int num_pages = min(AQUIRE_PAGES_THREASHOLD +1, end-index);
+		pgoff_t start = index;
+		pages_idx = (int*)kzalloc(sizeof(int)*(num_pages + 1), GFP_KERNEL);
+		if (!pages_idx) {
+			UCM_ERR("Error allocating memory!\n");
+			error = -ENOMEM;
+         	       goto out_unlock;
+		}
+		nr_pages = find_get_taged_pages_idx(cpu_vma->vm_file->f_mapping, &index,
+			num_pages, pages_idx, PAGECACHE_TAG_CPU_DIRTY);
+		index += nr_pages;
+		stat_cpu_marked += nr_pages;
+		if (!nr_pages) {
+			//UCM_DBG("No pages taged as DIRTY ON CPU!!! index=%d end - %d\n", index, end);
+			kfree(pages_idx);
+			break;
+		} 
+		for (i = 0; i < nr_pages; i++) {
+			int page_idx = pages_idx[i];
+			/* until radix tree lookup accepts end_index */
+			if (page_idx > end) {
+				UCM_DBG("page_idx (%d) > end (%d). continue..\n", page_idx, end);
+				continue;
+			}
+			if (1/*(gpu_page_idx == -1) || (gpu_page_idx != page_idx % 16)*/) {
+				struct page *gpu_page = pagecache_get_gpu_page(cpu_vma->vm_file->f_mapping, page_idx, GPU_NVIDIA, true);
+
+				if (gpu_page) {
+					struct mem_cgroup *memcg;
+					unsigned long flags;
+					struct ucm_page_data *pdata = (struct ucm_page_data *)gpu_page->private;
+
+					memcg = mem_cgroup_begin_page_stat(gpu_page);
+					gpu_page_idx = gpu_page->index;
+					//Remove the page from page cache
+					__set_page_locked(gpu_page);
+					spin_lock_irqsave(&cpu_vma->vm_file->f_mapping->tree_lock, flags);
+					__delete_from_page_cache_gpu(gpu_page, NULL, memcg, GPU_NVIDIA);
+					ClearPageonGPU(gpu_page);
+					spin_unlock_irqrestore(&cpu_vma->vm_file->f_mapping->tree_lock, flags);
+					mem_cgroup_end_page_stat(memcg);
+					__clear_page_locked(gpu_page);
+					//The virtual address of the page in the shared VM is saved ar page->private
+					if (stat_gpu_deleted < 0)
+						stat_gpu_deleted = 0;
+					stat_gpu_deleted++;
+					if (shared_vma->ucm_vm_ops->invalidate_cached_page(shared_vma, pdata->shared_addr ))
+						UCM_ERR("Error invalidating page at virt addr 0x%llx on GPU!!!\n", pdata->shared_addr );
+				} else
+					gpu_missing++;
+				radix_tree_tag_clear(&cpu_vma->vm_file->f_mapping->page_tree, page_idx,
+                                   		PAGECACHE_TAG_CPU_DIRTY);
+			}
+		}
+		kfree(pages_idx);
+	}
+
+out_unlock:
+        up_read(&mm->mmap_sem);
+out:
+	UCM_DBG("done: stat_gpu_deleted=%d, stat_cpu_marked=%d gpu_missing=%d\n", stat_gpu_deleted, stat_cpu_marked, gpu_missing);
+        return stat_gpu_deleted;
+}
+```
++ pagecache_get_gpu_page   
+
 ##  va_space_create
 
 ```
@@ -195,3 +499,5 @@ static int uvm_open(struct inode *inode, struct file *filp)
 [cuda统一内存优化DeepUM](https://zhuanlan.zhihu.com/p/672931240)  
 
 [CUDA中的UM机制与GDR实现](https://www.ctyun.cn/developer/article/465119451353157)   
+
+[address_space_init_once of gdr](https://github.com/NVIDIA/gdrcopy/blob/fbb6f924e0b6361c382bcb0aaef595f08a2cb61f/src/gdrdrv/gdrdrv.c#L72)   

@@ -86,7 +86,7 @@ Segmentation fault
 root@ubuntux86:# dmesg | tail -n 60
 ```
 
-# do_swap_page
+> ## do_swap_page
 ```
 [   43.984917] PKRU: 55555554
 [   43.984920] Call Trace:
@@ -100,4 +100,26 @@ root@ubuntux86:# dmesg | tail -n 60
 [   43.984977]  ? asm_exc_page_fault+0x8/0x30
 [   43.984988]  asm_exc_page_fault+0x1e/0x30
 [   43.984996] RIP: 0033:0x7f54783829ae
+```
+
+## migrate_vma_finalize之后执行zap_vma_ptes
+
+```
+        dmirror_migrate_alloc_and_copy(&args);
+        migrate_vma_finalize(&args);
+        zap_vma_ptes(vma, vma->vm_start, vma->vm_end - vma->vm_start);
+```
+仍然发生coredump    
+```
+[  102.167746]  <TASK>
+[  102.167751]  migration_entry_wait+0xa1/0xb0
+[  102.167759]  do_swap_page+0x657/0x730
+[  102.167771]  __handle_mm_fault+0x882/0x8e0
+[  102.167779]  handle_mm_fault+0xda/0x2b0
+[  102.167785]  do_user_addr_fault+0x1bb/0x650
+[  102.167792]  ? __x64_sys_write+0x1a/0x20
+[  102.167799]  exc_page_fault+0x7d/0x170
+[  102.167807]  ? asm_exc_page_fault+0x8/0x30
+[  102.167818]  asm_exc_page_fault+0x1e/0x30
+[  102.167825] RIP: 0033:0x7fae059549ae
 ```

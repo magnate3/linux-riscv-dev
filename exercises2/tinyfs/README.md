@@ -69,7 +69,7 @@ inode->i_mapping->a_ops = &ext2_aops;
 可以知道 address_space 对象的成员 a_ops 指向变量 ext2_aops 或者变量 ext2_nobh_aops 。这两个变量的初始化如清单5所示。
 
 变量 ext2_aops 和变量 ext2_nobh_aops 的初始化，代码如下：
-
+```
 struct address_space_operations ext2_aops = {
 .readpage =
 ext2_readpage,
@@ -95,6 +95,7 @@ struct address_space_operations ext2_nobh_aops = {
 .direct_IO = ext2_direct_IO,
 .writepages = ext2_writepages,
 };
+```
 从上述代码中可以看出，不论是哪个变量，其中的 readpage 成员都指向函数 ext2_readpage 。所以可以断定：函数do_generic_mapping_read 最终调用 ext2_readpage 函数处理读数据请求。
 到此为止， ext2 文件系统层的工作结束。
  

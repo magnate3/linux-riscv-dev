@@ -128,16 +128,21 @@ int main(int argc, const char **argv)
 				addr[i+3]);
 	}
 #if 1
-	printf("phy addr of addr 0x%lx \n",mem_virt2phy(addr));
-	write(fd, addr, len);
-	printf("after zap_vma_ptes, phy addr of addr  0x%lx \n",mem_virt2phy(addr));
 	ret = posix_memalign((void **)&ptr, pagesize, pagesize);
 	if(!ret)
 	{
             memcpy(ptr, "krishna", strlen("krishna"));
 	    printf("phy addr of ptr  0x%lx \n",mem_virt2phy(ptr));
+	    //read(fd, ptr, pagesize);
+
 	    write(fd, ptr, pagesize);
-	    printf("after zap_vma_ptes, phy addr of ptr 0x%lx \n",mem_virt2phy(addr));
+	    printf("after migrate, phy addr of ptr 0x%lx \n",mem_virt2phy(addr));
+	    //read(fd, ptr, pagesize);
+#if 0
+            memcpy(ptr, "krishna2", strlen("krishna"));
+	    printf("after migrate and memecpy again , phy addr of ptr 0x%lx \n", mem_virt2phy(addr));
+	    //read(fd, ptr, pagesize);
+#endif
 	    free(ptr);
 	}
 	else

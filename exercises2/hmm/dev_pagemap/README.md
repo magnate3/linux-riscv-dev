@@ -118,3 +118,93 @@ genalloc 是 linux 内核提供的通用内存分配器，源码位于 lib/genal
                         range_len(&pgmap->range), dev_to_node(&pdev->dev),
                         &pgmap->ref);
 ```
+#  svm_migrate_vma_to_vram    
+```
+static long
+svm_migrate_vma_to_vram(struct kfd_node *node, struct svm_range *prange,
+			struct vm_area_struct *vma, uint64_t start,
+			uint64_t end, uint32_t trigger, uint64_t ttm_res_offset)
+{
+	struct kfd_process *p = container_of(prange->svms, struct kfd_process, svms);
+	uint64_t npages = (end - start) >> PAGE_SHIFT;
+	struct amdgpu_device *adev = node->adev;
+	struct kfd_process_device *pdd;
+	struct dma_fence *mfence = NULL;
+	struct migrate_vma migrate = { 0 };
+	unsigned long cpages = 0;
+	unsigned long mpages = 0;
+	dma_addr_t *scratch;
+	void *buf;
+	int r = -ENOMEM;
+
+	memset(&migrate, 0, sizeof(migrate));
+	migrate.vma = vma;
+	migrate.start = start;
+	migrate.end = end;
+	migrate.flags = MIGRATE_VMA_SELECT_SYSTEM;
+	migrate.pgmap_owner = SVM_ADEV_PGMAP_OWNER(adev);
+
+	buf = kvcalloc(npages,
+		       2 * sizeof(*migrate.src) + sizeof(uint64_t) + sizeof(dma_addr_t),
+		       GFP_KERNEL);
+	if (!buf)
+		goto out;
+
+	migrate.src = buf;
+	migrate.dst = migrate.src + npages;
+	scratch = (dma_addr_t *)(migrate.dst + npages);
+
+	kfd_smi_event_migration_start(node, p->lead_thread->pid,
+				      start >> PAGE_SHIFT, end >> PAGE_SHIFT,
+				      0, node->id, prange->prefetch_loc,
+				      prange->preferred_loc, trigger);
+
+	r = migrate_vma_setup(&migrate);
+	if (r) {
+		dev_err(adev->dev, "%s: vma setup fail %d range [0x%lx 0x%lx]\n",
+			__func__, r, prange->start, prange->last);
+		goto out_free;
+	}
+
+	cpages = migrate.cpages;
+	if (!cpages) {
+		pr_debug("failed collect migrate sys pages [0x%lx 0x%lx]\n",
+			 prange->start, prange->last);
+		goto out_free;
+	}
+	if (cpages != npages)
+		pr_debug("partial migration, 0x%lx/0x%llx pages collected\n",
+			 cpages, npages);
+	else
+		pr_debug("0x%lx pages collected\n", cpages);
+
+	r = svm_migrate_copy_to_vram(node, prange, &migrate, &mfence, scratch, ttm_res_offset);
+	migrate_vma_pages(&migrate);
+
+	svm_migrate_copy_done(adev, mfence);
+	migrate_vma_finalize(&migrate);
+
+	mpages = cpages - svm_migrate_unsuccessful_pages(&migrate);
+	pr_debug("successful/cpages/npages 0x%lx/0x%lx/0x%lx\n",
+			 mpages, cpages, migrate.npages);
+
+	kfd_smi_event_migration_end(node, p->lead_thread->pid,
+				    start >> PAGE_SHIFT, end >> PAGE_SHIFT,
+				    0, node->id, trigger);
+
+	svm_range_dma_unmap_dev(adev->dev, scratch, 0, npages);
+
+out_free:
+	kvfree(buf);
+out:
+	if (!r && mpages) {
+		pdd = svm_range_get_pdd_by_node(prange, node);
+		if (pdd)
+			WRITE_ONCE(pdd->page_in, pdd->page_in + mpages);
+
+		return mpages;
+	}
+	return r;
+}
+
+```

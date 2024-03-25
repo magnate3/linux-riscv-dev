@@ -148,6 +148,30 @@ struct block_device *bdev_alloc(struct gendisk *disk, u8 partno)
 
 ```
 
+> ##  do_read_cache_folio --> blkdev_read_folio
+
+```
+> [   20.878128]  memcg_slab_post_alloc_hook+0xa8/0x1c8
+> [   20.878132]  kmem_cache_alloc+0x18c/0x338
+> [   20.878135]  alloc_buffer_head+0x28/0xa0
+> [   20.878138]  folio_alloc_buffers+0xe8/0x1c0
+> [   20.878141]  folio_create_empty_buffers+0x2c/0x1e8
+> [   20.878143]  folio_create_buffers+0x58/0x80
+> [   20.878145]  block_read_full_folio+0x80/0x450
+> [   20.878148]  blkdev_read_folio+0x24/0x38
+> [   20.956921]  filemap_read_folio+0x60/0x138
+> [   20.956925]  do_read_cache_folio+0x180/0x298
+> [   20.965270]  read_cache_page+0x24/0x90
+> [   20.965273]  __arm64_sys_swapon+0x2e0/0x1208
+> [   20.965277]  invoke_syscall+0x78/0x108
+> [   20.965282]  el0_svc_common.constprop.0+0x48/0xf0
+> [   20.981702]  do_el0_svc+0x24/0x38
+> [   20.993773]  el0t_64_sync_handler+0x100/0x130
+> [   20.993776]  el0t_64_sync+0x190/0x198
+> [   20.993779] ---[ end trace 0000000000000000 ]---
+> [   20.999972] Adding 999420k swap on /dev/mapper/eng07sys--r113--vg-swap_1.
+> Priority:-2 extents:1 across:999420k SS
+```
 
 # references
 

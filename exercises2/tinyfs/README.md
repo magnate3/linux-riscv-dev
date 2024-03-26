@@ -192,6 +192,80 @@ static const struct vm_operations_struct blkdev_default_vm_ops = {
 };
 ```
 
+> ## filemap_read_folio
+
+```
+filemap_fault -->  filemap_read_folio
+```
++  __alloc_pages_nodemask   
+```
+get_page_from_freelist+0x8e4/0x8fc
+
+__alloc_pages_nodemask+0x190/0xfac
+
+__do_page_cache_readahead+0xbc/0x280
+
+filemap_fault+0x41c/0x588
+
+ext4_filemap_fault+0x34/0x50
+
+__do_fault+0x40/0x118
+
+handle_pte_fault+0xa18/0xd28
+
+handle_mm_fault+0x1dc/0x2a4
+
+do_page_fault+0x300/0x448
+
+do_translation_fault+0x50/0x6c
+
+do_mem_abort+0x5c/0xe0
+
+el0_da+0x20/0x24
+```
++ ext4_readpages   
+```
+PID: 4442   TASK: ffff880426cbbec0  CPU: 2   COMMAND: "filebeat"
+ #0 [ffff8807a6643690] __schedule at ffffffff8168c1a5
+ #1 [ffff8807a66436f8] schedule at ffffffff8168c7f9
+ #2 [ffff8807a6643708] schedule_timeout at ffffffff8168a239
+ #3 [ffff8807a66437b0] io_schedule_timeout at ffffffff8168bd9e
+ #4 [ffff8807a66437e0] io_schedule at ffffffff8168be38
+ #5 [ffff8807a66437f0] bt_get at ffffffff812fb915
+ #6 [ffff8807a6643860] blk_mq_get_tag at ffffffff812fbe7f
+ #7 [ffff8807a6643888] __blk_mq_alloc_request at ffffffff812f725b
+ #8 [ffff8807a66438b8] blk_mq_map_request at ffffffff812f96d1
+ #9 [ffff8807a6643928] blk_sq_make_request at ffffffff812fa430
+#10 [ffff8807a66439b0] generic_make_request at ffffffff812eee69
+#11 [ffff8807a66439f8] submit_bio at ffffffff812eefb1
+#12 [ffff8807a6643a50] do_mpage_readpage at ffffffff8123ffed
+#13 [ffff8807a6643b28] mpage_readpages at ffffffff8124058b
+#14 [ffff8807a6643bf8] ext4_readpages at ffffffffa01df23c [ext4]
+#15 [ffff8807a6643c08] __do_page_cache_readahead at ffffffff8118dd2c
+#16 [ffff8807a6643cc8] ra_submit at ffffffff8118e3c1
+#17 [ffff8807a6643cd8] filemap_fault at ffffffff811836f5
+#18 [ffff8807a6643d38] ext4_filemap_fault at ffffffffa01e8016 [ext4]
+#19 [ffff8807a6643d60] __do_fault at ffffffff811ac83c
+#20 [ffff8807a6643db0] do_read_fault at ffffffff811accd3
+#21 [ffff8807a6643e00] handle_mm_fault at ffffffff811b1461
+#22 [ffff8807a6643e98] __do_page_fault at ffffffff81692cc4
+#23 [ffff8807a6643ef8] trace_do_page_fault at ffffffff816930a6
+#24 [ffff8807a6643f38] do_async_page_fault at ffffffff8169274b
+#25 [ffff8807a6643f50] async_page_fault at ffffffff8168f238
+    RIP: 0000000000adf1f9  RSP: 00007fcefbe06860  RFLAGS: 00010297
+    RAX: 0000000000000004  RBX: 0000000000000000  RCX: 0000000000ad1100
+    RDX: 0000000000000000  RSI: 0000000000000000  RDI: 0000000000000000
+    RBP: 00007fcefbe06b28   R8: 000000c420066080   R9: 000000007fffffff
+    R10: 0000000001a14630  R11: 0000000001e89ee0  R12: 000000c42239cd70
+    R13: 0000000001a14630  R14: 0000000000aea430  R15: 0000000000000000
+    ORIG_RAX: ffffffffffffffff  CS: 0033  SS: 002b
+```
+
+```
+filemap_read -> filemap_get_pages -> filemap_create_folio -> filemap_alloc_folio -> folio_alloc
+filemap_get_pages -> filemap_readahead -> page_cache_async_ra -> ondemand_readahead -> do_page_cache_ra -> page_cache_ra_unbounded -> filemap_alloc_folio/filemap_add_folio
+```
+
 > ## Page Cache 的插入
 
 我们在Linux内核源码分析-内存请页机制中分析了缺页中断时，当访问的 Page Table 尚未分配，即vma对应磁盘上的某一个文件时，会调用vma->vm_ops->fault(vmf)对应的文件系统的缺页处理函数。

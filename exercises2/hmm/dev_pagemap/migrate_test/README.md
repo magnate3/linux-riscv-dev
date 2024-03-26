@@ -149,6 +149,20 @@ migrate_vma_insert_page(migrate, addr, newpage,&migrate->src[i]);
 
 ![images](mig1.png)  
 
+通过pagemap2观察    
+```
+root@ubuntux86:# ./pagemap2 3663 | grep 564e2164e000
+bash: ./pagemap2: No such file or directory
+root@ubuntux86:# cd /work/kernel_learn/pagemap/
+root@ubuntux86:# ./pagemap2 3663 | grep 564e2164e000
+0x564e2164e000     : pfn 15bf72           soft-dirty 1 file/shared 0 swapped 0 present 1 library [heap]
+root@ubuntux86:# ./pagemap2 3663 | grep 564e2164e000
+0x564e2164e000     : pfn 10d528           soft-dirty 1 file/shared 0 swapped 0 present 1 library [heap]
+root@ubuntux86:# ./pagemap2 3663 | grep 564e2164e000
+0x564e2164e000     : pfn 10d528           soft-dirty 1 file/shared 0 swapped 0 present 1 library [heap]
+root@ubuntux86:# 
+```
+
 #  nouveau_dmem_migrate_to_ram
 ```
 static vm_fault_t nouveau_dmem_migrate_to_ram(struct vm_fault *vmf)

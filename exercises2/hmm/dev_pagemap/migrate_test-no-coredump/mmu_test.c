@@ -274,11 +274,14 @@ static ssize_t my_read(struct file *file, char __user *u, size_t count,
     }
     //printk(KERN_NOTICE "Valid pte");
     pte = *ptep;
+    if (pte_present(pte)) {
+                printk(KERN_INFO "************* pte present \n");
+    }
     if(is_swap_pte(pte)){
 	swp_entry_t entry;
 	entry = pte_to_swp_entry(pte);
         if (!pte_present(pte)) {
-                printk(KERN_INFO "************* swap pte, but not present");
+                printk(KERN_INFO "************* swap pte, but not present \n");
         }
         if (is_migration_entry(entry))
 	{
@@ -356,6 +359,7 @@ static ssize_t  my_write(struct file *file, const char __user *buf, size_t count
 		goto out;
 	  }
         next = addr + PAGE_SIZE;
+	//next = min(vma->vm_end, end);
         if (next > vma->vm_end)
            next = vma->vm_end;
 

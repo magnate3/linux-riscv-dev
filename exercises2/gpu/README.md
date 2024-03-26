@@ -491,6 +491,84 @@ static int uvm_open(struct inode *inode, struct file *filp)
 }
 ```
 
+# page 迁移
+
+```
+static NV_STATUS nv_migrate_vma(struct migrate_vma *args, migrate_vma_state_t *state)
+{
+    int ret;
+
+#if defined(CONFIG_MIGRATE_VMA_HELPER)
+    static const struct migrate_vma_ops uvm_migrate_vma_ops =
+    {
+        .alloc_and_copy = uvm_migrate_vma_alloc_and_copy_helper,
+        .finalize_and_map = uvm_migrate_vma_finalize_and_map_helper,
+    };
+
+    ret = migrate_vma(&uvm_migrate_vma_ops, args->vma, args->start, args->end, args->src, args->dst, state);
+    if (ret < 0)
+        return errno_to_nv_status(ret);
+#else // CONFIG_MIGRATE_VMA_HELPER
+
+#if defined(NV_MIGRATE_VMA_FLAGS_PRESENT)
+    args->flags = MIGRATE_VMA_SELECT_SYSTEM;
+#endif // NV_MIGRATE_VMA_FLAGS_PRESENT
+
+    ret = migrate_vma_setup(args);
+    if (ret < 0)
+        return errno_to_nv_status(ret);
+
+    uvm_migrate_vma_alloc_and_copy(args, state);
+    if (state->status == NV_OK) {
+        migrate_vma_pages(args);
+        uvm_migrate_vma_finalize_and_map(args, state);
+    }
+
+    migrate_vma_finalize(args);
+#endif // CONFIG_MIGRATE_VMA_HELPER
+
+    return state->status;
+}
+```
+#  dmirror_device_evict_chunk
+```
+static void dmirror_device_evict_chunk(struct dmirror_chunk *chunk)
+{
+	unsigned long start_pfn = chunk->pagemap.range.start >> PAGE_SHIFT;
+	unsigned long end_pfn = chunk->pagemap.range.end >> PAGE_SHIFT;
+	unsigned long npages = end_pfn - start_pfn + 1;
+	unsigned long i;
+	unsigned long *src_pfns;
+	unsigned long *dst_pfns;
+
+	src_pfns = kcalloc(npages, sizeof(*src_pfns), GFP_KERNEL);
+	dst_pfns = kcalloc(npages, sizeof(*dst_pfns), GFP_KERNEL);
+
+	migrate_device_range(src_pfns, start_pfn, npages);
+	for (i = 0; i < npages; i++) {
+		struct page *dpage, *spage;
+
+		spage = migrate_pfn_to_page(src_pfns[i]);
+		if (!spage || !(src_pfns[i] & MIGRATE_PFN_MIGRATE))
+			continue;
+
+		if (WARN_ON(!is_device_private_page(spage) &&
+			    !is_device_coherent_page(spage)))
+			continue;
+		spage = BACKING_PAGE(spage);
+		dpage = alloc_page(GFP_HIGHUSER_MOVABLE | __GFP_NOFAIL);
+		lock_page(dpage);
+		copy_highpage(dpage, spage);
+		dst_pfns[i] = migrate_pfn(page_to_pfn(dpage));
+		if (src_pfns[i] & MIGRATE_PFN_WRITE)
+			dst_pfns[i] |= MIGRATE_PFN_WRITE;
+	}
+	migrate_device_pages(src_pfns, dst_pfns, npages);
+	migrate_device_finalize(src_pfns, dst_pfns, npages);
+	kfree(src_pfns);
+	kfree(dst_pfns);
+}
+```
 
 # references
 

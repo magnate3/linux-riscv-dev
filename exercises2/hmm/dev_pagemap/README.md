@@ -1,5 +1,5 @@
 
-#   struct dev_pagemap
+#   struct dev_pagemap、struct vm_fault *vmf
 ```
 int svm_migrate_init(struct amdgpu_device *adev)
 {

@@ -275,6 +275,27 @@ static inline struct page *find_get_page(struct address_space *mapping,
 }
 ```
 
+# mmap
+
+从整个 mmap 映射的过程可以看出，内核只是在进程的虚拟地址空间中寻找出一段空闲的虚拟内存区域 vma 然后分配给本次映射而已
+
+```
+    vma = vm_area_alloc(mm);
+    vma->vm_start = addr;
+    vma->vm_end = addr + len;
+    vma->vm_flags = vm_flags;
+    vma->vm_page_prot = vm_get_page_prot(vm_flags);
+    vma->vm_pgoff = pgoff;
+
+```
+如果是文件映射的话，内核还会额外做一项工作，就是将分配出来的这段虚拟内存区域 vma 与映射文件关联映射起来。
+```
+vma->vm_file = get_file(file);
+error = call_mmap(file, vma);
+```
+映射的核心就是将虚拟内存区域 vm_area_struct 相关的内存操作 vma->vm_ops 设置为文件系统的相关操作 ext4_file_vm_ops。这样一来，进程后续对这段虚拟内存的读写就相当于是读写映射文件了。
+
+
 # references
 
 [300行代码带你实现一个Linux文件系统](https://zhuanlan.zhihu.com/p/579011810)     

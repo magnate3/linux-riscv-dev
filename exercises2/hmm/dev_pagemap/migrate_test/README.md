@@ -123,3 +123,170 @@ root@ubuntux86:# dmesg | tail -n 60
 [  102.167818]  asm_exc_page_fault+0x1e/0x30
 [  102.167825] RIP: 0033:0x7fae059549ae
 ```
+
+## 加上migrate_vma_pages(&args)解决coredump      
+
+
+```
+        dmirror_migrate_alloc_and_copy(&args);
+        migrate_vma_pages(&args);
+        migrate_vma_finalize(&args);
+        //zap_vma_ptes(vma, vma->vm_start, vma->vm_end - vma->vm_start);
+        //test_migrate_vma_finalize(&args);
+```
+migrate_vma_pages会调用
+migrate_vma_insert_page(migrate, addr, newpage,&migrate->src[i]);     
+```
+ *  migrate_vma_pages()
+	 *    migrate_vma_insert_page()
+	 *      page_add_new_anon_rmap()
+	 *        __page_set_anon_rmap()
+	 *          ...checks page->mapping, via PageAnon(page) call,
+	 *            and incorrectly concludes that the page is an
+	 *            anonymous page. Therefore, it incorrectly,
+	 *            silently fails to set up the new anon rmap.
+```
+
+![images](mig1.png)  
+
+#  nouveau_dmem_migrate_to_ram
+```
+static vm_fault_t nouveau_dmem_migrate_to_ram(struct vm_fault *vmf)
+{
+	struct nouveau_drm *drm = page_to_drm(vmf->page);
+	struct nouveau_dmem *dmem = drm->dmem;
+	struct nouveau_fence *fence;
+	struct nouveau_svmm *svmm;
+	struct page *spage, *dpage;
+	unsigned long src = 0, dst = 0;
+	dma_addr_t dma_addr = 0;
+	vm_fault_t ret = 0;
+	struct migrate_vma args = {
+		.vma		= vmf->vma,
+		.start		= vmf->address,
+		.end		= vmf->address + PAGE_SIZE,
+		.src		= &src,
+		.dst		= &dst,
+		.pgmap_owner	= drm->dev,
+		.flags		= MIGRATE_VMA_SELECT_DEVICE_PRIVATE,
+	};
+
+	/*
+	 * FIXME what we really want is to find some heuristic to migrate more
+	 * than just one page on CPU fault. When such fault happens it is very
+	 * likely that more surrounding page will CPU fault too.
+	 */
+	if (migrate_vma_setup(&args) < 0)
+		return VM_FAULT_SIGBUS;
+	if (!args.cpages)
+		return 0;
+
+	spage = migrate_pfn_to_page(src);
+	if (!spage || !(src & MIGRATE_PFN_MIGRATE))
+		goto done;
+
+	dpage = alloc_page_vma(GFP_HIGHUSER, vmf->vma, vmf->address);
+	if (!dpage)
+		goto done;
+
+	dst = migrate_pfn(page_to_pfn(dpage));
+
+	svmm = spage->zone_device_data;
+	mutex_lock(&svmm->mutex);
+	nouveau_svmm_invalidate(svmm, args.start, args.end);
+	ret = nouveau_dmem_copy_one(drm, spage, dpage, &dma_addr);
+	mutex_unlock(&svmm->mutex);
+	if (ret) {
+		ret = VM_FAULT_SIGBUS;
+		goto done;
+	}
+
+	nouveau_fence_new(dmem->migrate.chan, false, &fence);
+	migrate_vma_pages(&args);
+	nouveau_dmem_fence_done(&fence);
+	dma_unmap_page(drm->dev->dev, dma_addr, PAGE_SIZE, DMA_BIDIRECTIONAL);
+done:
+	migrate_vma_finalize(&args);
+	return ret;
+}
+```
+
+#  __kvmppc_svm_page_out  
+```
+/*
+ * Provision a new page on HV side and copy over the contents
+ * from secure memory using UV_PAGE_OUT uvcall.
+ * Caller must held kvm->arch.uvmem_lock.
+ */
+static int __kvmppc_svm_page_out(struct vm_area_struct *vma,
+		unsigned long start,
+		unsigned long end, unsigned long page_shift,
+		struct kvm *kvm, unsigned long gpa)
+{
+	unsigned long src_pfn, dst_pfn = 0;
+	struct migrate_vma mig;
+	struct page *dpage, *spage;
+	struct kvmppc_uvmem_page_pvt *pvt;
+	unsigned long pfn;
+	int ret = U_SUCCESS;
+
+	memset(&mig, 0, sizeof(mig));
+	mig.vma = vma;
+	mig.start = start;
+	mig.end = end;
+	mig.src = &src_pfn;
+	mig.dst = &dst_pfn;
+	mig.pgmap_owner = &kvmppc_uvmem_pgmap;
+	mig.flags = MIGRATE_VMA_SELECT_DEVICE_PRIVATE;
+
+	/* The requested page is already paged-out, nothing to do */
+	if (!kvmppc_gfn_is_uvmem_pfn(gpa >> page_shift, kvm, NULL))
+		return ret;
+
+	ret = migrate_vma_setup(&mig);
+	if (ret)
+		return -1;
+
+	spage = migrate_pfn_to_page(*mig.src);
+	if (!spage || !(*mig.src & MIGRATE_PFN_MIGRATE))
+		goto out_finalize;
+
+	if (!is_zone_device_page(spage))
+		goto out_finalize;
+
+	dpage = alloc_page_vma(GFP_HIGHUSER, vma, start);
+	if (!dpage) {
+		ret = -1;
+		goto out_finalize;
+	}
+
+	lock_page(dpage);
+	pvt = spage->zone_device_data;
+	pfn = page_to_pfn(dpage);
+
+	/*
+	 * This function is used in two cases:
+	 * - When HV touches a secure page, for which we do UV_PAGE_OUT
+	 * - When a secure page is converted to shared page, we *get*
+	 *   the page to essentially unmap the device page. In this
+	 *   case we skip page-out.
+	 */
+	if (!pvt->skip_page_out)
+		ret = uv_page_out(kvm->arch.lpid, pfn << page_shift,
+				  gpa, 0, page_shift);
+
+	if (ret == U_SUCCESS)
+		*mig.dst = migrate_pfn(pfn) | MIGRATE_PFN_LOCKED;
+	else {
+		unlock_page(dpage);
+		__free_page(dpage);
+		goto out_finalize;
+	}
+
+	migrate_vma_pages(&mig);
+
+out_finalize:
+	migrate_vma_finalize(&mig);
+	return ret;
+}
+```

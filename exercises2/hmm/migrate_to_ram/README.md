@@ -1,5 +1,32 @@
 
+# run
 
+```
+root@ubuntux86:# insmod mmu_test.ko 
+root@ubuntux86:# ./mmap_test 
+addr: 0x7f47b1596000 
+
+Write/Read test ...
+0x66616365
+0x66616365
+0x66616365
+virt addr 0x557dd2595000, phy addr of ptr  0x159ca8000 
+Zero page frame number
+after migrate, phy addr of ptr 0x0 
+Zero page frame number
+after migrate and memecpy again , phy addr of ptr 0x0 
+Zero page frame number
+after migrate and memecpy again , phy addr of ptr 0x0 
+
+root@ubuntux86:# dmesg | tail -n 5
+[11838.292958] src and dts page are equal 
+[11838.292960] buf is krishna 
+[11838.293017] dmirror_devmem_fault addr 0x557dd2595000 
+[11838.293052] ------------- pte present 
+[11838.293054]  not swap pte,page frame struct is @ 00000000afd28eda, and user paddr 0x159ca8000, virt addr 0x557dd2595000 
+root@ubuntux86:# 
+```
+not swap pte,page frame struct is @ 00000000afd28eda,物理页是存在的，但是mem_virt2phy(addr)获取不到物理地址        
 # 不断触发dmirror_devmem_fault addr 0x55c590d16000 
 
 ![images](bug1.png)
@@ -72,6 +99,7 @@ static int handle_pte_fault(struct vm_fault *vmf)
 ......
 }
 ```
+
 
 # 从folio分配内存   
 

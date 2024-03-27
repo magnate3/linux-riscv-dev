@@ -102,6 +102,46 @@ root@ubuntux86:# dmesg | tail -n 60
 [   43.984996] RIP: 0033:0x7f54783829ae
 ```
 
+```
+vm_fault_t do_swap_page(struct vm_fault *vmf)
+{
+        struct vm_area_struct *vma = vmf->vma;
+        struct page *page = NULL, *swapcache;
+        struct swap_info_struct *si = NULL;
+        rmap_t rmap_flags = RMAP_NONE;
+        bool exclusive = false;
+        swp_entry_t entry;
+        pte_t pte;
+        int locked;
+        vm_fault_t ret = 0;
+        void *shadow = NULL;
+
+        if (!pte_unmap_same(vmf))
+                goto out;
+
+        entry = pte_to_swp_entry(vmf->orig_pte);
+        if (unlikely(non_swap_entry(entry))) {
+                if (is_migration_entry(entry)) {
+                        migration_entry_wait(vma->vm_mm, vmf->pmd,
+                                             vmf->address);
+                } else if (is_device_exclusive_entry(entry)) {
+                        vmf->page = pfn_swap_entry_to_page(entry);
+                        ret = remove_device_exclusive_entry(vmf);
+                } else if (is_device_private_entry(entry)) {
+                        vmf->page = pfn_swap_entry_to_page(entry);
+                        ret = vmf->page->pgmap->ops->migrate_to_ram(vmf);
+                }
+
+
+```
+
+是个迁移页    
+```
+if (is_migration_entry(entry)) {
+                        migration_entry_wait(vma->vm_mm, vmf->pmd,
+                                             vmf->address);
+```
+
 ## migrate_vma_finalize之后执行zap_vma_ptes
 
 ```

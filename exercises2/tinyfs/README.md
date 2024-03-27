@@ -100,6 +100,71 @@ struct address_space_operations ext2_nobh_aops = {
 到此为止， ext2 文件系统层的工作结束。
  
  
+#  ext4_file_mmap
+
+```
+unsigned long mmap_region(struct file *file, unsigned long addr,
+        unsigned long len, vm_flags_t vm_flags, unsigned long pgoff,
+        struct list_head *uf)
+{
+   if (file) {
+        vma->vm_file = get_file(file);
+        error = call_mmap(file, vma);
+        addr = vma->vm_start;
+        vm_flags = vma->vm_flags;
+    }
+......
+    vma_link(mm, vma, prev, rb_link, rb_parent);
+    return addr;
+.....
+}
+```
+如果是映射到文件，则设置 vm_file 为目标文件，
+调用 call_mmap。其实就是调用 file_operations 的 mmap 函数对于 ext4 文件系统，调用的是 ext4_file_mmap  
+
+> ##  ext4_filemap_fault
+
+```
+static int handle_pte_fault(struct vm_fault *vmf)
+{
+    pte_t entry;
+......
+    vmf->pte = pte_offset_map(vmf->pmd, vmf->address);
+    vmf->orig_pte = *vmf->pte;
+......
+    if (!vmf->pte) {
+        if (vma_is_anonymous(vmf->vma))
+            return do_anonymous_page(vmf);
+        else
+            return do_fault(vmf);
+    }
+ 
+ 
+    if (!pte_present(vmf->orig_pte))
+        return do_swap_page(vmf);
+......
+}
+```
+映射到文件调用 do_fault，最终我们会调用 __do_fault
+这里调用了struct vm_operations_struct vm_ops的fault函数，还记得咱们上面用mmap映射文件的时候，对于ext4文件系统，vm_ops指向了ext4_file_vm_ops也就是调用了函数ext4_filemap_fault   
+```
+static const struct vm_operations_struct ext4_file_vm_ops = {
+    .fault      = ext4_filemap_fault,
+    .map_pages  = filemap_map_pages,
+    .page_mkwrite   = ext4_page_mkwrite,
+};
+ 
+ 
+int ext4_filemap_fault(struct vm_fault *vmf)
+{
+    struct inode *inode = file_inode(vmf->vma->vm_file);
+......
+    err = filemap_fault(vmf);
+......
+    return err;
+}
+```
+
 
 # address_space_operations def_blk_aops
 

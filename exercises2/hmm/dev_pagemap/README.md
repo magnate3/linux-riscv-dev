@@ -99,6 +99,48 @@ svm_migrate_to_vram(struct svm_range *prange, uint32_t best_loc,
 [ 2964.818531] p2pmem_pci 0000:00:04.0: unable to add p2p resource
 ```
 
+## page map --> free
+
+```
+static const struct dev_pagemap_ops dmirror_devmem_ops = {
+        .page_free      = dmirror_devmem_free,
+        .migrate_to_ram = dmirror_devmem_fault,
+};
+```
+```
+[  217.845933]  dmirror_devmem_free+0x18/0x3e [mmu_test]
+[  217.845937]  free_devmap_managed_page+0x59/0x60
+[  217.845940]  put_devmap_managed_page+0x53/0x60
+[  217.845943]  memunmap_pages+0x104/0x
+```
+
+```
+[  196.593364]  dump_stack+0x7d/0x9c
+[  196.593365]  dmirror_devmem_fault+0x2d/0x1a1 [mmu_test]
+[  196.593367]  do_swap_page+0x569/0x730
+[  196.593369]  __handle_mm_fault+0x882/0x8e0
+[  196.593371]  handle_mm_fault+0xda/0x2b0
+[  196.593372]  do_user_addr_fault+0x1bb/0x650
+[  196.593373]  exc_page_fault+0x7d/0x170
+[  196.593374]  ? asm_exc_page_fault+0x8/0x30
+[  196.593375]  asm_exc_page_fault+0x1e/0x30
+[  196.593377] RIP: 0033:0x7fefb63079ae
+```
+
+
+```
+vm_fault_t do_swap_page(struct vm_fault *vmf)
+{
+
+        entry = pte_to_swp_entry(vmf->orig_pte);
+        if (unlikely(non_swap_entry(entry))) {
+
+                } else if (is_device_private_entry(entry)) {
+                        vmf->page = pfn_swap_entry_to_page(entry);
+                        ret = vmf->page->pgmap->ops->migrate_to_ram(vmf);
+                }
+```
+
 
 #  pci_alloc_p2pmem
 

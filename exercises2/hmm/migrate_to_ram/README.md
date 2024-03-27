@@ -17,7 +17,12 @@
 [  196.593375]  asm_exc_page_fault+0x1e/0x30
 [  196.593377] RIP: 0033:0x7fefb63079ae
 ```
+
+
+
+
 把两次migrate的args.pgmap_owner设置成一样，不能设置成空    
+
 ```
         args.vma = vma;
         args.src = src_pfns;
@@ -43,6 +48,54 @@ static vm_fault_t dmirror_devmem_fault(struct vm_fault *vmf)
         args.flags = MIGRATE_VMA_SELECT_DEVICE_PRIVATE;
 
 ```
+
+
+
+```
+static int handle_pte_fault(struct vm_fault *vmf)
+{
+    pte_t entry;
+......
+    vmf->pte = pte_offset_map(vmf->pmd, vmf->address);
+    vmf->orig_pte = *vmf->pte;
+......
+    if (!vmf->pte) {
+        if (vma_is_anonymous(vmf->vma))
+            return do_anonymous_page(vmf);
+        else
+            return do_fault(vmf);
+    }
+ 
+ 
+    if (!pte_present(vmf->orig_pte))
+        return do_swap_page(vmf);
+......
+}
+```
+
+# 从folio分配内存   
+
+```
+static inline struct page *alloc_page_vma(gfp_t gfp,
+                struct vm_area_struct *vma, unsigned long addr)
+{
+        struct folio *folio = vma_alloc_folio(gfp, 0, vma, addr, false);
+
+        return &folio->page;
+}
+struct folio *__folio_alloc(gfp_t gfp, unsigned int order, int preferred_nid,
+                nodemask_t *nodemask)
+{
+        struct page *page = __alloc_pages(gfp | __GFP_COMP, order,
+                        preferred_nid, nodemask);
+
+        if (page && order > 1)
+                prep_transhuge_page(page);
+        return (struct folio *)page;
+}
+EXPORT_SYMBOL(__folio_alloc);
+```
+
 
 #  memmap_init_zone_device
 

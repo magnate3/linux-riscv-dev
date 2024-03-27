@@ -135,7 +135,7 @@ vm_fault_t do_swap_page(struct vm_fault *vmf)
 
 ```
 
-是个迁移页    
+***是个迁移页***       
 ```
 if (is_migration_entry(entry)) {
                         migration_entry_wait(vma->vm_mm, vmf->pmd,
@@ -201,6 +201,91 @@ root@ubuntux86:# ./pagemap2 3663 | grep 564e2164e000
 root@ubuntux86:# ./pagemap2 3663 | grep 564e2164e000
 0x564e2164e000     : pfn 10d528           soft-dirty 1 file/shared 0 swapped 0 present 1 library [heap]
 root@ubuntux86:# 
+```
+
+## 构造 pte
+
+```
+static void migrate_vma_insert_page(struct migrate_vma *migrate,
+                                    unsigned long addr,
+                                    struct page *page,
+                                    unsigned long *src)
+{
+        struct vm_area_struct *vma = migrate->vma;
+        struct mm_struct *mm = vma->vm_mm;
+        bool flush = false;
+        spinlock_t *ptl;
+        pte_t entry;
+        pgd_t *pgdp;
+        p4d_t *p4dp;
+        pud_t *pudp;
+        pmd_t *pmdp;
+        pte_t *ptep;
+
+        /* Only allow populating anonymous memory */
+        if (!vma_is_anonymous(vma))
+                goto abort;
+
+        pgdp = pgd_offset(mm, addr);
+        p4dp = p4d_alloc(mm, pgdp, addr);
+        if (!p4dp)
+                goto abort;
+        pudp = pud_alloc(mm, p4dp, addr);
+        if (!pudp)
+                goto abort;
+        pmdp = pmd_alloc(mm, pudp, addr);
+        if (!pmdp)
+                goto abort;
+
+        if (pmd_trans_huge(*pmdp) || pmd_devmap(*pmdp))
+                goto abort;
+
+        /*
+         * Use pte_alloc() instead of pte_alloc_map().  We can't run
+         * pte_offset_map() on pmds where a huge pmd might be created
+         * from a different thread.
+         *
+         * pte_alloc_map() is safe to use under mmap_write_lock(mm) or when
+         * parallel threads are excluded by other means.
+         *
+         * Here we only have mmap_read_lock(mm).
+         */
+        if (pte_alloc(mm, pmdp))
+                goto abort;
+}
+```
+
+旧 ptep   
+```
+ ptep = pte_offset_map_lock(mm, pmdp, addr, &ptl);
+
+        if (check_stable_address_space(mm))
+                goto unlock_abort;
+
+        if (pte_present(*ptep)) {
+                unsigned long pfn = pte_pfn(*ptep);
+
+                if (!is_zero_pfn(pfn))
+                        goto unlock_abort;
+                flush = true;
+        } else if (!pte_none(*ptep))
+                goto unlock_abort;
+
+```
+pte置换   
++ ptep_clear_flush_notify  
++ set_pte_at_notify   
+```
+    if (flush) {
+                flush_cache_page(vma, addr, pte_pfn(*ptep));
+                ptep_clear_flush_notify(vma, addr, ptep);
+                set_pte_at_notify(mm, addr, ptep, entry);
+                update_mmu_cache(vma, addr, ptep);
+        } else {
+                /* No need to invalidate - it was non-present before */
+                set_pte_at(mm, addr, ptep, entry);
+                update_mmu_cache(vma, addr, ptep);
+        }
 ```
 
 #  nouveau_dmem_migrate_to_ram

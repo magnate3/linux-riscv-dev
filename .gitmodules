@@ -1,0 +1,3 @@
+[submodule "exercises2/gpu/gpudma/gpudma"]
+	path = exercises2/gpu/gpudma/gpudma
+	url = https://github.com/karakozov/gpudma.git

@@ -59,7 +59,7 @@ static int pevb_ioctl_pin_cuda(struct pevb_file *pevb_file, unsigned long arg)
 		cusurf->va, aligned_len, &cusurf->page_table,
 		pevb_p2p_free_callback, cusurf);
 ```
-nvidia_p2p_get_pages --> RmP2PGetPagesPersistent
+nvidia_p2p_get_pages --> RmP2PGetPagesPersistent  
 
 > ## 3 cuda计算   
 
@@ -301,15 +301,15 @@ NV_STATUS NV_API_CALL nv_dma_map_alloc
 
 ```
 # The Linux Kernel Driver
-[RDMA from Xilinx FPGA to Nvidia GPUs — Part 1](https://giladkru.medium.com/rdma-from-xilinx-fpga-to-nvidia-gpus-part-1-da9ef91e38ed)
+[RDMA from Xilinx FPGA to Nvidia GPUs — Part 1](https://giladkru.medium.com/rdma-from-xilinx-fpga-to-nvidia-gpus-part-1-da9ef91e38ed)    
 For this experiment I have found the following sources useful and would like to thank and credit their authors:  
 
 Bluespec PCIe library   
 https://github.com/sangwoojun/bluespecpcie/blob/master/distribute/driver/bdbmpcie.c  
 This link contains a nice example of a PCIe driver source code for a Xilinx FPGA  
-GPUDirect RDMA example
+GPUDirect RDMA example    
 https://github.com/karakozov/gpudma   
 This link contains the best example I found online for an RDMA driver  
 Developing a Linux Kernel Module using GPUDirect RDMA   
-https://docs.nvidia.com/cuda/gpudirect-rdma/index.html
+https://docs.nvidia.com/cuda/gpudirect-rdma/index.html   
 This link contains the formal RDMA driver documentation from Nvidia    

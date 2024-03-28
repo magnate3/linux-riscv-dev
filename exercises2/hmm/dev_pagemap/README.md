@@ -250,3 +250,5 @@ out:
 }
 
 ```
+
+# KFD_IOCTL_SVM_OP_SET_ATTR

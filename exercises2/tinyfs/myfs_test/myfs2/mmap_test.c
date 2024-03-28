@@ -19,8 +19,8 @@
 #include <assert.h>
 #include <string.h>
 
-#define NPAGES		1
-#define MMAP_DEV	"/dev/my_dev"
+#define NPAGES		3
+#define MMAP_DEV	"/mnt/myfs/myfile"
 
 #define BAD_PHYS_ADDR 0
 #define PFN_MASK_SIZE 8
@@ -105,47 +105,31 @@ int main(int argc, const char **argv)
 	unsigned char *addr;
 	char *ptr;
 	int pagesize = getpagesize();
-	int len = NPAGES*pagesize;
+	int len = NPAGES * pagesize;
 	int i;
         int ret = 0;
-	char buf[64] = {0};
-	uint64_t phyaddr = 0;
-	const char * str = "hello krishna";
+        struct stat file_stat;
 	fd = open(MMAP_DEV, O_RDWR | O_SYNC);
 	if (fd < 0) {
 		perror("open");
 		exit(EXIT_FAILURE);
 	}
 
-#if 1
-	ret = posix_memalign((void **)&ptr, pagesize, pagesize);
-	if(!ret)
-	{
-            memcpy(ptr, str, strlen(str) +1);
-	    phyaddr = mem_virt2phy(ptr);
-	    printf("virt addr 0x%lx, phy addr of ptr  0x%lx \n",(unsigned long)ptr, phyaddr);
-	}
-	else
-	{
-	    fprintf(stderr, "posix_memalign: %s\n", strerror (ret));
+        ret = truncate(MMAP_DEV,len);
+	if (ret < 0) {
+	    perror("truncate");
             goto err1;
 	}
-#endif
-	if(0 == phyaddr)
-	{
-            printf("phyaddr is 0 \n");
-	    goto err2;
-	}
+        fstat(fd, &file_stat);
+        printf("%s size %u \n", MMAP_DEV, file_stat.st_size);
 	/* TODO: call mmap() system call with R/W permission to address */
-	addr = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, phyaddr);
-        printf("addr: %p \n", addr);
-	if(NULL == addr)
-	{
-            printf("addr: is NULL  \n");
-	    goto err2;
-	}
-	memcpy(buf, addr, strlen(str) + 1);
-	printf("buf is: %s \n",buf);
+	addr = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if(NULL == addr)
+        {
+            printf("addr is null \n");
+            goto err1;
+        }
+        printf("virt addr: %p, phyaddr: 0x%lx \n", addr, mem_virt2phy(addr));
 	/* TODO: call test_write_read() */
 	test_write_read(fd, addr);
 	/* TODO: check the values by module init */
@@ -156,15 +140,11 @@ int main(int argc, const char **argv)
 				addr[i+2], 
 				addr[i+3]);
 	}
-    munmap(addr, len);
-    free(ptr);
+         // this will cause kernel coredump
+        //msync(addr, file_stat.st_size, MS_SYNC);
+        munmap(addr, len);
 	close(fd);
-
 	return 0;
-err2:
-	free(ptr);
 err1:
 	close(fd);
-
-	return 0;
 }

@@ -53,6 +53,9 @@ struct file_operations ext2_file_operations = {
 **文件的 page cache 结构**   
  
 ![images](fs2.jpg)
+
+![images](cache1.png)
+
  图5显示了一个文件的 page cache 结构。文件被分割为一个个以 page 大小为单元的数据块,这些数据块（页）被组织成一个多叉树（称为 radix 树）。树中所有叶子节点为一个个页帧结构（struct page），表示了用于缓存该文件的每一个页。在叶子层最左端的第一个页保存着该文件的前4096个字节（如果页的大小为4096字节），接下来的页保存 着文件第二个4096个字节，依次类推。树中的所有中间节点为组织节点，指示某一地址上的数据所在的页。此树的层次可以从0层到6层，所支持的文件大小从 0字节到16 T 个字节。树的根节点指针可以从和文件相关的 address_space 对象（该对象保存在和文件关联的 inode 对象中）中取得（更多关于 page cache 的结构内容请参见参考资料）。
 现在，我们来看看函数 do_generic_mapping_read 都作了哪些工作， do_generic_mapping_read 函数代码较长，本文简要介绍下它的主要流程：
 

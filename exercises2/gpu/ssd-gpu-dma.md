@@ -175,7 +175,7 @@ long nvfs_io_start_op(nvfs_io_t* nvfsio)
                                         nvfsio);
                 }
 ```
-call_write_iter 和 call_read_iter 执行读写
+call_write_iter 和 call_read_iter 执行读写   
 ```
 //TODO: If the config is not present fallback to vfs_read/vfs_write
 #ifdef HAVE_CALL_READ_WRITE_ITER
@@ -193,6 +193,17 @@ call_write_iter 和 call_read_iter 执行读写
                                 call_read_iter(filp, &nvfsio->common, &iter));
         }
 #endif
+```
+
+## nvfsio->cpuvaddr
+
+
+```
+                        ret = nvfs_direct_io(op, f,
+                                        nvfsio->cpuvaddr,
+                                        bytes_issued,
+                                        fd_offset,
+                                        nvfsio)
 ```
 
 ##  struct vm_operations_struct

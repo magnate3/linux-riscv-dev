@@ -45,6 +45,10 @@ facebookfacebookfacebook[root@centos7 myfs2]#
 [  640.947547] [<ffff0000082b2454>] vfs_read+0x90/0x14c
 [  640.952487] [<ffff0000082b2b70>] SyS_read+0x60/0xc0
 ```
+generic_file_buffered_read调用copy_page_to_iter把page拷贝到用户层的buffer中
+
+
+
 + filemap_fault ->  test_simple_readpage    
 ```
 [  644.839308] [<ffff000008089e14>] dump_backtrace+0x0/0x23c

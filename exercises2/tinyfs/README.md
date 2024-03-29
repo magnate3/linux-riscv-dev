@@ -3,6 +3,8 @@
 [linux 系统调用read 剖析](https://blog.csdn.net/u011159820/article/details/112439457)   
 
 
+
+
 > ##  inode->i_op pk  inode->i_mapping->a_ops
 ```
 void ext2_read_inode (struct inode * inode)
@@ -434,6 +436,20 @@ error = call_mmap(file, vma);
 ```
 映射的核心就是将虚拟内存区域 vm_area_struct 相关的内存操作 vma->vm_ops 设置为文件系统的相关操作 ext4_file_vm_ops。这样一来，进程后续对这段虚拟内存的读写就相当于是读写映射文件了。
 
+
+# O_EXCL
+
+ 块设备通过O_EXCL这个flag来确定每个块设备最多可以有一个“持有人”。当我们试图持有一个块设备（例如，在内核中使用blkdev_get（）或类似的调用）的时候，如果在我们之前已经有另外一个不同的持有者已经拥有了该设备，那么我们的持有请求将会失败。一般的文件系统试图挂载设备的时候会使用这个open标志，从而确保自己是独占设备的。所以如果文件系统以O_EXCL的方式成功打开了设备，那么从此以后它就会成为这个设备的持有者。如果这以后再有文件系统尝试去mount的话, 就会失败。这里有一点比较有趣的是，使用O_EXCL并不会阻止在没有O_EXCL的情况下打开块设备，因此它其实并不会阻止并发写入，而仅仅是阻止了其他文件系统以独占方式打开设备。   
+
+ 
+# merge
+
+```
+extern int blk_integrity_merge_rq(struct request_queue *, struct request *,
+				  struct request *);
+extern int blk_integrity_merge_bio(struct request_queue *, struct request *,
+				   struct bio *);
+```
 
 # references
 

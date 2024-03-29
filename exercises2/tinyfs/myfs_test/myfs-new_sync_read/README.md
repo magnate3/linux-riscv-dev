@@ -64,6 +64,8 @@ ssize_t new_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *p
 }
 ```
 
+
+
 # run 
 ```
 [root@centos7 myfs2]# insmod  myfs.ko 

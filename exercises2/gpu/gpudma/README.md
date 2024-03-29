@@ -19,7 +19,7 @@
 
 + 1 malloc(size)   
 
-+ 2 cuMemAlloc(&dptr, size)   
++ 2 cuMemAlloc(&dptr, size),没有采用cudaMallocManaged     
 
 + 3 ioctl(fd, IOCTL_GPUMEM_LOCK, &lock)   
 

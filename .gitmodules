@@ -1,3 +1,6 @@
 [submodule "exercises2/gpu/gpudma/gpudma"]
 	path = exercises2/gpu/gpudma/gpudma
 	url = https://github.com/karakozov/gpudma.git
+[submodule "exercises2/gpu/ssd-gpu-dma"]
+	path = exercises2/gpu/ssd-gpu-dma
+	url = https://github.com/enfiskutensykkel/ssd-gpu-dma.git

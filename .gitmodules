@@ -4,3 +4,6 @@
 [submodule "exercises2/gpu/ssd-gpu-dma"]
 	path = exercises2/gpu/ssd-gpu-dma
 	url = https://github.com/enfiskutensykkel/ssd-gpu-dma.git
+[submodule "exercises2/tinyfs/simplefs"]
+	path = exercises2/tinyfs/simplefs
+	url = https://github.com/sysprog21/simplefs.git

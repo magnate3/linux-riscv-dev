@@ -7,3 +7,6 @@
 [submodule "exercises2/tinyfs/simplefs"]
 	path = exercises2/tinyfs/simplefs
 	url = https://github.com/sysprog21/simplefs.git
+[submodule "exercises2/nat64/kmod-tayga"]
+	path = exercises2/nat64/kmod-tayga
+	url = https://github.com/rssnsj/kmod-tayga.git

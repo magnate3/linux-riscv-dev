@@ -141,4 +141,4 @@ nat64设备配置
 
 [NAT64/DNS64 under linux](https://forums.he.net/index.php?topic=1998.0)    
 
-[What is NAT64 and DNS64 with tayga)?](https://www.privex.io/articles/what-is-nat64/)      
+[What is NAT64 and DNS64?](https://www.privex.io/articles/what-is-nat64/)      

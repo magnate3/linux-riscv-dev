@@ -1,6 +1,22 @@
 
-#arp
+#  arp
+
 IFF_NOARP    ARPHRD_NONE   
+
+没有arp邻居   
+```
+[root@centos7 src]# ping6  2001:db8:0:0::10.10.103.81
+PING 2001:db8:0:0::10.10.103.81(2001:db8::a0a:6751) 56 data bytes
+64 bytes from 2001:db8::a0a:6751: icmp_seq=1 ttl=62 time=7.51 ms
+64 bytes from 2001:db8::a0a:6751: icmp_seq=2 ttl=62 time=0.085 ms
+^C
+--- 2001:db8:0:0::10.10.103.81 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1001ms
+rtt min/avg/max/mdev = 0.085/3.800/7.516/3.716 ms
+[root@centos7 src]# ip n | grep 2001
+[root@centos7 src]# 
+```
+
 ```
 static void nat64_setup(struct net_device *dev)
 {

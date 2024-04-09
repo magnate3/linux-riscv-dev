@@ -85,4 +85,10 @@ rtt min/avg/max/mdev = 0.094/0.110/0.126/0.016 ms
 [root@centos7 src]# 
 ```
 
-![images](nat1.png)
+![images](nat1.png)  
+
+
+![images](nat2.png)
+
+
+![images](nat3.png)

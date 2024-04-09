@@ -1,0 +1,5 @@
+#!/bin/sh
+
+setup-nat64.sh 64:ff9b:0:0::/64 10.40.0.0/16 cache_age=600
+
+exit 0

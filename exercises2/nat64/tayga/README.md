@@ -87,8 +87,10 @@ rtt min/avg/max/mdev = 0.094/0.110/0.126/0.016 ms
 
 ![images](nat1.png)  
 
+icmp6 请求和回复  
 
 ![images](nat2.png)
 
 
+icmp4 请求和回复  
 ![images](nat3.png)

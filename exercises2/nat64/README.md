@@ -38,6 +38,16 @@ Now we have a valid NAT64 address!
 [root@centos7 nat64]# ip -6 route add 2001:200:0:ff99::/96 dev nat64
 ```
 
+##  dev->type = ARPHRD_NONE   
+
+没有arp请求   
+```
+        /* Zero header length */
+        dev->type = ARPHRD_NONE;
+        dev->flags = IFF_POINTOPOINT | IFF_NOARP | IFF_MULTICAST;
+        dev->tx_queue_len = 500;  /* We prefer our own queue length */
+```
+
 
 ## 正确配置   
 

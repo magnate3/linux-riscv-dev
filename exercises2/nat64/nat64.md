@@ -142,3 +142,7 @@ nat64设备配置
 [NAT64/DNS64 under linux](https://forums.he.net/index.php?topic=1998.0)    
 
 [What is NAT64 and DNS64?](https://www.privex.io/articles/what-is-nat64/)      
+
+[NAT44 / NAT64 implementation using TC-BPF](https://github.com/shashank68/bpf-nat/tree/bbb807e008c46f84b267cc1cb536812db072dee0)   
+
+[tundra-nat64,user-space,statelessNAT64](https://github.com/vitlabuda/tundra-nat64/tree/main/src)   

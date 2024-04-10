@@ -23,12 +23,23 @@ TCP window size: 1.84 MByte (default)
 [  3]  0.0-10.0 sec  7.17 GBytes  6.15 Gbits/sec
 [root@bogon ~]# 
 ```
+nat46测试    
+```
+[root@bogon ~]# iperf -c 10.10.103.251 -p 8800
+------------------------------------------------------------
+Client connecting to 10.10.103.251, TCP port 8800
+TCP window size: 45.0 KByte (default)
+------------------------------------------------------------
+[  3] local 10.10.103.81 port 47192 connected with 10.10.103.251 port 8800
+[ ID] Interval       Transfer     Bandwidth
+[  3]  0.0-10.1 sec  66.9 KBytes  54.5 Kbits/sec
+[root@bogon ~]# 
+```
 
 + dpdk
 
 const char *ip6str = "2008:db8::a0a:6751";   
-
-
+10.10.103.251
 
 
 + gw 

@@ -44,11 +44,13 @@ typedef enum {
     FWD_MODE_TYPE_MAX,
 } fwd_mode_type;
 
+#if 0
 static const char *fwd_mode_str_array[FWD_MODE_TYPE_MAX] = {
     "disable",
     "direct",
     "cache"
 };
+#endif
 void log_open( char *ident);
 
 void log_msg(int priority, const char *format, ...)
@@ -80,5 +82,5 @@ int hexdigit_to_int(char ch);
 
 int linux_set_if_mac(const char *ifname, const unsigned char mac[ETH_ALEN]);
 
-int config_file_load(struct nat_config *cfg, char *cfgfile_path, char *proc_name);
+int config_file_load(struct nat_config *cfg, const char *cfgfile_path, char *proc_name);
 #endif /* _UTIL_H_ */

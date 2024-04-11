@@ -72,15 +72,16 @@ static int metrics_check_equal(char *key, hashNode *node, __attribute__((unused)
     }
     return 0;
 }
-int test2()
+static int test2()
 {
     char  key[METRICS_MAX_NAME_LEN]= {0};
     uint64_t timeStart = 999;
-    char *domain = "test";
+    const char *domain = "test";
     uint32_t src_addr = 32;
     g_nat_cfg = (struct nat_config *)malloc(sizeof(struct nat_config));
     config_file_load(g_nat_cfg,"nat.cfg", NULL);
     log_open(g_nat_cfg->comm.log_file);
+     log_msg(LOG_INFO, "log file : %s \n", g_nat_cfg->comm.log_file);
 #if 1
     sprintf(key,"%s-%d",domain, src_addr);
     g_metrics_fwd_domains= hmap_create(METRICS_HASH_SIZE, METRICS_LOCK_SIZE, elfHashDomain,
@@ -102,7 +103,9 @@ int test2()
         printf("not find %s  \n", key); 
     }
 #endif
+    hmap_del_all(g_metrics_fwd_domains);
     free(g_nat_cfg);
+    return 0;
 }
 
 //DPDK 添加方式有四种

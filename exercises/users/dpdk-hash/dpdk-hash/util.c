@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <rte_cfgfile.h>
 
 #include "util.h"
 #include "parser.h"
@@ -32,6 +33,7 @@ static FILE *current_log_file = NULL;
 static int current_pid = 0;
 
 
+int fwd_mode_parse(const char *entry);
 static const char * getinfo_by_levelId( int level)
 {
     struct log_leval_info *table = log_leval_infos;
@@ -418,7 +420,7 @@ static int common_config_load(struct rte_cfgfile *cfgfile, struct comm_config *c
 
     return 0;
 }
-int config_file_load(struct nat_config *cfg, char *cfgfile_path, char *proc_name) {
+int config_file_load(struct nat_config *cfg, const char *cfgfile_path,  __attribute__((unused)) char *proc_name) {
     int ret = 0;
 
     struct rte_cfgfile *cfgfile = rte_cfgfile_load(cfgfile_path, 0);

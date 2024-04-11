@@ -36,6 +36,20 @@ UDPDK_DPDK_INCLUDE=/root/dpdk-19.11/${RTE_TARGET}/include
  set follow-fork-mode child
 ```
 
+# udp 校验和
+
+
+
+> ## 伪首部(pseudo header)
+通常有TCP伪首部和UDP伪首部。在UDP/TCP伪首部中，包含：   
+32位源IP地址。  
+32位目的IP地址。  
+8位填充0。  
+8位协议。  
+16位UDP长度(IP数据报长度)。   
+ 伪首部并非TCP&UDP数据报中实际的有效成分。伪首部是一个虚拟的数据结构，其中的信息是从数据报所在IP分组头的分组头中提取的，既不向下传送也不向上递交，而仅仅是为计算校验和。   
+ 
+
 # test  pingpong
 
 + 1 发送端发送4096字节

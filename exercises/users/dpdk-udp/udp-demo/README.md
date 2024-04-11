@@ -73,3 +73,7 @@ Socket created successfully
 Server's response: client message: hello world 
 [root@bogon tcpreplay]# 
 ```
+
+# references
+
+[udp_generator](https://github.com/carvalhof/udp_generator/blob/master/main.c)

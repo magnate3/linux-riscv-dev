@@ -39,6 +39,81 @@ static void nat64_setup(struct net_device *dev)
         nif->dev = dev;
 }
 ```
+
+> ##  arp_send_dst of  IFF_NOARP   
+```
+/* Create and send an arp packet. */
+static void arp_send_dst(int type, int ptype, __be32 dest_ip,
+                         struct net_device *dev, __be32 src_ip,
+                         const unsigned char *dest_hw,
+                         const unsigned char *src_hw,
+                         const unsigned char *target_hw,
+                         struct dst_entry *dst)
+{
+        struct sk_buff *skb;
+
+        /* arp on this interface. */
+        if (dev->flags & IFF_NOARP)
+                return;
+
+        skb = arp_create(type, ptype, dest_ip, dev, src_ip,
+                         dest_hw, src_hw, target_hw);
+        if (!skb)
+                return;
+
+        skb_dst_set(skb, dst_clone(dst));
+        arp_xmit(skb);
+}
+```
+> ##  eth_header of  IFF_NOARP   
+采用eth_zero_addr
+
+```
+static inline void eth_zero_addr(u8 *addr)
+{
+        memset(addr, 0x00, ETH_ALEN);
+}
+```
+
+```
+int eth_header(struct sk_buff *skb, struct net_device *dev,
+               unsigned short type,
+               const void *daddr, const void *saddr, unsigned int len)
+{
+        struct ethhdr *eth = skb_push(skb, ETH_HLEN);
+
+        if (type != ETH_P_802_3 && type != ETH_P_802_2)
+                eth->h_proto = htons(type);
+        else
+                eth->h_proto = htons(len);
+
+        /*
+         *      Set the source hardware address.
+         */
+
+        if (!saddr)
+                saddr = dev->dev_addr;
+        memcpy(eth->h_source, saddr, ETH_ALEN);
+
+        if (daddr) {
+                memcpy(eth->h_dest, daddr, ETH_ALEN);
+                return ETH_HLEN;
+        }
+
+        /*
+         *      Anyway, the loopback-device should never use this function...
+         */
+
+        if (dev->flags & (IFF_LOOPBACK | IFF_NOARP)) {
+                eth_zero_addr(eth->h_dest);
+                return ETH_HLEN;
+        }
+
+        return -ETH_HLEN;
+}
+EXPORT_SYMBOL(eth_header);
+```
+
 # run 
 
 Note:   
@@ -110,3 +185,7 @@ icmp6 请求和回复
 
 icmp4 请求和回复  
 ![images](nat3.png)
+
+#  handle_ip6
+
+   handle_ip6  -->  parse_ip6 进行解析  

@@ -42,10 +42,18 @@ Now we have a valid NAT64 address!
 
 没有arp请求   
 ```
-        /* Zero header length */
+
+static void nat64_netdev_setup(struct net_device *dev)
+{
+        dev->netdev_ops = &nat64_netdev_ops;
+
         dev->type = ARPHRD_NONE;
-        dev->flags = IFF_POINTOPOINT | IFF_NOARP | IFF_MULTICAST;
-        dev->tx_queue_len = 500;  /* We prefer our own queue length */
+        dev->hard_header_len = 0;
+        dev->addr_len = 0;
+        dev->mtu = ETH_DATA_LEN;
+        dev->features = NETIF_F_NETNS_LOCAL;
+        dev->flags = IFF_NOARP | IFF_POINTOPOINT;
+}
 ```
 
 

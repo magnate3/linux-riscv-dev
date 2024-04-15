@@ -32,6 +32,35 @@ Success: Loaded BPF-object(xdp_prog_kern.o) and used program(xdp_pass_func)
 root@ubuntux86:# ls /sys/fs/bpf/enp0s31f6/
 xdp_stats_map
 ```
+ bpf_object__pin_maps  /sys/fs/bpf/enp0s31f6/     
+ 
+ ```
+ root@ubuntux86:# cat /sys/fs/bpf/enp0s31f6/xdp_stats_map 
+# WARNING!! The output is for debug purpose only
+# WARNING!! The output format will change
+0: {
+        cpu0: {0,0,}
+        cpu1: {0,0,}
+        cpu2: {0,0,}
+        cpu3: {0,0,}
+        cpu4: {0,0,}
+        cpu5: {0,0,}
+        cpu6: {0,0,}
+        cpu7: {0,0,}
+        cpu8: {0,0,}
+        cpu9: {0,0,}
+        cpu10: {0,0,}
+        cpu11: {0,0,}
+        cpu12: {0,0,}
+        cpu13: {0,0,}
+        cpu14: {0,0,}
+        cpu15: {0,0,}
+        cpu16: {0,0,}
+        cpu17: {0,0,}
+        cpu18: {0,0,}
+        cpu19: {0,0,}
+}
+ ```
 
 ```
 root@ubuntux86:# ./xdp_stats -d   enp0s31f6

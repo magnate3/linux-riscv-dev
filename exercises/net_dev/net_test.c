@@ -29,15 +29,30 @@ static void emulator_rx_data(struct sk_buff *skb,
     unsigned char tmp_dev_addr[ETH_ALEN];
     struct ethhdr *ethhdr;
     struct sk_buff *rx_skb;
+    int len;
+	len = skb->len;
+	if (len < sizeof(struct ethhdr) + sizeof(struct iphdr)) {
+		pr_info("snull: Hmm... packet too short (%i octets)\n", len);
+		return ;
+	}
     
 //    printk("emulator_rx_data\n");
     ethhdr =(struct ethhdr*)skb->data;
+        if(0x0800 != ntohs(ethhdr->h_proto)){
+		pr_info("not ip hdr \n");
+		return ;
+	}
     memcpy(tmp_dev_addr,ethhdr->h_dest,ETH_ALEN);
     memcpy(ethhdr->h_dest,ethhdr->h_source,ETH_ALEN);
     memcpy(ethhdr->h_source,tmp_dev_addr,ETH_ALEN);
 //    printk("memcpy(h_source\n");
 
     ih=(struct iphdr*)(skb->data+sizeof(struct ethhdr));
+        if(IPPROTO_ICMP != ih->protocol)
+        {
+		pr_info("not icmp hdr %x \n", ntohs(ih->protocol));
+		return ;
+	}
     saddr =&(ih->saddr);
     daddr =&(ih->daddr);
 

@@ -75,7 +75,10 @@ tcpdump: listening on nat64, link-type RAW (Raw IP), capture size 262144 bytes
 ```
 
 ## IP层对于TTL的修改
-对于TTL的修改通常发生在网络层对一个报文进行转发的情况下，也就是典型的在linux-2.6.21\net\ipv4\ip_forward.```
+
+对于TTL的修改通常发生在网络层对一个报文进行转发的情况下，也就是典型的在linux-2.6.21\net\ipv4\ip_forward.
+
+```
  
 int ip_forward(struct sk_buff *skb)
 {
@@ -100,7 +103,10 @@ kfree_skb(skb);
 return NET_RX_DROP;
 }
 ```
+
 这里对于TTL的递减和校验和的更新看起来非常简单，但是乍一看也有点让人费解，这个操作通过ip_decrease_ttl函数完成：
+
+
 ```
 /* The function in 2.2 was invalid, producing wrong result for
  * check=0xFEFF. It was noticed by Arthur Skawina _year_ ago. --ANK(000625) */
@@ -113,11 +119,14 @@ iph->check = (__force __sum16)(check + (check>=0xFFFF));
 return --iph->ttl;
 }
 ```
+
 这里从整体上来看就比较简单了。对于这里的操作动作其实非常明确，就是在Ipheader中的ttl字段中递减，这个递减是通过在函数的最后--iph->ttl完成。为了保证校验和同时不变，就需要对最终的校验和执行一个和这个操作相反的操作，也就是递增。从之前的Ip header的定义可以看到，作为一个16bits word，它位于|Time to Live |Protocol|这个word中，所以它的递增操作是加上一个0x0100而不是直接加上一个0x0001。      
 
 ##  TCP层在NAT中可能对校验和的修改
 
 正如前面所说的，这个场景主要发生在NAT这样的场景中，这个也是我最早感受到校验和的存在，之后在使用traceroute的时候再次遇到校验和。以TCP协议中端口修改的场景为例，在函数linux-2.6.21\net\ipv4\netfilter\ip_nat_proto_tcp.c:
+
+
 ```
 static int
 tcp_manip_pkt(struct sk_buff **pskb,
@@ -131,7 +140,9 @@ nf_proto_csum_replace2(&hdr->check, *pskb, oldport, newport, 0);
 return 1;
 }
 ```
+
 以对于4字节字段的修改为例，可以明显的看到，对于这个地方的实现依然间接，但是并没有TTL操作那么飘逸，相对来说比较直观古朴。
+
 ```
 linux-2.6.21\net\netfilter\core.c
 void nf_proto_csum_replace4(__sum16 *sum, struct sk_buff *skb,
@@ -149,4 +160,5 @@ skb->csum = ~csum_partial((char *)diff, sizeof(diff),
 csum_unfold(*sum)));
 }
 ```
+
 这里加上~from，所以之前的from + ~from = 0xFFFF，由于前面说过，任何一个非零数加上0xFFFF都等于该数本身，所以加上~from相当于把这个值首先从校验和中清除掉，然后加上to就得到了修正后的数据。至于为什么说之前的数据一定非零呢？因为IP header中的version肯定非零(而且TTL正常情况下也应该大于等于1)。   

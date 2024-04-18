@@ -203,3 +203,36 @@ icmp4 请求和回复
 #  handle_ip6
 
    handle_ip6  -->  parse_ip6 进行解析  
+   
+
+## frag 处理
+
+
+```
+static void xlate_header_6to4(struct pkt *p, struct ip4 *ip4,
+		int payload_length)
+{
+	ip4->ver_ihl = 0x45;
+	ip4->tos = (ntohl(p->ip6->ver_tc_fl) >> 20) & 0xff;
+	ip4->length = htons(sizeof(struct ip4) + payload_length);
+	if (p->ip6_frag) {
+		ip4->ident = htons(ntohl(p->ip6_frag->ident) & 0xffff);
+		ip4->flags_offset =
+			htons(ntohs(p->ip6_frag->offset_flags) >> 3);
+		if (p->ip6_frag->offset_flags & htons(IP6_F_MF))
+			ip4->flags_offset |= htons(IP4_F_MF);
+	} /* else if (dest && (dest->flags & CACHE_F_GEN_IDENT) &&
+			p->header_len + payload_length <= 1280) {
+		ip4->ident = htons(dest->ip4_ident++);
+		ip4->flags_offset = 0;
+		if (dest->ip4_ident == 0)
+			dest->ip4_ident++;
+	} */ else {
+		ip4->ident = select_ip4_ipid();
+		ip4->flags_offset = htons(IP4_F_DF);
+	}
+	ip4->ttl = p->ip6->hop_limit;
+	ip4->proto = p->data_proto == 58 ? 1 : p->data_proto;
+	ip4->cksum = 0;
+}
+```

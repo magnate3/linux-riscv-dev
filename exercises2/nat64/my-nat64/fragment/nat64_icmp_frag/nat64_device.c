@@ -24,6 +24,7 @@
 #include <net/sock.h>
 #include <linux/ip.h>
 #include <linux/icmp.h>
+#include <linux/icmpv6.h>
 #include <linux/netdev_features.h>
 
 #include "tayga.h"
@@ -165,6 +166,37 @@ static u16 ip6_checksum(struct ip6 *ip6, u32 data_len, u8 proto)
 
 	return ~sum;
 }
+static void host_send_frag(u8 tc, struct in6_addr *src,
+		struct in6_addr *dest,u8 next_header, 
+		u8 *data, int data_len, struct net_device *dev)
+{
+    	struct {
+		struct ip6 ip6;
+                //struct ip6_frag ip6_frag;
+	} __attribute__ ((__packed__)) header;
+	struct sk_buff *skb;
+
+	header.ip6.ver_tc_fl = htonl((0x6 << 28) | (tc << 20));
+	header.ip6.payload_length = htons(data_len);
+	//header.ip6.payload_length = htons(data_len + sizeof(struct ip6_frag));
+	header.ip6.next_header = next_header;
+	header.ip6.hop_limit = 64;
+	header.ip6.src = *src;
+	header.ip6.dest = *dest;
+        //header.ip6_frag = *ip6_frag;
+	skb = netdev_alloc_skb(dev, sizeof(header) + data_len);
+	if (!skb) {
+		dev->stats.rx_dropped++;
+		return;
+	}
+	memcpy(skb_put(skb, sizeof(header)), &header, sizeof(header));
+	memcpy(skb_put(skb, data_len), data, data_len);
+	skb->protocol = htons(ETH_P_IPV6);
+	
+	dev->stats.rx_bytes += skb->len;
+	dev->stats.rx_packets++;
+	netif_rx(skb);
+}
 static void host_send_icmp6(u8 tc, struct in6_addr *src,
 		struct in6_addr *dest, struct icmp *icmp,
 		u8 *data, int data_len, struct net_device *dev)
@@ -201,12 +233,80 @@ static void host_send_icmp6(u8 tc, struct in6_addr *src,
 	dev->stats.rx_packets++;
 	netif_rx(skb);
 }
+#if 0
+static inline __sum16 csum16_add(__sum16 csum, __be16 addend)
+{
+        uint16_t res = (uint16_t)csum;
+
+        res += (__u16)addend;
+        return (__sum16)(res + (res < (__u16)addend));
+}
+
+static inline __sum16 csum16_sub(__sum16 csum, __be16 addend)
+{
+        return csum16_add(csum, ~addend);
+}
+
+static inline void csum_replace2(__sum16 *sum, __be16 old, __be16 new)
+{
+        *sum = ~csum16_add(csum16_sub(~(*sum), old), new);
+}
+#endif
+static void host_send_icmp6_first_frag(u8 tc, struct in6_addr *src,
+		struct in6_addr *dest, u8 next_header,struct icmp *icmp,struct ip6_frag *ip6_frag,
+		u8 *data, int data_len, struct net_device *dev)
+{
+    	struct {
+		struct ip6 ip6;
+                struct ip6_frag ip6_frag;
+		struct icmp icmp;
+	} __attribute__ ((__packed__)) header;
+	struct sk_buff *skb;
+
+	header.ip6.ver_tc_fl = htonl((0x6 << 28) | (tc << 20));
+	header.ip6.payload_length = htons(sizeof(header.icmp) + sizeof(header.ip6_frag)  + data_len);
+	header.ip6.next_header = next_header;
+	header.ip6.hop_limit = 64;
+	header.ip6.src = *src;
+	header.ip6.dest = *dest;
+	header.ip6_frag = *ip6_frag;
+	header.icmp = *icmp;
+#if 0
+	header.icmp.cksum = 0;
+	header.icmp.cksum = htons(swap_u16(ones_add(ip_checksum(data, data_len),
+			ip_checksum(&header.icmp, sizeof(header.icmp)))));
+	header.icmp.cksum = htons(swap_u16(ones_add(swap_u16(ntohs(header.icmp.cksum)),
+			ip6_checksum(&header.ip6, data_len + sizeof(header.icmp), next_header))));
+#else
+        
+         csum_replace2(&header.icmp.cksum,
+                              htons(ICMPV6_ECHO_REQUEST << 8),
+                              htons(ICMPV6_ECHO_REPLY << 8));
+#endif
+	skb = netdev_alloc_skb(dev, sizeof(header) + data_len);
+	if (!skb) {
+		dev->stats.rx_dropped++;
+		return;
+	}
+	memcpy(skb_put(skb, sizeof(header)), &header, sizeof(header));
+	memcpy(skb_put(skb, data_len), data, data_len);
+	skb->protocol = htons(ETH_P_IPV6);
+	
+	dev->stats.rx_bytes += skb->len;
+	dev->stats.rx_packets++;
+	netif_rx(skb);
+}
 void handle_ip6(struct sk_buff *skb)
 {
      struct ip6 *ip6;
      struct icmp *icmp;
      int len;
      u8 *data;
+     u8  more;
+     u16 offset  ;
+     u8 data_proto;
+     struct ip6_frag *ip6_frag;
+     bool first_frag = false;
      len = skb->len;
      if (len < sizeof(struct icmp) + sizeof(struct ip6)) {
 		pr_info("snull: Hmm... packet too short (%i octets)\n", len);
@@ -218,25 +318,70 @@ void handle_ip6(struct sk_buff *skb)
 		goto err1;
       }
       ip6 = (struct ip6 *)(skb->data);
-      if(IPPROTO_ICMP6 != ip6->next_header)
+      data_proto = ip6->next_header;
+      if(IPPROTO_FRAGMENT == data_proto)
+      {
+          ip6_frag = (struct ip6_frag *)(ip6 +1);
+          more = ntohs(ip6_frag->offset_flags) & IP6_F_MF;
+          offset = ntohs(ip6_frag->offset_flags) & IP6_F_MASK;
+          pr_info("ipv6 frag , more %u, offset: %u, id %u \n",more,offset,ip6_frag->ident);      
+          data_proto = ip6_frag->next_header;
+          if(IPPROTO_ICMP6 == data_proto)
+          {
+              if(more && 0 == offset)
+              {
+                  first_frag = true;
+                  icmp = (struct icmp *)(ip6_frag + 1); 
+                  data =  skb->data + sizeof(struct ip6) + sizeof(struct ip6_frag) +  sizeof(struct icmp);
+                  len  = len - sizeof(struct ip6) - sizeof(struct icmp) - sizeof(struct ip6_frag);
+              }
+              else
+              {
+                  icmp = NULL; 
+                  data =  skb->data + sizeof(struct ip6);
+                  len  = len - sizeof(struct ip6);
+                  host_send_frag((ntohl(ip6->ver_tc_fl) >> 20) & 0xff,&ip6->dest, &ip6->src,IPPROTO_FRAGMENT,data,len,skb->dev);
+                  goto out; 
+              }
+          }
+      }
+      else if(IPPROTO_ICMP6 == data_proto)
+      {
+          icmp = (struct icmp *)(ip6 + 1); 
+          data =  skb->data + sizeof(struct ip6) + sizeof(struct icmp);
+          len  = len - sizeof(struct ip6) - sizeof(struct icmp);
+      }
+      /*
+       *    first fragment which is not icmp  will be free
+       *    middle and last fragment not include proto header,if it not icmp will be free
+       *    icmp middle and icmp last fragment will be processed by host_send_frag
+       */
+      if(IPPROTO_ICMP6 != data_proto)
       {
 		pr_info("not icmp6 hdr \n");
 		goto err1;
       }
-      icmp = (struct icmp *)(ip6 + 1); 
-      data =  skb->data + sizeof(struct ip6) + sizeof(struct icmp);
-      len  = len - sizeof(struct ip6) - sizeof(struct icmp);
       switch (icmp->type) {
-      case 128:
-		icmp->type = 129;
-		host_send_icmp6((ntohl(ip6->ver_tc_fl) >> 20) & 0xff,
+      case ICMPV6_ECHO_REQUEST:
+		icmp->type = ICMPV6_ECHO_REPLY;
+                if(first_frag) 
+                {
+		    host_send_icmp6_first_frag((ntohl(ip6->ver_tc_fl) >> 20) & 0xff,
+				&ip6->dest, &ip6->src,IPPROTO_FRAGMENT,
+				icmp, ip6_frag,data,len , skb->dev);
+                }
+                else
+                {
+		    host_send_icmp6((ntohl(ip6->ver_tc_fl) >> 20) & 0xff,
 				&ip6->dest, &ip6->src,
 				icmp, data,len , skb->dev);
+                }
 		break;
        default:
            dev_kfree_skb(skb);
            return; 
        }
+out:
       dev_kfree_skb(skb);
       return ;
 err1:

@@ -58,7 +58,7 @@ got 'hi there' from 2001:db8::a0a:6752
 ```
 
 ```
-#if 0
+#if 1
   /* now send a datagram */
   if (sendto(sock, MESSAGE, sizeof(MESSAGE), 0,
              (struct sockaddr *)&server_addr,

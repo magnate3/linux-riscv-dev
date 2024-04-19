@@ -1,6 +1,111 @@
 
 
+
+# run (大包)
+
+```
+[root@centos7 nat64_icmp_frag]# insmod  nat64_device.ko 
+[root@centos7 nat64_icmp_frag]# ip a add 2001:db8::a0a:6751/96 dev nat64
+[root@centos7 nat64_icmp_frag]# ip l set nat64 up
+[root@centos7 nat64_icmp_frag]# ./udp_cli 
+waiting for a reply...
+got 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' from 2001:db8::a0a:6752
+[root@centos7 nat64_icmp_frag]# 
+```
+
+> ## fullnat checksum
+
+```
+        udphdr = udp_hdr(skb);
+        //old five tuple <dest,  udphdr->dest, udp  -->  src, udphdr->source>
+        // new five tuple  <src ,  udphdr->source, udp  --> dest,  udphdr->dest>
+        //snat
+        port = udphdr->dest;
+        udphdr->dest = udphdr->source;
+        udp_fast_csum_update(udphdr,(__be32 *)dest,(__be32 *)src,udphdr->dest, udphdr->source);
+        //dnat
+        udphdr->source = port;
+        udp_fast_csum_update(udphdr,(__be32 *)src,(__be32 *)dest, udphdr->source,port);
+```
+> ## csum_inv_substract  csum_inv_add
+```
+static inline void factory_clone_udp(struct sk_buff *src, struct sk_buff *dst, __be16 sport, __be16 dport)
+{
+	struct udphdr	*udph;
+	int		len;
+
+	len = sizeof(struct udphdr);
+	udph = (struct udphdr*)skb_push(dst, len);
+	//memcpy(udph, skb_transport_header(src), len);
+	memcpy(udph, skb_push(src, len), len);
+	//printk("nat64: [factory] [udp] [debug] src_udph = %02x %02x %02x %02x %02x %02x %02x %02x.\n", *(src->data), *(src->data +1), *(src->data +2), *(src->data +3), *(src->data +4), *(src->data +5), *(src->data +6), *(src->data +7));
+	udph->source = sport;
+	udph->dest = dport;
+	csum_inv_substract(&udph->check, (__be16 *)src->data, (__be16 *)(src->data + 4));
+	csum_inv_add(&udph->check, (__be16 *)dst->data, (__be16 *)(dst->data + 4));
+	//printk("nat64: [factory] [udp] [debug] dst_udph = %02x %02x %02x %02x %02x %02x %02x %02x.\n", *(dst->data), *(dst->data +1), *(dst->data +2), *(dst->data +3), *(dst->data +4), *(dst->data +5), *(dst->data +6), *(dst->data +7));
+
+	skb_reset_transport_header(dst);
+}
+```
+# run 小包
+
+```
+[root@centos7 nat64_icmp_frag]# ./udp_cli 
+waiting for a reply...
+got 'hi there' from 2001:db8::a0a:6752
+[root@centos7 nat64_icmp_frag]# 
+```
+
+```
+#if 0
+  /* now send a datagram */
+  if (sendto(sock, MESSAGE, sizeof(MESSAGE), 0,
+             (struct sockaddr *)&server_addr,
+             sizeof(server_addr)) < 0) {
+      perror("sendto failed");
+      exit(4);
+  }
+#else
+  int i = 0;
+  while(i< UDP_BIG_PKT_LEN){
+
+     buffer[i] = 'a';
+     ++ i;
+  }
+  if (sendto(sock, buffer, sizeof(buffer), 0,
+             (struct sockaddr *)&server_addr,
+             sizeof(server_addr)) < 0) {
+      perror("sendto failed");
+      exit(4);
+  }
+  memset(buffer,0, sizeof(buffer));
+#endif
+```
+
+
 #  csum_tcpudp_magiccsum_tcpudp_magic
+
+```
+static void esp_output_encap_csum(struct sk_buff *skb)
+{
+	/* UDP encap with IPv6 requires a valid checksum */
+	if (*skb_mac_header(skb) == IPPROTO_UDP) {
+		struct udphdr *uh = udp_hdr(skb);
+		struct ipv6hdr *ip6h = ipv6_hdr(skb);
+		int len = ntohs(uh->len);
+		unsigned int offset = skb_transport_offset(skb);
+		__wsum csum = skb_checksum(skb, offset, skb->len - offset, 0);
+
+		uh->check = csum_ipv6_magic(&ip6h->saddr, &ip6h->daddr,
+					    len, IPPROTO_UDP, csum);
+		if (uh->check == 0)
+			uh->check = CSUM_MANGLED_0;
+	}
+}
+```
+
+
 ```
 static int
 udp_snat_handler(struct sk_buff *skb,
@@ -149,5 +254,18 @@ udp_dnat_handler(struct sk_buff *skb,
 	}
 	return 1;
 }
+
+```
+
+
+
+# csum_replace2
+
+```
+alculate IP-checksum:
+Depending on if the value you changed was a __be16 or __be32, you use csum_replace2 and csum_replace4 respectively.
+
+Calculating transport protocol checksum:
+Depending on if the value you changed was a __be16 or __be32, you use inet_proto_csum_replace2 or inet_proto_csum_replace4 respectively
 
 ```

@@ -25,11 +25,14 @@
 #include <linux/ip.h>
 #include <linux/icmp.h>
 #include <linux/netdev_features.h>
+#include <linux/ipv6.h>
 
 #include "tayga.h"
+#include "csum.h"
 
 #define SRC_MAC "7226fe61ca65"
 #define DST_MAC "22554e946f4d"
+#define DBG_FRRAG 0
 struct nat64_if_info {
 	struct net_device *dev;
 };
@@ -418,7 +421,7 @@ static void host_handle_frag(struct pkt *p)
 		struct ip4 ip4;
 	} __attribute__ ((__packed__)) header;
 	struct sk_buff *skb = p->skb;
-	struct ethhdr * ethhdr = NULL;
+	//struct ethhdr * ethhdr = NULL;
         if (map_ip6_to_ip4(&header.ip4.dest, &p->ip6->dest, 0)) {
 		kfree_skb(skb);
 		return;
@@ -456,6 +459,374 @@ static void host_handle_frag(struct pkt *p)
 	p->dev->stats.rx_bytes += skb->len;
 	p->dev->stats.rx_packets++;
 	netif_rx(skb);
+}
+static int parse_ip4(struct pkt *p)
+{
+	p->ip4 = (struct ip4 *)(p->data);
+
+	if (p->data_len < sizeof(struct ip4))
+		return -1;
+
+	p->header_len = (p->ip4->ver_ihl & 0x0f) * 4;
+
+	if ((p->ip4->ver_ihl >> 4) != 4 ||
+			p->header_len < sizeof(struct ip4) ||
+			p->data_len < p->header_len ||
+			ntohs(p->ip4->length) < p->header_len )
+		return -1;
+
+	if (p->data_len > ntohs(p->ip4->length))
+		p->data_len = ntohs(p->ip4->length);
+
+	p->data += p->header_len;
+	p->data_len -= p->header_len;
+	p->data_proto = p->ip4->proto;
+
+	if (p->data_proto == 1) {
+		if (p->ip4->flags_offset & htons(IP4_F_MASK | IP4_F_MF))
+			return -1; /* fragmented ICMP is unsupported */
+		if (p->data_len < sizeof(struct icmp))
+			return -1;
+		p->icmp = (struct icmp *)(p->data);
+	} else {
+		if ((p->ip4->flags_offset & htons(IP4_F_MF)) &&
+				(p->data_len & 0x7))
+			return -1;
+
+		if ((u32)((ntohs(p->ip4->flags_offset) & IP4_F_MASK) * 8) +
+				p->data_len > 65535)
+			return -1;
+	}
+#if 0
+        if(p->data_proto == 17 &&((ntohs(p->ip4->flags_offset) &IP4_F_MF) && 0 == (ntohs(p->ip4->flags_offset) & IP4_F_MASK)))
+        {
+            struct udphdr *udphdr = (struct udphdr *)p->data;
+            pr_info("udp first frag , src port %u, dst port %u, udp total len %u \n",ntohs(udphdr->source), ntohs(udphdr->dest), udphdr->len);
+        }
+#endif
+	return 0;
+
+}
+#if 0
+static void host_handle_icmp4(struct pkt *p)
+{
+	p->data += sizeof(struct icmp);
+	p->data_len -= sizeof(struct icmp);
+
+	switch (p->icmp->type) {
+	case 8:
+		p->icmp->type = 0;
+		host_send_icmp4(p->ip4->tos, &p->ip4->dest, &p->ip4->src,
+				p->icmp, p->data, p->data_len, p->dev);
+		break;
+	}
+}
+#endif
+int __map_ip4_to_ip6(struct in6_addr *addr6, const struct in_addr *addr4)
+{
+   addr6->s6_addr32[0] = htonl(0x20010db8);
+   addr6->s6_addr32[1] = htonl(0x0);
+   addr6->s6_addr32[2] = htonl(0x0);
+   addr6->s6_addr32[3] = addr4->s_addr;
+   return 0;
+}
+static void xlate_header_4to6(struct pkt *p, struct ip6 *ip6,
+		int payload_length)
+{
+	ip6->ver_tc_fl = htonl((0x6 << 28) | (p->ip4->tos << 20));
+	ip6->payload_length = htons(payload_length);
+	ip6->next_header = p->data_proto == 1 ? 58 : p->data_proto;
+	ip6->hop_limit = p->ip4->ttl;
+}
+
+static inline void csum_inv_add(__be16 *sum, __be16 *start, __be16 *end)
+{
+	__be32	new_sum;
+
+	for(new_sum = *sum; start < end; start++)
+		new_sum -= *start;
+
+	*sum = (new_sum & 0xffff) + (new_sum >> 16);
+}
+
+static inline void csum_inv_substract(__be16 *sum, __be16 *start, __be16 *end)
+{
+	__be32	new_sum;
+
+	for(new_sum = *sum; start < end; start++)
+		new_sum += *start;
+
+	*sum = (new_sum & 0xffff) + (new_sum >> 16);
+}
+static int xlate_payload_4to6(struct pkt *p, struct ip6 *ip6)
+{
+	u16 *tck;
+	u16 cksum;
+
+	if (p->ip4->flags_offset & htons(IP4_F_MASK))
+		return 0;
+
+	switch (p->data_proto) {
+	case 1:
+		cksum = ip6_checksum(ip6, ntohs(p->ip4->length) - p->header_len, 58);
+		cksum = ones_add(swap_u16(ntohs(p->icmp->cksum)), cksum);
+		if (p->icmp->type == 8) {
+			p->icmp->type = 128;
+			p->icmp->cksum = htons(swap_u16(ones_add(cksum, ~(128 - 8))));
+		} else {
+			p->icmp->type = 129;
+			p->icmp->cksum = htons(swap_u16(ones_add(cksum, ~(129 - 0))));
+		}
+		return 0;
+	case 17:
+		if (p->data_len < 8)
+			return -1;
+		tck = (u16 *)(p->data + 6);
+		if (!*tck)
+			return -1; /* drop UDP packets with no checksum */
+		break;
+	case 6:
+		if (p->data_len < 20)
+			return -1;
+		tck = (u16 *)(p->data + 16);
+		break;
+	default:
+		return 0;
+	}
+#if 1
+	*tck = ones_add(*tck, ~convert_cksum(ip6, p->ip4));
+#else
+	csum_inv_substract(tck, (__be16 *)&p->ip4->src, ((__be16 *)&p->ip4->src) + 4);
+        csum_inv_add(tck, (__be16 *)&ip6->src, ((__be16 *)&ip6->src) + 16);
+#endif
+	return 0;
+}
+#define IPV6_OFFLINK_MTU 1492
+#define G_MTU 1492
+static void xlate_4to6_data(struct pkt *p)
+{
+	struct {
+		struct ip6 ip6;
+		struct ip6_frag ip6_frag;
+	} __attribute__ ((__packed__)) header;
+	struct sk_buff *skb = p->skb, *new_skb;
+	int no_frag_hdr = 0;
+	u16 off = ntohs(p->ip4->flags_offset);
+	int frag_size;
+
+	frag_size = IPV6_OFFLINK_MTU;
+	//frag_size = gcfg.ipv6_offlink_mtu;
+	//if (frag_size > gcfg.mtu)
+	if (frag_size > G_MTU)
+		frag_size = G_MTU;
+	frag_size -= sizeof(struct ip6);
+
+	if (map_ip4_to_ip6(&header.ip6.dest, &p->ip4->dest)) {
+		//host_send_icmp4_error(3, 1, 0, p);
+		goto drop_skb;
+	}
+
+	if (map_ip4_to_ip6(&header.ip6.src, &p->ip4->src)) {
+		//host_send_icmp4_error(3, 10, 0, p);
+		goto drop_skb;
+	}
+
+	/* We do not respect the DF flag for IP4 packets that are already
+	   fragmented, because the IP6 fragmentation header takes an extra
+	   eight bytes, which we don't have space for because the IP4 source
+	   thinks the MTU is only 20 bytes smaller than the actual MTU on
+	   the IP6 side.  (E.g. if the IP6 MTU is 1496, the IP4 source thinks
+	   the path MTU is 1476, which means it sends fragments with 1456
+	   bytes of fragmented payload.  Translating this to IP6 requires
+	   40 bytes of IP6 header + 8 bytes of fragmentation header +
+	   1456 bytes of payload == 1504 bytes.) */
+	if ((off & (IP4_F_MASK | IP4_F_MF)) == 0) {
+                
+		if (off & IP4_F_DF) {
+			if (G_MTU - MTU_ADJ < p->header_len + p->data_len) {
+				//host_send_icmp4_error(3, 4, gcfg.mtu - MTU_ADJ, p);
+                                pr_info("drop skb,because of mtu \n");
+				goto drop_skb;
+			}
+			no_frag_hdr = 1;
+		} else if (p->data_len <= frag_size) {
+			no_frag_hdr = 1;
+		}
+	}
+
+	xlate_header_4to6(p, &header.ip6, p->data_len);
+	--header.ip6.hop_limit;
+
+	if (xlate_payload_4to6(p, &header.ip6) < 0)
+		goto drop_skb;
+
+	//if (src)
+	//	src->flags |= CACHE_F_SEEN_4TO6;
+	//if (dest)
+	//	dest->flags |= CACHE_F_SEEN_4TO6;
+
+	if (no_frag_hdr) {
+		size_t push_len = (skb->data - (p->data - sizeof(header.ip6)));
+
+		if (skb_headroom(skb) < push_len) {
+			struct sk_buff *new_skb = skb_realloc_headroom(skb, push_len);
+			if (!new_skb) {
+				p->dev->stats.rx_dropped++;
+				goto drop_skb;
+			}
+			kfree_skb(skb);
+			skb = new_skb;
+		}
+
+		skb_push(skb, push_len);
+		skb_reset_network_header(skb);
+		memcpy(ipv6_hdr(skb), &header.ip6, sizeof(header.ip6));
+		skb->protocol = htons(ETH_P_IPV6);
+		skb->dev = p->dev;
+
+		p->dev->stats.rx_bytes += skb->len;
+		p->dev->stats.rx_packets++;
+		netif_rx(skb);
+	} else {
+		header.ip6_frag.next_header = header.ip6.next_header;
+		header.ip6_frag.reserved = 0;
+		header.ip6_frag.ident = htonl(ntohs(p->ip4->ident));
+
+		header.ip6.next_header = 44;
+
+		off = (off & IP4_F_MASK) * 8;
+		frag_size = (frag_size - sizeof(header.ip6_frag)) & ~7;
+
+		while (p->data_len > 0) {
+			if (p->data_len < frag_size)
+				frag_size = p->data_len;
+
+			header.ip6.payload_length =
+				htons(sizeof(struct ip6_frag) + frag_size);
+			header.ip6_frag.offset_flags = htons(off);
+                        //pr_info("ip4 frag %u, ipv6 offset: %u, frag payload %u \n",ntohl(p->ip4->ident),off,frag_size);
+
+			//p->data += frag_size;
+			p->data_len -= frag_size;
+			off += frag_size;
+
+			if (p->data_len || (p->ip4->flags_offset & htons(IP4_F_MF)))
+				header.ip6_frag.offset_flags |= htons(IP6_F_MF);
+
+#if 0
+                if(p->data_proto == 17 &&((ntohs(header.ip6_frag.offset_flags) &IP6_F_MF) && 0 == (ntohs(header.ip6_frag.offset_flags) & IP6_F_MASK)))
+                {
+                    struct udphdr *udphdr = (struct udphdr *)p->data;
+                    //udphdr->check = htons(0x4421);
+                    pr_info("udp first frag , src port %u, dst port %u, udp total len %u, chk sum 0x%x \n",ntohs(udphdr->source),\
+                      ntohs(udphdr->dest), ntohs(udphdr->len), ntohs(udphdr->check));
+#if 0
+                    u16 total_len = htons(p->data_len);
+                    //u16 total_len = htons(udphdr->len) + sizeof(struct udphdr);
+                      
+		    csum_inv_substract(&udphdr->check, (__be16 *)&total_len, (__be16 *)&total_len + 1 );
+		    csum_inv_add(&udphdr->check, (__be16 *)&header.ip6.payload_length, ((__be16 *)&header.ip6.payload_length) + 1);
+		    //csum_inv_substract(&udphdr->check, (__be16 *)&header.ip6.payload_length, (__be16 *)&header.ip6.payload_length + 1 );
+		    //csum_inv_add(&udphdr->check, (__be16 *)&total_len, ((__be16 *)&total_len) + 1);
+#endif
+                }
+#endif
+			new_skb = netdev_alloc_skb(p->dev, sizeof(header) + frag_size);
+			if (!new_skb) {
+				p->dev->stats.rx_dropped++;
+				break;
+			}
+			memcpy(skb_put(new_skb, sizeof(header)), &header, sizeof(header));
+			memcpy(skb_put(new_skb, frag_size), p->data, frag_size);
+		        p->data += frag_size;
+                        pr_info("hop %u , ipv6 frag id  %u, frag offset %u, frag  more %u,next header: %u, payload %u \n",\
+                             header.ip6.hop_limit, ntohl(header.ip6_frag.ident),\
+                             ntohs(header.ip6_frag.offset_flags)&IP6_F_MASK,\
+                             ntohs(header.ip6_frag.offset_flags)&IP6_F_MF,header.ip6_frag.next_header, frag_size);
+			new_skb->protocol = htons(ETH_P_IPV6);
+
+			p->dev->stats.rx_bytes += new_skb->len;
+			p->dev->stats.rx_packets++;
+			netif_rx(new_skb);
+#if DBG_FRRAG
+                u_int16_t index = 0, count = 0, udp_payload_size = 0;
+                char * udp_payload = NULL;
+                if(p->data_proto == 17 &&((ntohs(header.ip6_frag.offset_flags) &IP6_F_MF) && 0 == (ntohs(header.ip6_frag.offset_flags) & IP6_F_MASK)))
+                {
+                    struct udphdr *udphdr = (struct udphdr *)p->data;
+                    pr_info("udp first frag , src port %u, dst port %u, udp total len %u \n",ntohs(udphdr->source), ntohs(udphdr->dest), udphdr->len);
+                    udp_payload = (char *) (udphdr +1);
+                    udp_payload_size = frag_size - sizeof(struct udphdr);
+                }
+                else if(p->data_proto == 17 &&(0 != (ntohs(header.ip6_frag.offset_flags) & IP6_F_MASK)))
+                {
+                    udp_payload = (char *) p->data;
+                    udp_payload_size = frag_size;
+                }
+                if (NULL != udp_payload)
+                {
+                    while(index < udp_payload_size){
+                        if('a' == udp_payload[index++])
+                        {
+                             ++count; 
+                        }
+                    }
+                    pr_info("ip4 frag %u, ipv6 offset: %u, frag payload %u, number of a %u \n",ntohl(p->ip4->ident),off,frag_size, count);
+                }
+#else
+                //if(p->data_proto == 17 &&((ntohs(header.ip6_frag.offset_flags) &IP6_F_MF) && 0 == (ntohs(header.ip6_frag.offset_flags) & IP6_F_MASK)))
+                //{
+                //    struct udphdr *udphdr = (struct udphdr *)p->data;
+                //    pr_info("udp first frag , src port %u, dst port %u, udp total len %u \n",ntohs(udphdr->source), ntohs(udphdr->dest), udphdr->len);
+		//    csum_inv_substract(&udphdr->check, (__be16 *)&p->ip4->src, ((__be16 *)&p->ip4->src) + 4);
+		//    csum_inv_add(&udphdr->check, (__be16 *)&header.ip6.src, ((__be16 *)&header.ip6.src) + 16);
+                //}
+#endif
+		}
+
+		kfree_skb(skb);
+	}
+
+	return;
+
+drop_skb:
+	kfree_skb(skb);
+}
+void handle_ip4(struct pkt *p)
+{
+	if (parse_ip4(p) < 0 || p->ip4->ttl == 0 ||
+			ip_checksum(p->ip4, p->header_len) ||
+			p->header_len + p->data_len != ntohs(p->ip4->length)) {
+		p->dev->stats.tx_dropped++;
+		kfree_skb(p->skb);
+		return;
+	}
+
+	if (p->icmp && ip_checksum(p->data, p->data_len)) {
+		p->dev->stats.tx_dropped++;
+		kfree_skb(p->skb);
+		return;
+	}
+
+	p->dev->stats.tx_bytes += p->skb->len;
+	p->dev->stats.tx_packets++;
+        // udp or tcp fragment have no l4 header
+	if (p->data_proto != 1 || p->icmp->type == 8 ||
+		p->icmp->type == 0)
+		xlate_4to6_data(p);
+        else {
+		kfree_skb(p->skb);
+        }
+#if 0
+	if (p->data_proto ==1 ){
+
+		host_handle_icmp4(p);
+	} else {
+		if (p->data_proto != 1 || p->icmp->type == 8 ||
+				p->icmp->type == 0)
+			xlate_4to6_data(p);
+	}
+#endif
 }
 void handle_ip6(struct pkt *p)
 {
@@ -506,8 +877,8 @@ static int nat64_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	switch(ntohs(skb->protocol)) {
 	case ETH_P_IP:
-	        dev_kfree_skb(skb);
-		//handle_ip4(&pbuf);
+	        //dev_kfree_skb(skb);
+		handle_ip4(&pbuf);
 		break;
 	case ETH_P_IPV6:
 		handle_ip6(&pbuf);
@@ -548,10 +919,11 @@ static void nat64_setup(struct net_device *dev)
 	dev->hard_header_len = 0;
 	dev->addr_len = 0;
 	dev->mtu = 1500;
-	dev->needed_headroom = sizeof(struct ip6) - sizeof(struct ip4) + sizeof(ETH_HLEN);
+	dev->needed_headroom = sizeof(struct ip6) - sizeof(struct ip4);
+	//dev->needed_headroom = sizeof(struct ip6) - sizeof(struct ip4) + sizeof(ETH_HLEN);
 
 	/* Zero header length */
-	//dev->type = ARPHRD_NONE;
+	dev->type = ARPHRD_NONE;
 	dev->flags = IFF_POINTOPOINT | IFF_NOARP | IFF_MULTICAST;
 	dev->tx_queue_len = 500;  /* We prefer our own queue length */
 

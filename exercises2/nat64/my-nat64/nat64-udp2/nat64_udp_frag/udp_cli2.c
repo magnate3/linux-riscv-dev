@@ -25,24 +25,18 @@
 #include <memory.h>
 
 #define PORT 8080
-#define CLI_PORT 5080
 #define MESSAGE "hi, I am ipv6 client"
-#define SERVADDR "2001:db8::a0a:6752"
-#define CLIADDR "2001:db8::a0a:6751"
-// will drop skb,because of mtu 
-//#define UDP_BIG_PKT_LEN 1472 
-// two ipv6 fragment 1508
-#define UDP_BIG_PKT_LEN  1508
-//#define UDP_BIG_PKT_LEN 2048
+#define SERVADDR "2001:db8:0:0::10.10.103.81"
+//#define SERVADDR "2001:db8::a0a:6752"
+
+#define UDP_BIG_PKT_LEN 1470
 int main(void)
 {
   int sock;
   socklen_t clilen;
   struct sockaddr_in6 server_addr, client_addr;
-  struct sockaddr_in6 my_addr;
   char buffer[UDP_BIG_PKT_LEN*2];
   char addrbuf[INET6_ADDRSTRLEN];
-  int ret ;
 
   /* create a DGRAM (UDP) socket in the INET6 (IPv6) protocol */
   sock = socket(PF_INET6, SOCK_DGRAM, 0);
@@ -58,18 +52,6 @@ int main(void)
   memset(&server_addr, 0, sizeof(server_addr));
 
   /* it is an INET address */
-  my_addr.sin6_family = AF_INET6;
-  my_addr.sin6_port = htons(CLI_PORT);
-  /* the client IP address, in network byte order */
-  inet_pton(AF_INET6, CLIADDR, &my_addr.sin6_addr);
-  ret = bind(sock, (struct sockaddr*)&my_addr, sizeof(my_addr));
-  if(ret == -1) {
-      perror("bind()");
-      close(sock);
-      return EXIT_FAILURE;
-  }
-  
-  /* it is an INET address */
   server_addr.sin6_family = AF_INET6;
 
   /* the server IP address, in network byte order */
@@ -77,7 +59,7 @@ int main(void)
 
   /* the port we are going to send to, in network byte order */
   server_addr.sin6_port = htons(PORT);
-#if 1
+#if 0
   /* now send a datagram */
   if (sendto(sock, MESSAGE, sizeof(MESSAGE), 0,
              (struct sockaddr *)&server_addr,

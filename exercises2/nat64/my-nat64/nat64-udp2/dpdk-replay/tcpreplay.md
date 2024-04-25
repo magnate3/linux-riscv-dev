@@ -70,6 +70,39 @@ udp.pcap
 csum: 0x4421,origin_cksum : 0x4421
 [root@centos7 reasm]# 
 ```
+
+# 构造udp分片
+
+```
+def send_udp_frag3():
+    eth=Ether(src=node81_mac, dst=ndoe251_mac,type =ETH_P_IPV6)
+    ip6 = IPv6(src = src_ipv6, dst = dst_ipv6, nh = 44)
+    udp_hdr_len = 8
+    udp_data_len = 2048
+    #udp_data_len = 1488
+    total = udp_hdr_len + udp_data_len
+    sec_of  = (total/2)&~7
+    len1 = sec_of - udp_hdr_len
+    len2 =  total - sec_of
+    fisrt_of = 0
+    payload1=packet.Raw("a"*len1) 
+    payload2=packet.Raw("a"*len2) 
+    udp=UDP(sport=8080, dport=5080, len=udp_data_len + udp_hdr_len, chksum=0x0)
+    total_payload = packet.Raw("a"*udp_data_len)
+    packet_raw = raw(ip6/udp/total_payload)
+    udp_raw = packet_raw[40:]
+    udp.chksum = 0
+    csum = in6_chksum(socket.IPPROTO_UDP, ip6,udp_raw)
+    frag_1 = IPv6ExtHdrFragment(nh = 17,id= 0x0000c911, offset = 0, m = 1)
+    frag_2 = IPv6ExtHdrFragment(nh = 17,id= 0x0000c911, offset = sec_of/8, m = 0)
+    udp.chksum = csum
+    pkt1 = ip6/frag_1/udp/payload1
+    sendp(eth/pkt1,verbose=0,iface='enahisic2i3')
+    pkt2 = ip6/frag_2/payload2
+    sendp(eth/pkt2,verbose=0,iface='enahisic2i3')
+```
+
+
 #   tcpdump bad udp cksum
 
 ```

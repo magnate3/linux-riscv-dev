@@ -20,6 +20,8 @@
 #include <linux/kprobes.h>
 #include <linux/netdevice.h>
 #include <linux/inet.h>
+#include <linux/netfilter.h>
+#include <linux/net.h>
 
 #define SERVADDR "2001:db8::a0a:6751"
 
@@ -52,7 +54,9 @@ struct ip6_frag {
 
 #define IP6_F_MF	0x0001
 #define IP6_F_MASK	0xfff8
-static char func_name[KSYM_NAME_LEN] = "ipv6_frag_rcv";
+static char func_name[KSYM_NAME_LEN] = "ipv6_defrag";
+//static char func_name[KSYM_NAME_LEN] = "ipv6_rcv";
+//static char func_name[KSYM_NAME_LEN] = "ipv6_frag_rcv";
 static struct in6_addr  server_ip ;
 
 static int __udp6_lib_rcv_wrapper(struct sk_buff * skb, struct udp_table * udptable,
@@ -81,7 +85,8 @@ static void print_skb_ipv6(const struct sk_buff* skb)
     ip6_sip = ip6h->saddr;
     ip6_dip = ip6h->daddr;
     
-    if (ip6h->nexthdr != NEXTHDR_TCP && ip6h->nexthdr != NEXTHDR_ICMP && ip6h->nexthdr != NEXTHDR_UDP) {
+    if (ip6h->nexthdr != NEXTHDR_TCP && ip6h->nexthdr != NEXTHDR_ICMP && ip6h->nexthdr != NEXTHDR_UDP\
+            && ip6h->nexthdr != 44 ) {
         return;
     }
     if (ip6h->nexthdr == NEXTHDR_ICMP) {
@@ -92,42 +97,147 @@ static void print_skb_ipv6(const struct sk_buff* skb)
     else if (ip6h->nexthdr == NEXTHDR_UDP && IN6_ARE_ADDR_EQUAL(&server_ip, &ip6_dip)) {
          //struct udphdr * uh  = (struct udphdr *)skb_transport_header(skb);
          //struct udphdr * uh  = udp_hdr(skb);
-         struct ipv6hdr * hdr = ipv6_hdr(skb);
-         struct udphdr * uh  = (struct udphdr *)(hdr +1);
+         struct udphdr * uh  = (struct udphdr *)(ip6h +1);
 
          sport = ntohs(uh->source);
          dport = ntohs(uh->dest);
-        printk("udp Source: "NIP6_FMT" sport:%d --->Dest:  "NIP6_FMT" dport:%d    ---> \n", NIP6(ip6_sip), sport, NIP6(ip6_dip), dport);
+         printk("udp Source: "NIP6_FMT" sport:%d --->Dest:  "NIP6_FMT" dport:%d    ---> \n", NIP6(ip6_sip), sport, NIP6(ip6_dip), dport);
         return;
     }
-    else if (ip6h->nexthdr == 44 && IN6_ARE_ADDR_EQUAL(&server_ip, &ip6_dip)) {
-        struct ipv6hdr * hdr = ipv6_hdr(skb);
+    //else if (ip6h->nexthdr == 44 && IN6_ARE_ADDR_EQUAL(&server_ip, &ip6_dip)) {
+    else if (ip6h->nexthdr == 44)  {
         //struct frag_hdr *fhdr = (struct frag_hdr *)skb_transport_header(skb);
-        struct frag_hdr *fhdr = (struct frag_hdr *)(hdr +1);
-        printk("frag: "NIP6_FMT" --->Dest:  "NIP6_FMT" ,next proto : %u    ", NIP6(ip6_sip),  NIP6(ip6_dip),ntohs(fhdr->nexthdr));
+        struct frag_hdr *fhdr = (struct frag_hdr *)(ip6h +1);
+        //printk("frag: "NIP6_FMT" --->Dest:  "NIP6_FMT" ,next proto : %u   \n ", NIP6(ip6_sip),  NIP6(ip6_dip),fhdr->nexthdr);
+        if (skb->len - skb_network_offset(skb) < IPV6_MIN_MTU && fhdr->frag_off & htons(IP6_MF))
+        {
+             printk("frag(id %u | offset %u ): "NIP6_FMT" --->Dest:  "NIP6_FMT" will be droped \n" ,ntohl(fhdr->identification),\
+                     ntohs(fhdr->frag_off)&IP6_OFFSET,    NIP6(ip6_sip),  NIP6(ip6_dip));
+        }
         return;
     }
-    
+    else if (ip6h->nexthdr == NEXTHDR_TCP && IN6_ARE_ADDR_EQUAL(&server_ip, &ip6_dip)) {
     
     //skb->transport_header = skb->network_header + sizeof(*ip6h);
-    th = tcp_hdr(skb);
+    // skb->transport_header = skb->network_header + sizeof(*hdr);
+    //th = tcp_hdr(skb);
+    th = (struct tcphdr*)(ip6h +1);
     sport = ntohs(th->source);
     dport = ntohs(th->dest);
     //printk("tcp  Source: "NIP6_FMT" sport:%d --->Dest:  "NIP6_FMT" dport:%d    ---> \n", NIP6(ip6_sip), sport, NIP6(ip6_dip), dport);
-            
+        return;
+    }        
     return;    
 }
+#if 0
+//nf_hook_entry_hookfn(const struct nf_hook_entry *entry, struct sk_buff *skb,
+//                     struct nf_hook_state *state)
+//{
+//        return entry->hook(entry->priv, skb, state);
+//}
+//
+//static unsigned int nf_iterate(struct sk_buff *skb,
+/* Returns 1 if okfn() needs to be executed by the caller,
+ *  * -EPERM for NF_DROP, 0 otherwise.  Caller must hold rcu_read_lock. */
+int test_nf_hook_slow(struct sk_buff *skb, struct nf_hook_state *state,
+                 const struct nf_hook_entries *e, unsigned int s)
+{
+#if 0
+        unsigned int verdict;
+        int ret;
 
+        for (; s < e->num_hook_entries; s++) {
+                verdict = nf_hook_entry_hookfn(&e->hooks[s], skb, state);
+                switch (verdict & NF_VERDICT_MASK) {
+                case NF_ACCEPT:
+                        break;
+                case NF_DROP:
+                        kfree_skb(skb);
+                        ret = NF_DROP_GETERR(verdict);
+                        if (ret == 0)
+                                ret = -EPERM;
+                        return ret;
+                case NF_QUEUE:
+                        ret = nf_queue(skb, state, e, s, verdict);
+                        if (ret == 1)
+                                continue;
+                        return ret;
+                default:
+                        /* Implicit handling for NF_STOLEN, as well as any other
+ *                          * non conventional verdicts.
+ *                                                   */
+                        return 0;
+                }
+        }
 
+        return 1;
+#else
+        for (; s < e->num_hook_entries; s++) {
+                //verdict = nf_hook_entry_hookfn(&e->hooks[s], skb, state);
+             const struct nf_hook_entry *entry = &e->hooks[s];
+             pr_info("hook func %p \n", entry->hook);
+        }
+        return 1;
+#endif
+}
+  
+static inline int test_nf_hook(u_int8_t pf, unsigned int hook, struct net *net,
+                          struct sock *sk, struct sk_buff *skb,
+                          struct net_device *indev, struct net_device *outdev,
+                          int (*okfn)(struct net *, struct sock *, struct sk_buff *))
+{
+        struct nf_hook_entries *hook_head;
+        int ret = 1;
+
+#ifdef HAVE_JUMP_LABEL
+        if (__builtin_constant_p(pf) &&
+            __builtin_constant_p(hook) &&
+            !static_key_false(&nf_hooks_needed[pf][hook]))
+                return 1;
+#endif
+
+        rcu_read_lock();
+        hook_head = rcu_dereference(net->nf.hooks[pf][hook]);
+        if (hook_head) {
+                struct nf_hook_state state;
+
+                nf_hook_state_init(&state, hook, pf, indev, outdev,
+                                   sk, net, okfn);
+
+                ret = test_nf_hook_slow(skb, &state, hook_head, 0);
+        }
+        rcu_read_unlock();
+        return ret;
+}
+#endif
 static int ipv6_rcv_hook(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
 {
     
+#if 0
+    struct net *net = dev_net(skb->dev);
+    test_nf_hook(NFPROTO_IPV6, NF_INET_PRE_ROUTING,
+                       net, NULL, skb, dev, NULL,
+                       NULL);
+                       //(nf_hookfn*)kallsyms_lookup_name("ip6_rcv_finish"));
+#endif
     print_skb_ipv6(skb);
-
     jprobe_return();
     return 0;
 }
-
+static  int ip6_rcv_finish_wrap(struct net *net, struct sock *sk, struct sk_buff *skb)
+{
+    print_skb_ipv6(skb);
+    jprobe_return();
+    return 0;
+}
+static unsigned int ipv6_defrag_wrap(void *priv,
+                                struct sk_buff *skb,
+                                const struct nf_hook_state *state)
+{
+    print_skb_ipv6(skb);
+    jprobe_return();
+    return 0;
+}
 static struct jprobe ipv6_recv_probe;
 
 static int probe_netif_receive_skb_fun(struct sk_buff *skb)
@@ -193,7 +303,8 @@ NOKPROBE_SYMBOL(entry_handler);
  *     */
 static int ret_handler(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
-	unsigned long retval = regs_return_value(regs);
+	//unsigned long retval = regs_return_value(regs);
+	int retval = regs_return_value(regs);
 #if 0
 	struct my_data *data = (struct my_data *)ri->data;
 	s64 delta;
@@ -204,7 +315,8 @@ static int ret_handler(struct kretprobe_instance *ri, struct pt_regs *regs)
 	pr_info("%s returned %lu and took %lld ns to execute\n",
 			func_name, retval, (long long)delta);
 #endif
-	pr_info("%s returned %lu \n", func_name, retval);
+	pr_info("%s returned %d, %d \n", func_name, retval, NET_RX_DROP);
+	//pr_info("%s returned %lu, %d \n", func_name, retval, NET_RX_DROP);
 	return 0;
 }
 NOKPROBE_SYMBOL(ret_handler);
@@ -214,7 +326,7 @@ static struct kretprobe my_kretprobe = {
 	.entry_handler		= entry_handler,
 	.data_size		= sizeof(struct my_data),
 	/* Probe up to 20 instances concurrently. */
-	.maxactive		= 20,
+	.maxactive		= 128,
 };
 
 int  __init  kp_init(void)
@@ -223,8 +335,17 @@ int  __init  kp_init(void)
 
     //inet_pton(AF_INET6, SERVADDR, &server_ip);
     in6_pton(SERVADDR, strlen(SERVADDR), (void *)&server_ip, '\0', NULL);
+    printk(" server ip6: "NIP6_FMT" \n", NIP6(server_ip));
+#if 0
+    ipv6_recv_probe.kp.addr = (kprobe_opcode_t*)kallsyms_lookup_name("ipv6_defrag");
+    ipv6_recv_probe.entry = (kprobe_opcode_t*)ipv6_defrag_wrap;
+#elif 1
     ipv6_recv_probe.kp.addr = (kprobe_opcode_t*)kallsyms_lookup_name("ipv6_rcv");
     ipv6_recv_probe.entry = (kprobe_opcode_t*)ipv6_rcv_hook;
+#elif 0
+    ipv6_recv_probe.kp.addr = (kprobe_opcode_t*)kallsyms_lookup_name("ip6_rcv_finish");
+    ipv6_recv_probe.entry = (kprobe_opcode_t*)ip6_rcv_finish_wrap;
+#endif
     retval = register_jprobe(&ipv6_recv_probe);
     if (retval < 0) {
 	pr_err("register_jretprobe failed, returned %d\n", retval);

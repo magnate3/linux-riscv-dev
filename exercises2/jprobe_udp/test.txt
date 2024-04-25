@@ -1,0 +1,3 @@
+ iperf -V -s 2008:db8::a0a:6752 -p 8888
+ ip a add 2008:db8::a0a:67fb/96 dev enp5s0
+ iperf -V -c 2008:db8::a0a:6752 -p 8888

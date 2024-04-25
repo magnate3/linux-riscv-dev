@@ -739,10 +739,12 @@ static void xlate_4to6_data(struct pkt *p)
 			memcpy(skb_put(new_skb, sizeof(header)), &header, sizeof(header));
 			memcpy(skb_put(new_skb, frag_size), p->data, frag_size);
 		        p->data += frag_size;
+#if 0
                         pr_info("hop %u , ipv6 frag id  %u, frag offset %u, frag  more %u,next header: %u, payload %u \n",\
                              header.ip6.hop_limit, ntohl(header.ip6_frag.ident),\
                              ntohs(header.ip6_frag.offset_flags)&IP6_F_MASK,\
                              ntohs(header.ip6_frag.offset_flags)&IP6_F_MF,header.ip6_frag.next_header, frag_size);
+#endif
 			new_skb->protocol = htons(ETH_P_IPV6);
 
 			p->dev->stats.rx_bytes += new_skb->len;
@@ -918,7 +920,9 @@ static void nat64_setup(struct net_device *dev)
 	dev->netdev_ops = &nat64_netdev_ops;
 	dev->hard_header_len = 0;
 	dev->addr_len = 0;
-	dev->mtu = 1500;
+        //ipv4 mtu - sizeof(struct iphdr) <  ipv6 mtu -sizeof(struct ip6hdr) - sizeof(struct ip6frag)
+	dev->mtu = 1460;
+	//dev->mtu = 1500;
 	dev->needed_headroom = sizeof(struct ip6) - sizeof(struct ip4);
 	//dev->needed_headroom = sizeof(struct ip6) - sizeof(struct ip4) + sizeof(ETH_HLEN);
 

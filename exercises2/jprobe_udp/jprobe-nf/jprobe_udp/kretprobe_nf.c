@@ -17,7 +17,7 @@
 
 #define NAME_LEN 50
 
-#define SERVADDR "2001:db8::a0a:6751"
+#define SERVADDR "2001:db8::a0a:6752"
 
 #define PORT  5080
 #define NIP6(addr) \

@@ -308,6 +308,21 @@ Total                                                                         : 
 root@target:~/spdk# 
 ```
 
+> ## host
+
+```
+root@ubuntux86:# nvme connect -t tcp -n "nqn.2022-03.io.spdk:cnode1" -a 192.168.11.22 -s 4420
+```
+```
+root@ubuntux86:# lsblk | grep nvme
+nvme0n1     259:0    0 238.5G  0 disk 
+├─nvme0n1p1 259:1    0   512M  0 part /boot/efi
+└─nvme0n1p2 259:2    0   238G  0 part /
+nvme1n1     259:4    0   512M  0 disk 
+nvme1n2     259:6    0   512M  0 disk 
+root@ubuntux86:# nvme disconnect-all
+```
+
 # raid 
 
 

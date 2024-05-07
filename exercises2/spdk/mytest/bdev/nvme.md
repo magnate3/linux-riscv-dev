@@ -141,6 +141,173 @@ KeyboardInterrupt
 root@target:~# 
 ```
 
+# 两个nvme
+
+```
+root@target:~# lsblk
+NAME    MAJ:MIN RM  SIZE RO TYPE MOUNTPOINT
+fd0       2:0    1    4K  0 disk 
+loop0     7:0    0 63.2M  1 loop /snap/core20/1634
+loop1     7:1    0 63.3M  1 loop /snap/core20/1879
+loop2     7:2    0 67.8M  1 loop /snap/lxd/22753
+loop3     7:3    0 53.2M  1 loop /snap/snapd/19122
+loop4     7:4    0 91.9M  1 loop /snap/lxd/24061
+sda       8:0    0 22.2G  0 disk 
+├─sda1    8:1    0 22.1G  0 part /
+├─sda14   8:14   0    4M  0 part 
+└─sda15   8:15   0  106M  0 part /boot/efi
+sr0      11:0    1 1024M  0 rom  
+nvme1n1 259:0    0  512M  0 disk 
+nvme0n1 259:1    0  512M  0 disk 
+root@target:~#
+```
++ 1) setup.sh
+```
+root@target:~# PCI_ALLOWED="0000:00:03.0 0000:00:04.0" ./spdk/scripts/setup.sh
+0000:00:03.0 (1b36 0010): nvme -> uio_pci_generic
+0000:00:04.0 (1b36 0010): nvme -> uio_pci_generic
+root@target:~# 
+```
+
++ 2) bdev_nvme_attach_controller  
+
+```
+root@target:~/spdk# ./scripts/rpc.py bdev_nvme_attach_controller -b Nvme0 -t PCIe -a 0000:00:03.0
+Nvme0n1
+root@target:~/spdk# ./scripts/rpc.py bdev_nvme_attach_controller -b Nvme1 -t PCIe -a 0000:00:04.0
+Nvme1n1
+root@target:~/spdk# 
+```
+
+```
+root@target:~/spdk# ./scripts/rpc.py bdev_nvme_get_controllers
+[
+  {
+    "name": "Nvme0",
+    "trid": {
+      "trtype": "PCIe",
+      "traddr": "0000:00:03.0"
+    }
+  },
+  {
+    "name": "Nvme1",
+    "trid": {
+      "trtype": "PCIe",
+      "traddr": "0000:00:04.0"
+    }
+  }
+]
+```
+
++ 3 nvmf_create_subsystem   
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_create_subsystem nqn.2022-03.io.spdk:cnode1 -a -s SPDK00000000000002 -d SPDK_Controller1
+root@target:~/spdk# 
+```
+
++ 4 nvmf_subsystem_add_ns 2个 bdv
+Nvme2 不存在   
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2022-03.io.spdk:cnode1 Nvme0n1
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2022-03.io.spdk:cnode1 Nvme1n1
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2022-03.io.spdk:cnode1 Nvme2n1
+request:
+{
+  "nqn": "nqn.2022-03.io.spdk:cnode1",
+  "namespace": {
+    "bdev_name": "Nvme2n1"
+  },
+  "method": "nvmf_subsystem_add_ns",
+  "req_id": 1
+}
+Got JSON-RPC error response
+response:
+{
+  "code": -32602,
+  "message": "Invalid parameters"
+}
+root@target:~/spdk# 
+```
+
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_get_subsystems
+[
+  {
+    "nqn": "nqn.2014-08.org.nvmexpress.discovery",
+    "subtype": "Discovery",
+    "listen_addresses": [],
+    "allow_any_host": true,
+    "hosts": []
+  },
+  {
+    "nqn": "nqn.2022-03.io.spdk:cnode1",
+    "subtype": "NVMe",
+    "listen_addresses": [],
+    "allow_any_host": true,
+    "hosts": [],
+    "serial_number": "SPDK00000000000002",
+    "model_number": "SPDK_Controller1",
+    "max_namespaces": 32,
+    "namespaces": [
+      {
+        "nsid": 1,
+        "bdev_name": "Nvme0n1",
+        "name": "Nvme0n1",
+        "uuid": "422f13af-d767-40b1-9412-cafa9448a0a9"
+      },
+      {
+        "nsid": 2,
+        "bdev_name": "Nvme1n1",
+        "name": "Nvme1n1",
+        "uuid": "5b06fd94-0a1a-4f40-8d29-dc8051f8b908"
+      }
+    ]
+  }
+]
+```
+
++ 5  nvmf_create_transport and nvmf_subsystem_add_listener   
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_create_transport -t tcp -u 8192 -p 4 -c 0
+WARNING: max_qpairs_per_ctrlr is deprecated, please use max_io_qpairs_per_ctrlr.
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2022-03.io.spdk:cnode1 -t tcp -a 192.168.11.22 -s 4420
+root@target:~/spdk# 
+```
+
++ 6 perf
+
+```
+Associating TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 1 with lcore 0
+Associating TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 2 with lcore 0
+```
+两个namespaces   
+
+```
+root@target:~/spdk# ./build/examples/perf -i 0 -q 128 -o 4096 -w rw -M 50 -t 60 -r 'trtype:TCP adrfam:IPv4 traddr:192.168.11.22 trsvcid:4420'
+[2024-05-07 08:06:11.708098] Starting SPDK v21.01.2-pre git sha1 752ceb0c1 / DPDK 20.11.0 initialization...
+[2024-05-07 08:06:11.708151] [ DPDK EAL parameters: [2024-05-07 08:06:11.708159] perf [2024-05-07 08:06:11.708166] -c 0x1 [2024-05-07 08:06:11.708171] --no-pci [2024-05-07 08:06:11.708176] --log-level=lib.eal:6 [2024-05-07 08:06:11.708181] --log-level=lib.cryptodev:5 [2024-05-07 08:06:11.708187] --log-level=user1:6 [2024-05-07 08:06:11.708190] --iova-mode=pa [2024-05-07 08:06:11.708195] --base-virtaddr=0x200000000000 [2024-05-07 08:06:11.708201] --match-allocations [2024-05-07 08:06:11.708206] --file-prefix=spdk0 [2024-05-07 08:06:11.708212] --proc-type=auto [2024-05-07 08:06:11.708216] ]
+EAL: No available hugepages reported in hugepages-1048576kB
+EAL: No legacy callbacks, legacy socket not created
+Initializing NVMe Controllers
+Attached to NVMe over Fabrics controller at 192.168.11.22:4420: nqn.2022-03.io.spdk:cnode1
+controller IO queue size 128 less than required
+Consider using lower queue depth or small IO size because IO requests may be queued at the NVMe driver.
+controller IO queue size 128 less than required
+Consider using lower queue depth or small IO size because IO requests may be queued at the NVMe driver.
+Associating TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 1 with lcore 0
+Associating TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 2 with lcore 0
+Initialization complete. Launching workers.
+========================================================
+                                                                                                                  Latency(us)
+Device Information                                                            :       IOPS      MiB/s    Average        min        max
+TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 1 from core  0:    4294.90      16.78   29806.63    9737.95   51880.46
+TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 2 from core  0:    4293.80      16.77   29816.63    9709.88   51884.40
+========================================================
+Total                                                                         :    8588.70      33.55   29811.63    9709.88   51884.40
+
+root@target:~/spdk# 
+```
+
 # raid 
 
 

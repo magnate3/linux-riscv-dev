@@ -1,4 +1,33 @@
 
+# 参考
+
+(Block Device User Guide)[https://spdk.io/doc/bdev.html]
+
+[深信服 eds](https://www.sangfor.com.cn/video/09a754d7822049bdab5385ca2aadcc2d)
+
+[三万英尺看分布式存储中本地存储引擎 ](https://www.modb.pro/db/25573)   
+[深信服分布式存储501高性能版本发布会精彩回顾](https://www.sangfor.com.cn/event-center/eds501webinar)   
+
+(fastblock)[https://github.com/openeuler-mirror/fastblock]   
+
+(SPDK对接Ceph性能优化)[https://www.cnblogs.com/developer-tianyiyun/articles/16339003.html]
+
+
+(基于SPDK NVMeOF+多路径访问远端存储设备实践)[https://www.ctyun.cn/developer/article/423734886105157]  
+
++  命令
+```
+ spdk_rpc.py thread_get_pollers
+```
+
+> ## RBD bdev
+
+
+SPDK项目中的RBD bdev（RBD块设备模块）。这个模块主要是利用Ceph的librados/librbd的客户端软件库，把Ceph集群的RBD pool中的image file (镜像文件)，转化为SPDK定义的块设备。最终这个块设备可以被各类SPDK的target程序使用（诸如SPDK NVMe-oF target, Vhost target, iSCSI target），充当Ceph的存储网关服务，对真正的客户端应用提供块设备服务。
+
+
+
+![image](../../pic/bdev1.webp)
 
 #   ~/spdk/build/examples/my_hello_nvme_bdev -c bdev.json  -b Nvme0n1
 ![image](../../pic/bdev.png)

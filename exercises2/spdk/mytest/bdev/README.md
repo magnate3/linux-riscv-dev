@@ -1,19 +1,19 @@
 
 # 参考
 
-(Block Device User Guide)[https://spdk.io/doc/bdev.html]
+[Block Device User Guide](https://spdk.io/doc/bdev.html)
 
 [深信服 eds](https://www.sangfor.com.cn/video/09a754d7822049bdab5385ca2aadcc2d)
 
 [三万英尺看分布式存储中本地存储引擎 ](https://www.modb.pro/db/25573)   
 [深信服分布式存储501高性能版本发布会精彩回顾](https://www.sangfor.com.cn/event-center/eds501webinar)   
 
-(fastblock)[https://github.com/openeuler-mirror/fastblock]   
+[fastblock](https://github.com/openeuler-mirror/fastblock)  
 
-(SPDK对接Ceph性能优化)[https://www.cnblogs.com/developer-tianyiyun/articles/16339003.html]
+[SPDK对接Ceph性能优化](https://www.cnblogs.com/developer-tianyiyun/articles/16339003.html)
 
 
-(基于SPDK NVMeOF+多路径访问远端存储设备实践)[https://www.ctyun.cn/developer/article/423734886105157]  
+[基于SPDK NVMeOF+多路径访问远端存储设备实践](https://www.ctyun.cn/developer/article/423734886105157)  
 
 +  命令
 ```

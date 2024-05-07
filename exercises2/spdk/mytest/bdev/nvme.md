@@ -85,7 +85,7 @@ root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2022-03.io.
 root@target:~/spdk# 
 ```
 + 3) perf 下发io   
-
+./build/examples/perf   
 ```
 root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2022-03.io.spdk:cnode1 -t tcp -a 192.168.11.22 -s 4420
 [2024-05-07 07:42:37.136954] tcp.c: 748:nvmf_tcp_listen: *NOTICE*: *** NVMe/TCP Target Listening on 192.168.11.22 port 4420 ***
@@ -140,6 +140,8 @@ KeyboardInterrupt
 
 root@target:~# 
 ```
+
+
 
 # 两个nvme
 
@@ -205,7 +207,7 @@ root@target:~/spdk# ./scripts/rpc.py nvmf_create_subsystem nqn.2022-03.io.spdk:c
 root@target:~/spdk# 
 ```
 
-+ 4 nvmf_subsystem_add_ns 2个 bdv
++ 4 nvmf_subsystem_add_ns 2个 bdv   
 Nvme2 不存在   
 ```
 root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2022-03.io.spdk:cnode1 Nvme0n1
@@ -323,6 +325,185 @@ nvme1n2     259:6    0   512M  0 disk
 root@ubuntux86:# nvme disconnect-all
 ```
 
+# hellorld world
+bdev_get_bdevs   
+```
+scripts/rpc.py bdev_get_bdevs
+[
+  {
+    "name": "Nvme0n1",
+    "aliases": [],
+    "product_name": "NVMe disk",
+    "block_size": 512,
+    "num_blocks": 1048576,
+    "uuid": "422f13af-d767-40b1-9412-cafa9448a0a9",
+    "assigned_rate_limits": {
+      "rw_ios_per_sec": 0,
+      "rw_mbytes_per_sec": 0,
+      "r_mbytes_per_sec": 0,
+      "w_mbytes_per_sec": 0
+    },
+    "claimed": true,
+    "zoned": false,
+    "supported_io_types": {
+      "read": true,
+      "write": true,
+      "unmap": true,
+      "write_zeroes": true,
+      "flush": true,
+      "reset": true,
+      "nvme_admin": true,
+      "nvme_io": true
+    },
+    "driver_specific": {
+      "nvme": {
+        "pci_address": "0000:00:03.0",
+        "trid": {
+          "trtype": "PCIe",
+          "traddr": "0000:00:03.0"
+        },
+        "ctrlr_data": {
+          "vendor_id": "0x1b36",
+          "model_number": "QEMU NVMe Ctrl",
+          "serial_number": "nvme-dev",
+          "firmware_revision": "1.0",
+          "subnqn": "nqn.2019-08.org.qemu:nvme-dev",
+          "oacs": {
+            "security": 0,
+            "format": 1,
+            "firmware": 0,
+            "ns_manage": 1
+          }
+        },
+        "vs": {
+          "nvme_version": "1.4"
+        },
+        "csts": {
+          "rdy": 1,
+          "cfs": 0
+        },
+        "ns_data": {
+          "id": 1
+        }
+      }
+    }
+  },
+  {
+    "name": "Nvme1n1",
+    "aliases": [],
+    "product_name": "NVMe disk",
+    "block_size": 512,
+    "num_blocks": 1048576,
+    "uuid": "5b06fd94-0a1a-4f40-8d29-dc8051f8b908",
+    "assigned_rate_limits": {
+      "rw_ios_per_sec": 0,
+      "rw_mbytes_per_sec": 0,
+      "r_mbytes_per_sec": 0,
+      "w_mbytes_per_sec": 0
+    },
+    "claimed": true,
+    "zoned": false,
+    "supported_io_types": {
+      "read": true,
+      "write": true,
+      "unmap": true,
+      "write_zeroes": true,
+      "flush": true,
+      "reset": true,
+      "nvme_admin": true,
+      "nvme_io": true
+    },
+    "driver_specific": {
+      "nvme": {
+        "pci_address": "0000:00:04.0",
+        "trid": {
+          "trtype": "PCIe",
+          "traddr": "0000:00:04.0"
+        },
+        "ctrlr_data": {
+          "vendor_id": "0x1b36",
+          "model_number": "QEMU NVMe Ctrl",
+          "serial_number": "nvme-de2v",
+          "firmware_revision": "1.0",
+          "subnqn": "nqn.2019-08.org.qemu:nvme-de2v",
+          "oacs": {
+            "security": 0,
+            "format": 1,
+            "firmware": 0,
+            "ns_manage": 1
+          }
+        },
+        "vs": {
+          "nvme_version": "1.4"
+        },
+        "csts": {
+          "rdy": 1,
+          "cfs": 0
+        },
+        "ns_data": {
+          "id": 1
+        }
+      }
+    }
+  }
+]
+```
+
+
+```
+root@target:~/spdk/examples/hello_nvme_bdev# ../../build/examples/my_hello_nvme_bdev -r "trtype:tcp adrfam:IPv4 traddr:192.168.11.22 trsvcid:4420 subnqn:nqn.2022-03.io.spdk:cnode1"
+[2024-05-07 09:12:16.563700] Starting SPDK v21.01.2-pre git sha1 752ceb0c1 / DPDK 20.11.0 initialization...
+[2024-05-07 09:12:16.564261] [ DPDK EAL parameters: [2024-05-07 09:12:16.564285] hello_bdev [2024-05-07 09:12:16.564290] --no-shconf [2024-05-07 09:12:16.564294] -c 0x1 [2024-05-07 09:12:16.564297] --log-level=lib.eal:6 [2024-05-07 09:12:16.564300] --log-level=lib.cryptodev:5 [2024-05-07 09:12:16.564304] --log-level=user1:6 [2024-05-07 09:12:16.564308] --iova-mode=pa [2024-05-07 09:12:16.564311] --base-virtaddr=0x200000000000 [2024-05-07 09:12:16.564317] --match-allocations [2024-05-07 09:12:16.564323] --file-prefix=spdk_pid1482 [2024-05-07 09:12:16.564328] ]
+EAL: No available hugepages reported in hugepages-1048576kB
+EAL: No legacy callbacks, legacy socket not created
+[2024-05-07 09:12:16.669741] app.c: 538:spdk_app_start: *NOTICE*: Total cores available: 1
+[2024-05-07 09:12:16.795007] reactor.c: 915:reactor_run: *NOTICE*: Reactor started on core 0
+[2024-05-07 09:12:16.795083] accel_engine.c: 692:spdk_accel_engine_initialize: *NOTICE*: Accel engine initialized to use software engine.
+[2024-05-07 09:12:16.831215] hello_nvme_bdev.c: 169:hello_start: *NOTICE*: Successfully started the application
+[2024-05-07 09:12:16.831261] hello_nvme_bdev.c: 190:hello_start: *ERROR*: Could not find the bdev: Nvme0n1
+[2024-05-07 09:12:16.831267] app.c: 629:spdk_app_stop: *WARNING*: spdk_app_stop'd on non-zero
+[2024-05-07 09:12:16.889567] hello_nvme_bdev.c: 306:main: *ERROR*: ERROR starting application
+root@target:~/spdk/examples/hello_nvme_bdev# 
+```
+
+# gen_nvme.sh --json-with-subsystems
+
+
+```
+root@target:~/spdk# ./scripts/gen_nvme.sh --json-with-subsystems > bdev.json
+root@target:~/spdk# cat bdev.json 
+{
+"subsystems": [
+{
+"subsystem": "bdev",
+"config": [
+{
+"method": "bdev_nvme_attach_controller",
+"params": {
+"trtype": "PCIe",
+"name":"Nvme0",
+"traddr":"0000:00:03.0"
+}
+},{
+"method": "bdev_nvme_attach_controller",
+"params": {
+"trtype": "PCIe",
+"name":"Nvme1",
+"traddr":"0000:00:04.0"
+}
+}
+]
+}
+]
+}
+```
+
+# nvme/hello_world
+
+```
+./build/examples/hello_world 
+```
+
 # raid 
 
 
@@ -356,3 +537,6 @@ rpc.py bdev_raid_create -n raid5 -z 64 -r raid5f -b "nvme0n1 nvme1n1 nvme2n1 nvm
 [SPDK RAID EVALUATION AND IMPROVEMENT](https://xinnor.io/blog/spdk-raid-evaluation-and-improvement/)  
 
 [通过spdk 脚本iostat.py 观测bdev 的IO统计](https://zhuanlan.zhihu.com/p/593455010)   
+
+
+[spdk bdev layer](https://hackmd.io/@Hyam/spdk_test)   

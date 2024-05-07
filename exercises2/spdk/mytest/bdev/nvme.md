@@ -1,0 +1,176 @@
+
+# run
+
+
++ 1) 启动nvmf_target
+
+```
+root@target:~/spdk# ./build/bin/nvmf_tgt &
+[1] 1048
+```
+
++ 2) nvmf 设备配置
+
++ a) 准备工作，把nvme从内核解绑  
+
+```
+HUGEMEM=4096 PCI_ALLOWED="0000:00:03.0" ./scripts/setup.sh
+```
+
++ b) 把nvme 盘映射为一个 bdev  
+
+```
+root@target:~/spdk# ./scripts/rpc.py bdev_nvme_attach_controller -b Nvme0 -t PCIe -a 0000:00:03.0
+Nvme0n1
+root@target:~/spdk# ./scripts/rpc.py bdev_nvme_get_controllers
+[
+  {
+    "name": "Nvme0",
+    "trid": {
+      "trtype": "PCIe",
+      "traddr": "0000:00:03.0"
+    }
+  }
+]
+root@target:~/spdk# 
+```
+
++ c) 创建一个NVM subsystem   
+
+```
+root@target:~/spdk#  ./scripts/rpc.py nvmf_create_subsystem nqn.2022-03.io.spdk:cnode1 -a -s SPDK00000000000002 -d SPDK_Controller1
+root@target:~/spdk# 
+```
+
++ d) 用nvme bdev给NVMf subsystem 增加一个namespace,即把nvme bdev和NVMf subsystem 关联   
+名字 Nvme0 + n1   
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_ns nqn.2022-03.io.spdk:cnode1 Nvme0n1
+root@target:~/spdk# 
+```
+
++ e)  创建相应的tcp transport
+
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_create_transport -t tcp -u 8192 -p 4 -c 0
+WARNING: max_qpairs_per_ctrlr is deprecated, please use max_io_qpairs_per_ctrlr.
+[2024-05-07 07:41:24.872580] nvmf_rpc.c:1755:nvmf_rpc_decode_max_qpairs: *WARNING*: Parameter max_qpairs_per_ctrlr is deprecated, use max_io_qpairs_per_.
+[2024-05-07 07:41:24.873647] nvmf_rpc.c:1755:nvmf_rpc_decode_max_qpairs: *WARNING*: Parameter max_qpairs_per_ctrlr is deprecated, use max_io_qpairs_per_.
+[2024-05-07 07:41:24.874953] tcp.c: 554:nvmf_tcp_create: *NOTICE*: *** TCP Transport Init ***
+root@target:~/spdk# ./scripts/rpc.py nvmf_get_transports
+[
+  {
+    "trtype": "TCP",
+    "max_queue_depth": 128,
+    "max_io_qpairs_per_ctrlr": 3,
+    "in_capsule_data_size": 0,
+    "max_io_size": 131072,
+    "io_unit_size": 8192,
+    "max_aq_depth": 128,
+    "num_shared_buffers": 511,
+    "buf_cache_size": 32,
+    "dif_insert_or_strip": false,
+    "c2h_success": true,
+    "sock_priority": 0,
+    "abort_timeout_sec": 1
+  }
+]
+```
+
++ f) 监听nvmf subsystem 端口   
+让nvmf subsystem监听对应的端口，至此一块nvmf 盘已经建立成功，可以成功的被远端host discover到。
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2022-03.io.spdk:cnode1 -t tcp -a 192.168.11.22 -s 4420
+[2024-05-07 07:42:37.136954] tcp.c: 748:nvmf_tcp_listen: *NOTICE*: *** NVMe/TCP Target Listening on 192.168.11.22 port 4420 ***
+root@target:~/spdk# 
+```
++ 3) perf 下发io   
+
+```
+root@target:~/spdk# ./scripts/rpc.py nvmf_subsystem_add_listener nqn.2022-03.io.spdk:cnode1 -t tcp -a 192.168.11.22 -s 4420
+[2024-05-07 07:42:37.136954] tcp.c: 748:nvmf_tcp_listen: *NOTICE*: *** NVMe/TCP Target Listening on 192.168.11.22 port 4420 ***
+root@target:~/spdk# ./build/examples/perf -i 0 -q 128 -o 4096 -w rw -M 50 -t 60 -r 'trtype:TCP adrfam:IPv4 traddr:192.168.11.22 trsvcid:4420'
+[2024-05-07 07:43:16.386180] Starting SPDK v21.01.2-pre git sha1 752ceb0c1 / DPDK 20.11.0 initialization...
+[2024-05-07 07:43:16.386234] [ DPDK EAL parameters: [2024-05-07 07:43:16.386304] perf [2024-05-07 07:43:16.386394] -c 0x1 [2024-05-07 07:43:16.386483] -]
+EAL: No available hugepages reported in hugepages-1048576kB
+EAL: No legacy callbacks, legacy socket not created
+Initializing NVMe Controllers
+Attached to NVMe over Fabrics controller at 192.168.11.22:4420: nqn.2022-03.io.spdk:cnode1
+controller IO queue size 128 less than required
+Consider using lower queue depth or small IO size because IO requests may be queued at the NVMe driver.
+Associating TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 1 with lcore 0
+Initialization complete. Launching workers.
+========================================================
+                                                                                                                  Latency(us)
+Device Information                                                            :       IOPS      MiB/s    Average        min        max
+TCP (addr:192.168.11.22 subnqn:nqn.2022-03.io.spdk:cnode1) NSID 1 from core  0:    4287.03      16.75   29869.93   10975.25   58942.59
+========================================================
+Total                                                                         :    4287.03      16.75   29869.93   10975.25   58942.59
+
+root@target:~/spdk# 
+```
+
++ 4) iostat.py 观察
+```
+root@target:~# ./spdk/scripts/iostat.py -m -i 1 -t 180
+cpu_stat:  user_stat  nice_stat  system_stat  iowait_stat  steal_stat  idle_stat
+           5.47%      0.00%      0.10%        0.07%        0.00%       94.36%   
+
+Device   tps    MB_read/s  MB_wrtn/s  MB_dscd/s  MB_read  MB_wrtn  MB_dscd
+Nvme0n1  22.84  0.04       0.04       0.00       119.51   119.55   0.00   
+
+cpu_stat:  user_stat  nice_stat  system_stat  iowait_stat  steal_stat  idle_stat
+           10.36%     0.00%      6.25%        0.00%        0.00%       83.39%   
+
+Device   tps      MB_read/s  MB_wrtn/s  MB_dscd/s  MB_read  MB_wrtn  MB_dscd
+Nvme0n1  4209.42  8.26       8.19       0.00       8.37     8.30     0.00   
+
+cpu_stat:  user_stat  nice_stat  system_stat  iowait_stat  steal_stat  idle_stat
+           10.26%     0.00%      6.29%        0.00%        0.00%       83.44%   
+
+Device   tps      MB_read/s  MB_wrtn/s  MB_dscd/s  MB_read  MB_wrtn  MB_dscd
+Nvme0n1  4329.15  8.50       8.41       0.00       8.56     8.46     0.00   
+
+^CTraceback (most recent call last):
+  File "./spdk/scripts/iostat.py", line 356, in <module>
+    io_stat_display_loop(args)
+  File "./spdk/scripts/iostat.py", line 286, in io_stat_display_loop
+    time.sleep(interval)
+KeyboardInterrupt
+
+root@target:~# 
+```
+
+# raid 
+
+
+
+The first step is to connect the drives:    
+```
+rpc.py bdev_nvme_attach_controller -b nvme0 -t PCIe -a 0000:02:00.0
+rpc.py bdev_nvme_attach_controller -b nvme1 -t PCIe -a 0000:45:00.0
+rpc.py bdev_nvme_attach_controller -b nvme2 -t PCIe -a 0000:03:00.0
+rpc.py bdev_nvme_attach_controller -b nvme3 -t PCIe -a 0000:81:00.0
+rpc.py bdev_nvme_attach_controller -b nvme4 -t PCIe -a 0000:84:00.0
+rpc.py bdev_nvme_attach_controller -b nvme5 -t PCIe -a 0000:41:00.0
+rpc.py bdev_nvme_attach_controller -b nvme6 -t PCIe -a 0000:46:00.0
+rpc.py bdev_nvme_attach_controller -b nvme7 -t PCIe -a 0000:44:00.0
+rpc.py bdev_nvme_attach_controller -b nvme8 -t PCIe -a 0000:43:00.0
+rpc.py bdev_nvme_attach_controller -b nvme9 -t PCIe -a 0000:82:00.0
+rpc.py bdev_nvme_attach_controller -b nvme10 -t PCIe -a 0000:48:00.0
+rpc.py bdev_nvme_attach_controller -b nvme11 -t PCIe -a 0000:47:00.0
+rpc.py bdev_nvme_attach_controller -b nvme12 -t PCIe -a 0000:83:00.0
+rpc.py bdev_nvme_attach_controller -b nvme13 -t PCIe -a 0000:42:00.0
+rpc.py bdev_nvme_attach_controller -b nvme14 -t PCIe -a 0000:01:00.0
+rpc.py bdev_nvme_attach_controller -b nvme15 -t PCIe -a 0000:04:00.0
+```
+After that we can create an array:   
+```
+rpc.py bdev_raid_create -n raid5 -z 64 -r raid5f -b "nvme0n1 nvme1n1 nvme2n1 nvme3n1 nvme4n1 nvme5n1 nvme6n1 nvme7n1 nvme8n1 nvme9n1 nvme10n1 nvme11n1 nvme12n1 nvme13n1 nvme14n1 nvme15n1"
+```
+
+# references
+
+[SPDK RAID EVALUATION AND IMPROVEMENT](https://xinnor.io/blog/spdk-raid-evaluation-and-improvement/)  
+
+[通过spdk 脚本iostat.py 观测bdev 的IO统计](https://zhuanlan.zhihu.com/p/593455010)   

@@ -172,4 +172,9 @@ Test passed.
 root@target:~/spfs/build/bin# 
 ```
 
+# reference
+
+[Leohh123/spfs](https://github.com/Leohh123/spfs/tree/main)         
+
+[深入理解SPDK读写数据的过程，从应用到NVMe驱动](https://cloud.tencent.com/developer/news/1136961)    
 

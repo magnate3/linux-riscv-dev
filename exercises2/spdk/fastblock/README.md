@@ -8,8 +8,8 @@
 fastblock-client -op=createpool -poolname=fb -pgcount=128 -pgsize=3
 fastblock-client -op=createimage -imagesize=$((100*1024*1024*1024))  -imagename=fbimage -poolname=fb
 ```
-注意，创建pool之后，需要稍微等待raft选出pg的leader才可进行IO和性能测试。
-
+注意，创建pool之后，需要稍微等待raft选出pg的leader才可进行IO和性能测试。   
+fastblock-client -op=createimage类似dd image    
 
 + 2 创建spdk bdev    
 

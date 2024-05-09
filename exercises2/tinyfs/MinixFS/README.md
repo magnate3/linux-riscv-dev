@@ -65,14 +65,60 @@ dir/1.txt 和 dir的inode相同
 echo "hello, world3" > /mnt/myfs/test2.txt
 ```
 
-执行sync minix.disk（否则采用了page cache,hexdump看不到更新）     
+执行sync minix.disk（否则采用了page cache-minix_readpage/minix_writepage,hexdump看不到更新）     
 
 ![image](test2.png)
  
 
+> ## dd
 
+```
+[root@centos7 minix]# dd if=/dev/zero of=minix.disk bs=1k count=64 oflag=direct
+64+0 records in
+64+0 records out
+65536 bytes (66 kB) copied, 0.00242124 s, 27.1 MB/s
+[root@centos7 minix]# file minix.disk 
+minix.disk: data
+[root@centos7 minix]# ls -i minix.disk 
+83568241 minix.disk
+[root@centos7 minix]# df -i minix.disk 
+Filesystem        Inodes   IUsed     IFree IUse% Mounted on
+/dev/sda3      234031616 4284921 229746695    2% /
+[root@centos7 minix]# 
+```
 
++ 2 执行mkfs.minix 和mount
+```
+[root@centos7 minix]# mkfs.minix -1 minix.disk
+32 inodes
+64 blocks
+Firstdatazone=5 (5)
+Zonesize=1024
+Maxsize=268966912
 
+[root@centos7 minix]# mount minix.disk /mnt/myfs/
+[root@centos7 minix]# file minix.disk 
+minix.disk: Minix filesystem, V1, 30 char names, 16384 zones
+[root@centos7 minix]# 
+[root@centos7 minix]#  df -i minix.disk 
+Filesystem        Inodes   IUsed     IFree IUse% Mounted on
+/dev/sda3      234031616 4284921 229746695    2% /
+```
+file minix.disk  有变化    
+df -i minix.disk  没有变化    
+
++ 3 执行 echo "hello, world2" > /mnt/myfs/test1.txt
+```
+[root@centos7 minix]#  df -i minix.disk 
+Filesystem        Inodes   IUsed     IFree IUse% Mounted on
+/dev/sda3      234031616 4284921 229746695    2% /
+[root@centos7 minix]#  echo "hello, world2" > /mnt/myfs/test1.txt
+[root@centos7 minix]#  df -i minix.disk 
+Filesystem        Inodes   IUsed     IFree IUse% Mounted on
+/dev/sda3      234031616 4284921 229746695    2% /
+[root@centos7 minix]# 
+```
+df -i minix.disk  没有变化    
 
 > ## inode可用数目
 

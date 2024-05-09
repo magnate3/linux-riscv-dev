@@ -39,3 +39,5 @@ EAL: No legacy callbacks, legacy socket not created
 [2024-05-09 02:24:35.527509] hello_blob.c: 485:main: *NOTICE*: ERROR!
 root@target:~/spdk/examples/blob/hello_blob# 
 ```
+
+This is a bug in hello_blob (not blobstore itself). Blobstore used to only support read/write in 4KB units. It now supports 512B units if the backing device has 512B LBAs. hello_blob wasn't updated when those changes were made.

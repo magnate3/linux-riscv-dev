@@ -45,3 +45,7 @@ nvme1n1     259:4    0   512M  0 disk
 nvme1n2     259:6    0   512M  0 disk 
 root@ubuntux86:# 
 ```
+
+```
+root@ubuntux86:# nvme disconnect-all
+```

@@ -16,6 +16,12 @@ root@centos7 minix]# insmod  minix.ko
 64+0 records in
 64+0 records out
 65536 bytes (66 kB) copied, 0.00253823 s, 25.8 MB/s
+```
+
+格式化过程就是按照具体文件系统指定的结构来编排数据，比如格式化为MINIX文件系统，就需要写入超级块、inode位图、逻辑数据块位图、inode表等数据结构
+
+
+```
 [root@centos7 minix]# mkfs.minix -1 minix.disk
 32 inodes
 64 blocks

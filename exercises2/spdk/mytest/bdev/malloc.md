@@ -339,6 +339,10 @@ nvme2n1     259:10   0   512M  0 disk
 root@ubuntux86:# 
 ```
 
+# references
+
+[一个controller,两个subsystem通用](https://cloud.tencent.com/developer/article/1694515)    
+
 
 
  

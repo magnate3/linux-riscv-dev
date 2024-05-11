@@ -10,3 +10,6 @@
 [submodule "exercises2/nat64/kmod-tayga"]
 	path = exercises2/nat64/kmod-tayga
 	url = https://github.com/rssnsj/kmod-tayga.git
+[submodule "exercises2/bpftrace/bpf-developer-tutorial"]
+	path = exercises2/bpftrace/bpf-developer-tutorial
+	url = https://github.com/eunomia-bpf/bpf-developer-tutorial.git

@@ -115,6 +115,18 @@ tracepoint:syscalls:sys_enter_open
 root@ubuntux86:# 
 ```
 
+```
+root@ubuntux86:# bpftrace -e 'uprobe:/usr/lib/x86_64-linux-gnu/libc.so.6:madvise/pid == 1481/{printf("%s",ustack)}'
+Attaching 1 probe...
+^C
+
+root@ubuntux86:# bpftrace -e 'uprobe:/usr/lib/x86_64-linux-gnu/libc.so.6:madvise/pid==1481/{printf("%s",ustack)}'
+Attaching 1 probe...
+^C
+
+root@ubuntux86:# 
+```
+
 #  bpftrace  profile
 
 

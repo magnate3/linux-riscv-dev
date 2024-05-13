@@ -26,6 +26,8 @@ root@ubuntux86:#
 
 
 ```
+root@ubuntux86:# pwd
+/work/kernel_learn/bpftrace/ebpf-hello-world/src
 root@ubuntux86:# make
 uname -a
 Linux ubuntux86 5.13.0-39-generic #44~20.04.1-Ubuntu SMP Thu Mar 24 16:43:35 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux

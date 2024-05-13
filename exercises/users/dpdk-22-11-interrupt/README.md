@@ -256,3 +256,45 @@ Missing separate debuginfos, use: debuginfo-install libgcc-4.8.5-44.el7.x86_64 n
 #4  0x0000000000400d89 in main ()
 (gdb) 
 ```
+![images](test3.png)
+> ##  vfio_enable_msix   
+```
+Breakpoint 1, 0x00007ffff73f1524 in vfio_enable_msix () from /usr/local/lib64/librte_eal.so.23
+Missing separate debuginfos, use: debuginfo-install libgcc-4.8.5-44.el7.x86_64 numactl-libs-2.0.12-5.el7.x86_64 zlib-1.2.7-21.el7_9.x86_64
+(gdb) bt
+#0  0x00007ffff73f1524 in vfio_enable_msix () from /usr/local/lib64/librte_eal.so.23
+#1  0x00007ffff73f25e3 in rte_intr_enable () from /usr/local/lib64/librte_eal.so.23
+#2  0x00007fffec90d117 in eth_i40e_dev_init () from /usr/local/lib64/dpdk/pmds-23.0/librte_net_i40e.so.23.0
+#3  0x00007ffff7ae627c in rte_eth_dev_create () from /usr/local/lib64/librte_ethdev.so.23
+#4  0x00007fffec8f7bed in eth_i40e_pci_probe () from /usr/local/lib64/dpdk/pmds-23.0/librte_net_i40e.so.23.0
+#5  0x00007ffff49be6c2 in pci_probe () from /usr/local/lib64/librte_bus_pci.so.23
+#6  0x00007ffff73ccb93 in rte_bus_probe () from /usr/local/lib64/librte_eal.so.23
+#7  0x00007ffff73ee8c3 in rte_eal_init () from /usr/local/lib64/librte_eal.so.23
+#8  0x0000000000400c5f in main ()
+(gdb) 
+```
+
+
+VFIO_DEVICE_SET_IRQS     
+
+```
+vfio_enable_msix(const struct rte_intr_handle *intr_handle) {
+       
+        vfio_dev_fd = rte_intr_dev_fd_get(intr_handle);
+        ret = ioctl(vfio_dev_fd, VFIO_DEVICE_SET_IRQS, irq_set);
+
+        return 0;
+}
+```
+
+> ##  eventfd
+```
+(gdb) bt
+#0  eventfd () at ../sysdeps/unix/syscall-template.S:78
+#1  0x00007ffff49c29e0 in pci_vfio_map_resource_primary () from /usr/local/lib64/librte_bus_pci.so.23
+#2  0x00007ffff49be867 in pci_probe () from /usr/local/lib64/librte_bus_pci.so.23
+#3  0x00007ffff73ccb93 in rte_bus_probe () from /usr/local/lib64/librte_eal.so.23
+#4  0x00007ffff73ee8c3 in rte_eal_init () from /usr/local/lib64/librte_eal.so.23
+#5  0x0000000000400c5f in main ()
+(gdb) 
+```

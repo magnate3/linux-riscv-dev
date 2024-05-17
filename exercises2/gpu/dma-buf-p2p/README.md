@@ -71,3 +71,7 @@ static struct sg_table *dma_buf_exporter_map_dma_buf(struct dma_buf_attachment *
 	return table;
 }
 ```
+
+# references
+
+[Linux内核笔记之DMA_BUF](https://saiyn.github.io/homepage/2018/04/18/linux-kernel-dmabuf/)   

@@ -23,3 +23,9 @@ Linux系统在长时间运行后，连续的大块物理内存会被分解为小
 0xffffffff811df729 do_sync_readv_writev  ([kernel.kallsyms])
 0xffffffff811e0cfe do_readv_writev  ([kernel.kallsyms])
 ```
+
+
+# references
+
+
+[Linux内存管理：伙伴系统实现](https://zhuanlan.zhihu.com/p/258921453)   

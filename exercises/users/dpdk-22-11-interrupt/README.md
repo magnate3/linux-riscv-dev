@@ -274,6 +274,20 @@ Missing separate debuginfos, use: debuginfo-install libgcc-4.8.5-44.el7.x86_64 n
 (gdb) 
 ```
 
+```
+eth_i40e_dev_init(struct rte_eth_dev *dev)
+	/* register callback func to eal lib */
+	rte_intr_callback_register(&(pci_dev->intr_handle),
+		i40e_dev_interrupt_handler, (void *)dev);
+
+	/* configure and enable device interrupt */
+	i40e_pf_config_irq0(hw);
+	i40e_pf_enable_irq0(hw);
+
+	/* enable uio intr after callback register */
+	rte_intr_enable(&(pci_dev->intr_handle));
+```
+
 
 VFIO_DEVICE_SET_IRQS     
 

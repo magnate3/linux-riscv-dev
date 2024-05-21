@@ -38,3 +38,7 @@ create dumb: handle = 1, pitch = 960, size = 307200
 get mmap offset 0x1000f0000
 read from mmap: This is a dumb buffer!
 ```
+
+# references
+
+[drm 驱动系列 - 第三章 gem 内存管理](https://blog.csdn.net/sty01z/article/details/134694799)    

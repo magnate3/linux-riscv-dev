@@ -13,10 +13,18 @@ sync.flags = DMA_BUF_SYNC_READ | DMA_BUF_SYNC_START;
 [22214.916931] [<ffff0000082c76d8>] SyS_ioctl+0x90/0xa4
 ```
 
+```
+
+        sync.flags = DMA_BUF_SYNC_READ | DMA_BUF_SYNC_START;
+        ioctl(dmabuf_fd, DMA_BUF_IOCTL_SYNC, &sync);
+```
+
 
 # dma_buf_end_cpu_access
 
 sync.flags = DMA_BUF_SYNC_READ | DMA_BUF_SYNC_END;   
+
+
 ```
 [22215.030745] Call trace:
 [22215.033183] [<ffff000008089e14>] dump_backtrace+0x0/0x23c
@@ -27,4 +35,10 @@ sync.flags = DMA_BUF_SYNC_READ | DMA_BUF_SYNC_END;
 [22215.062212] [<ffff0000085ad9ac>] dma_buf_ioctl+0xdc/0x138
 [22215.067585] [<ffff0000082c6e18>] do_vfs_ioctl+0xcc/0x8fc
 [22215.072865] [<ffff0000082c76d8>] SyS_ioctl+0x90/0xa4
+```
+
+
+```
+sync.flags = DMA_BUF_SYNC_READ | DMA_BUF_SYNC_END;
+ioctl(dmabuf_fd, DMA_BUF_IOCTL_SYNC, &sync);
 ```

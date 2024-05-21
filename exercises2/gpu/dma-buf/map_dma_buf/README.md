@@ -25,7 +25,7 @@ vaddr：分配的内存虚拟地址
  
 
 
-drm_gem_cma_create有两个作用    
++ drm_gem_cma_create有两个作用    
 
 + 创建drm_gem_cma_object对象并初始化其中的drm_gem_object
 +  使用dma_alloc_wc分配内存并将物理地址存入paddr，虚拟地址存入vaddr

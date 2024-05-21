@@ -80,6 +80,13 @@ ls /dev/dma_buf_exporter
 /dev/dma_buf_exporter
 ```
 
+```
+root@ubuntux86:# insmod dma_buf_exporter_kmd_intel.ko 
+root@ubuntux86:# ./user_test 
+ion alloc success: size = 12288, dmabuf_fd = 4
+root@ubuntux86:# 
+```
+
 # references
 
 [Linux内核笔记之DMA_BUF](https://saiyn.github.io/homepage/2018/04/18/linux-kernel-dmabuf/)   

@@ -31,6 +31,16 @@ release_mem_region(pagemap.range.start, range_len(&pagemap.range));
 ```
 
 ## kgd2kfd_init_zone_device
+
+
+```
+
+static const struct dev_pagemap_ops svm_migrate_pgmap_ops = {
+	.page_free		= svm_migrate_page_free,
+	.migrate_to_ram		= svm_migrate_to_ram,
+};
+```
+
 ```
 int kgd2kfd_init_zone_device(struct amdgpu_device *adev)
 {
@@ -143,6 +153,22 @@ svm_migrate_get_vram_page(struct svm_range *prange, unsigned long pfn)
 genalloc 是 linux 内核提供的通用内存分配器，源码位于 lib/genalloc.c。这个分配器为独立于内核以外的内存块提供分配方法，采用的是最先适配原则，android 最新的 ION 内存管理器对 ION_HEAP_TYPE_CARVEOUT 类型的内存就是采用的这个分配器。
 
 ```
+static const struct dev_pagemap_ops p2pdma_pgmap_ops = {
+	.page_free = p2pdma_page_free,
+};
+```
+
+
+```
+	pgmap = &p2p_pgmap->pgmap;
+	pgmap->range.start = pci_resource_start(pdev, bar) + offset;
+	pgmap->range.end = pgmap->range.start + size - 1;
+	pgmap->nr_range = 1;
+	pgmap->type = MEMORY_DEVICE_PCI_P2PDMA;
+	pgmap->ops = &p2pdma_pgmap_ops;
+```
+
+```
         addr = devm_memremap_pages(&pdev->dev, pgmap);
         if (IS_ERR(addr)) {
                 error = PTR_ERR(addr);
@@ -155,7 +181,7 @@ genalloc 是 linux 内核提供的通用内存分配器，源码位于 lib/genal
                         range_len(&pgmap->range), dev_to_node(&pdev->dev),
                         &pgmap->ref);
 ```
-没有设置pgmap->ops   
+ 
 
 nvmet_req_alloc_p2pmem_sgls --> pci_p2pmem_alloc_sgl -->  pci_alloc_p2pmem
 ```

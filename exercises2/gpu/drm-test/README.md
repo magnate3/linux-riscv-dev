@@ -41,4 +41,5 @@ read from mmap: This is a dumb buffer!
 
 # references
 
-[drm 驱动系列 - 第三章 gem 内存管理](https://blog.csdn.net/sty01z/article/details/134694799)    
+[drm 驱动系列 - 第三章 gem 内存管理](https://blog.csdn.net/sty01z/article/details/134694799)      
+[my-gem/dumb](https://github.com/hexiaolong2008/sample-code/blob/master/drm/driver/my-gem/dumb.c)   

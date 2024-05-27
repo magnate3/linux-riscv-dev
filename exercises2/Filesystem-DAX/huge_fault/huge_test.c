@@ -4,7 +4,7 @@
  *
  *   Add "memmap=2M$4G" into CMDLINE
  *
- * (C) 2023.11.02 BuddyZhang1 <buddy.zhang@aliyun.com>
+ * 
  */
 #include <linux/init.h>
 #include <linux/kernel.h>

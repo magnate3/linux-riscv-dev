@@ -173,4 +173,110 @@ void __ref memmap_init_zone_device(struct zone *zone,
                 nr_pages, jiffies_to_msecs(jiffies - start));
 }
 ```
+
+#  dmirror_devmem_free
+
+
+
+
+
+```
+[ 2364.046856]  <TASK>
+[ 2364.046861]  dump_stack+0x7d/0x9c
+[ 2364.046879]  dmirror_devmem_free+0x18/0x3e [mmu_test]
+[ 2364.046889]  free_devmap_managed_page+0x59/0x60
+[ 2364.046898]  put_devmap_managed_page+0x53/0x60
+[ 2364.046909]  migrate_vma_finalize+0x263/0x290
+[ 2364.046917]  dmirror_devmem_fault+0x1df/0x230 [mmu_test]
+[ 2364.046927]  do_swap_page+0x569/0x730
+[ 2364.046939]  __handle_mm_fault+0x882/0x8e0
+[ 2364.046947]  handle_mm_fault+0xda/0x2b0
+[ 2364.046953]  do_user_addr_fault+0x1bb/0x650
+[ 2364.046961]  exc_page_fault+0x7d/0x170
+[ 2364.046969]  ? asm_exc_page_fault+0x8/0x30
+[ 2364.046979]  asm_exc_page_fault+0x1e/0x30
+```
+
+
+```
+static void dmirror_devmem_free(struct page *page)
+{
+        struct page *rpage = page->zone_device_data;
+
+        if (rpage)
+           __free_page(rpage);
+        page->zone_device_data = head;
+        head = page;
+}
+```
+
+> ## host to device （dmirror_migrate_alloc_and_copy）
+
++ 1 dpage->zone_device_data = rpage   
+
++ 2 为什么 copy_highpage(rpage, spage)，将spage拷贝到rpage而不是 dpage    
+   这和dmirror_devmem_free的实现有关   
+
+```
+dmirror_migrate_alloc_and_copy
+#if 0
+                dpage = alloc_page(GFP_HIGHUSER);
+#else
+                rpage = alloc_page(GFP_HIGHUSER);
+                //rpage = alloc_page_vma(GFP_HIGHUSER, vma, start);
+                //dpage = alloc_page_vma(GFP_HIGHUSER, vmf->vma, vmf->address);
+
+                dpage = get_dpage();
+                dpage->zone_device_data = rpage;
+#endif
+                get_page(dpage);
+                lock_page(dpage);
+                if (spage)
+                {
+                        pr_info("%s call copy highpage  ,dpage @ %p, spage @ %p \n", __func__,rpage, spage);
+                        copy_highpage(rpage, spage);
+                        if(addr == args->start)
+                        {
+                            cmp_page(current->mm, spage, rpage);
+                        }
+                }
+
+#if 1
+```
+
+
+> ##  device to host  （dmirror_migrate_alloc_and_copy）
  
+ 
+ ```
+ dmirror_devmem_fault
+ static vm_fault_t dmirror_devmem_fault_alloc_and_copy(struct migrate_vma *args)
+{
+        const unsigned long *src = args->src;
+        unsigned long *dst = args->dst;
+        unsigned long start = args->start;
+        unsigned long end = args->end;
+        unsigned long addr;
+
+        for (addr = start; addr < end; addr += PAGE_SIZE,
+                                       src++, dst++) {
+                struct page *dpage, *spage;
+
+                spage = migrate_pfn_to_page(*src);
+                if (!spage || !(*src & MIGRATE_PFN_MIGRATE))
+                        continue;
+                spage = spage->zone_device_data;
+
+                dpage = alloc_page_vma(GFP_HIGHUSER_MOVABLE, args->vma, addr);
+                if (!dpage)
+                        continue;
+
+                lock_page(dpage);
+                copy_highpage(dpage, spage);
+                *dst = migrate_pfn(page_to_pfn(dpage)) | MIGRATE_PFN_LOCKED;
+                if (*src & MIGRATE_PFN_WRITE)
+                        *dst |= MIGRATE_PFN_WRITE;
+        }
+        return 0;
+}
+ ```

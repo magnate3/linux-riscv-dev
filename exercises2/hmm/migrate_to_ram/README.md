@@ -216,9 +216,20 @@ static void dmirror_devmem_free(struct page *page)
 
 + 2 为什么 copy_highpage(rpage, spage)，将spage拷贝到rpage而不是 dpage    
    这和dmirror_devmem_free的实现有关   
+   
++ 3  MIGRATE_VMA_SELECT_SYSTEM
 
 ```
 dmirror_migrate_alloc_and_copy
+                if (!(*src & MIGRATE_PFN_MIGRATE))
+                        continue;
+
+                /*
+                 * Note that spage might be NULL which is OK since it is an
+                 * unallocated pte_none() or read-only zero page.
+                 */
+                spage = migrate_pfn_to_page(*src);
+
 #if 0
                 dpage = alloc_page(GFP_HIGHUSER);
 #else
@@ -242,13 +253,69 @@ dmirror_migrate_alloc_and_copy
                 }
 
 #if 1
+                *dst = migrate_pfn(page_to_pfn(dpage)) |
+                            MIGRATE_PFN_LOCKED;
+                if ((*src & MIGRATE_PFN_WRITE) ||
+                    (!spage && args->vma->vm_flags & VM_WRITE))
+                        *dst |= MIGRATE_PFN_WRITE;
+#endif
+                // need to free page
+
+#if 1
 ```
+
++  *dst = migrate_pfn(page_to_pfn(dpage)) 而不是 *dst = migrate_pfn(page_to_pfn(rpage))
 
 
 > ##  device to host  （dmirror_migrate_alloc_and_copy）
  
+ + MIGRATE_VMA_SELECT_DEVICE_PRIVATE     
+ +  vmf->page->zone_device_data  （vmf->page竟然不是空 ）
+ + migrate_vma_setup会设置args.src    
+ 
  
  ```
+ static vm_fault_t dmirror_devmem_fault(struct vm_fault *vmf)
+{
+        struct migrate_vma args;
+        unsigned long src_pfns;
+        unsigned long dst_pfns;
+        struct page *rpage;
+        vm_fault_t ret;
+        //dump_stack();
+
+        /*
+         * Normally, a device would use the page->zone_device_data to point to
+         * the mirror but here we use it to hold the page for the simulated
+         * device memory and that page holds the pointer to the mirror.
+         */
+        rpage = vmf->page->zone_device_data;
+
+        /* FIXME demonstrate how we can adjust migrate range */
+        args.vma = vmf->vma;
+        args.start = vmf->address;
+        args.end = args.start + PAGE_SIZE;
+        args.src = &src_pfns;
+        args.dst = &dst_pfns;
+        args.pgmap_owner = &dmirror_device;
+        args.flags = MIGRATE_VMA_SELECT_DEVICE_PRIVATE;
+
+        if (migrate_vma_setup(&args))
+                return VM_FAULT_SIGBUS;
+
+        ret = dmirror_devmem_fault_alloc_and_copy(&args);
+        if (ret)
+                return ret;
+        migrate_vma_pages(&args);
+        /*
+         * No device finalize step is needed since
+         * dmirror_devmem_fault_alloc_and_copy() will have already
+         * invalidated the device page table.
+         */
+        migrate_vma_finalize(&args);
+        pr_info("%s addr 0x%lx \n",__func__,vmf->address);
+        return 0;
+}
  dmirror_devmem_fault
  static vm_fault_t dmirror_devmem_fault_alloc_and_copy(struct migrate_vma *args)
 {

@@ -13,3 +13,6 @@
 [submodule "exercises2/bpftrace/bpf-developer-tutorial"]
 	path = exercises2/bpftrace/bpf-developer-tutorial
 	url = https://github.com/eunomia-bpf/bpf-developer-tutorial.git
+[submodule "exercises2/donard/nvme_donard"]
+	path = exercises2/donard/nvme_donard
+	url = https://github.com/sbates130272/nvme_donard.git

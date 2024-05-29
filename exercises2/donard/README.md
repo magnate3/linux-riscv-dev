@@ -1,21 +1,8 @@
 
-Copy of the NVME kernel module from 3.19.1, to be modified for the
-Donard project. Includes code to DMA directly between NVMe devices and
-NVIDIA GPUs.
+# donard
+![images](test1.png)
 
-There are two modules here: nvme_donard which is just the standard
-nvme module plus some additional ioctl's for initiating transfers and
-the donard_nv_pinbuf which provides a char device and some ioctls for
-creating pinned buffers on a GPU.
-
---
-
-If you get warnings that symbols do not exist you must regenerate the
-nvidia symbols with:
-
-sudo make nvidia-syms
-
-
+[donard](https://github.com/sbates130272/donard)
 
 
 #  nvidia_p2p_page_table

@@ -1,4 +1,9 @@
 
+# bug
+simplefsrrw has many bugs which will cause os hangs
+
+
+# test
 ```
 root@ubuntux86:# insmod  simplefsrrw.ko 
 root@ubuntux86:# dd if=/dev/zero of=test.img bs=1M count=50
@@ -19,19 +24,6 @@ Inode store: wrote 229 blocks
 Ifree blocks: wrote 1 blocks
 Bfree blocks: wrote 1 blocks
 root@ubuntux86:# mkdir test
-root@ubuntux86:# mount -o loop -t simplefs test.img test
-mount: /work/kernel_learn/simplefs-rrw/test: unknown filesystem type 'simplefs'.
-root@ubuntux86:# dmesg | tail -n 10
-[21806.965398] pcieport 0000:00:1d.0: AER: Corrected error received: 0000:02:00.0
-[21806.966615] nvme 0000:02:00.0: PCIe Bus Error: severity=Corrected, type=Physical Layer, (Receiver ID)
-[21806.966621] nvme 0000:02:00.0:   device [15b7:5006] error status/mask=00000001/0000e000
-[21806.966628] nvme 0000:02:00.0:    [ 0] RxErr                 
-[23437.435621] pcieport 0000:00:1d.0: AER: Corrected error received: 0000:02:00.0
-[23437.436874] nvme 0000:02:00.0: PCIe Bus Error: severity=Corrected, type=Physical Layer, (Receiver ID)
-[23437.436880] nvme 0000:02:00.0:   device [15b7:5006] error status/mask=00000001/0000e000
-[23437.436886] nvme 0000:02:00.0:    [ 0] RxErr                 
-[24692.674494] simplefsrrw: module loaded
-[24739.089438] loop15: detected capacity change from 0 to 102400
 ```
 
 

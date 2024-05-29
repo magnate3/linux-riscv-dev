@@ -21,7 +21,7 @@ if (follow_pfn(vma, arg, &pfn))
     pr_info("#########  after get_user_pages_remote ############# \n");
     printk_pagetable(arg);
 ```
-
+follow_pfn 查看页表是否存在    
 + 1  log1 说明handle_mm_fault被调用
 ```
 no page for vma addr  125960192  

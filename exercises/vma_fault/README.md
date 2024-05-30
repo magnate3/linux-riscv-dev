@@ -140,6 +140,31 @@ mmap done: 0xffff96dc0000
 [root@centos7 simple]# 
 ```
 
+# 正确的test
+
+```
+ ret = posix_memalign((void **)&ptr, pagesize, pagesize);
+ memcpy(ptr, str, strlen(str) +1);
+ phyaddr = mem_virt2phy(ptr);
+ addr = mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_SHARED, fd, phyaddr);
+```
+
+通过 mmap传递物理地址,也就是 vma->vm_pgoff    
+```
+[root@centos7 simple]# gcc mmap_test.c  -o mmap_test
+[root@centos7 simple]# ./mmap_test 
+virt addr 0xffffa5be0000, phy addr of ptr  0x5fea170000 
+addr: 0xffffa5bc0000 
+Zero page frame number
+mmap virt addr 0xffffa5bc0000, phy addr of ptr  0x0 
+buf is: hello krishna 
+
+Write/Read test ...
+0x66616365
+```
++  buf is: hello krishna 实现了共享内存      
++ 可以对mmap virt addr 0xffffa5bc0000进行test_write_read，但是物理地址是0    
+
 # reference
-https://github.com/blue119/kernel_user_space_interfaces_example
-https://github.com/ljrcore/linuxmooc/blob/bdaf02620e55bf06e9c84b72afb8ff47e7384447/%E7%B2%BE%E5%BD%A9%E6%96%87%E7%AB%A0/%E6%96%B0%E6%89%8B%E4%B8%8A%E8%B7%AF%EF%BC%9ALinux%E5%86%85%E6%A0%B8%E4%B9%8B%E6%B5%85%E8%B0%88%E5%86%85%E5%AD%98%E5%AF%BB%E5%9D%80.md
+https://github.com/blue119/kernel_user_space_interfaces_example    
+https://github.com/ljrcore/linuxmooc/blob/bdaf02620e55bf06e9c84b72afb8ff47e7384447/%E7%B2%BE%E5%BD%A9%E6%96%87%E7%AB%A0/%E6%96%B0%E6%89%8B%E4%B8%8A%E8%B7%AF%EF%BC%9ALinux%E5%86%85%E6%A0%B8%E4%B9%8B%E6%B5%85%E8%B0%88%E5%86%85%E5%AD%98%E5%AF%BB%E5%9D%80.md    

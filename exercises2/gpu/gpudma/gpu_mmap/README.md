@@ -44,6 +44,27 @@ int gpumem_mmap(struct file *file, struct vm_area_struct *vma)
     return 0;
 }
 ```
+vma->vm_pgoff是物理地址     
+```
+    for(unsigned i=0; i<state->page_count; i++) {
+        fprintf(stderr, "%02d: 0x%lx\n", i, state->pages[i]);
+        void* va = mmap(0, state->page_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, (off_t)state->pages[i]);
+        if(va == MAP_FAILED ) {
+             fprintf(stderr, "%s(): %s\n", __FUNCTION__, strerror(errno));
+             va = 0;
+        } else {
+            //memset(va, 0x55, state->page_size);
+        	unsigned *ptr=(unsigned*)va;
+        	for( unsigned jj=0; jj<(state->page_size/4); jj++ )
+        	{
+        		*ptr++=count++;
+        	}
+
+            fprintf(stderr, "%s(): Physical Address 0x%lx -> Virtual Address %p\n", __FUNCTION__, state->pages[i], va);
+            munmap(va, state->page_size);
+        }
+    }
+```
 
 # 用户程序 
 

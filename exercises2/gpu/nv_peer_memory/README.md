@@ -13,8 +13,8 @@ How does it work ?
 ▪ dma_map() – requests the bus addresses for the memory region   
 ▪ Matching callbacks for release: dma_unmap(), put_pages() and release()   
 
-**mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3源码**
-[mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3](https://github.com/Shun-Hao/mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3/blob/de3d66766e0eb5eab9db813b667c7c70eab4c534/drivers/infiniband/core/umem.c#L170)
+**mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3源码**    
+[mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3](https://github.com/Shun-Hao/mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3/blob/de3d66766e0eb5eab9db813b667c7c70eab4c534/drivers/infiniband/core/umem.c#L170)    
 
 [CUDA中的UM机制与GDR实现](https://www.ctyun.cn/developer/article/465119451353157)   
 

@@ -1,8 +1,43 @@
 ![image](../pic/peer.png)
 
 ![image](../pic/gpu1.png)
+
+
+How does it work ?   
++ 1 Allow ibv_reg_mr() to register peer memory.   
+▪ Peer devices implement new kernel module – io_peer_mem   
+▪ Register with RDMA subsystem - ib_register_peer_memory_client()   
++ 2  io_peer_mem implements the following callbacks :    
+▪ acquire() – detects whether a virtual memory range belongs to the peer   
+▪ get_pages() – asks the peer for the physical memory addresses matching the memory region   
+▪ dma_map() – requests the bus addresses for the memory region   
+▪ Matching callbacks for release: dma_unmap(), put_pages() and release()   
+
+**mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3源码**
+[mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3](https://github.com/Shun-Hao/mlnx-ofa_kernel-4.6-1.0.1.1-rhel7.3/blob/de3d66766e0eb5eab9db813b667c7c70eab4c534/drivers/infiniband/core/umem.c#L170)
+
+[CUDA中的UM机制与GDR实现](https://www.ctyun.cn/developer/article/465119451353157)   
+
+mlx5_ib_rereg_user_mr --> mlx5_ib_reg_user_mr  --> ib_umem_get --> ib_client_umem_get  --> peer_umem_get      
+
+![image](../pic/peer2.png)
+
+```
+	/* For known peer context move directly to peer registration handling */
+	if (context->peer_mem_private_data &&
+	    (peer_mem_flags & IB_PEER_MEM_ALLOW)) {
+		ret = ib_client_umem_get(context, addr, size,
+					 peer_mem_flags, umem, dmasync);
+		if (!ret)
+			return umem;
+	}
+```
+
 #  nvidia-peermem.ko
 The NVIDIA GPU driver package provides a kernel module, nvidia-peermem.ko, which provides Mellanox InfiniBand based HCAs (Host Channel Adapters) direct peer-to-peer read and write access to the NVIDIA GPU's video memory. It allows GPUDirect RDMA-based applications to use GPU computing power with the RDMA interconnect without needing to copy data to host memory.
+
+
+
 
 ##  open-gpu-kernel-modules 
 

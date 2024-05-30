@@ -33,6 +33,10 @@ mlx5_ib_rereg_user_mr --> mlx5_ib_reg_user_mr  --> ib_umem_get --> ib_client_ume
 	}
 ```
 
+# gpu_direct_rdma_access example
+
+[gpu_direct_rdma_access](https://github.com/Mellanox/gpu_direct_rdma_access)   
+
 #  nvidia-peermem.ko
 The NVIDIA GPU driver package provides a kernel module, nvidia-peermem.ko, which provides Mellanox InfiniBand based HCAs (Host Channel Adapters) direct peer-to-peer read and write access to the NVIDIA GPU's video memory. It allows GPUDirect RDMA-based applications to use GPU computing power with the RDMA interconnect without needing to copy data to host memory.
 

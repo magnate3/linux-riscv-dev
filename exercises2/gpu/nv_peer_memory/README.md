@@ -35,7 +35,51 @@ mlx5_ib_rereg_user_mr --> mlx5_ib_reg_user_mr  --> ib_umem_get --> ib_client_ume
 
 # gpu_direct_rdma_access example
 
-[gpu_direct_rdma_access](https://github.com/Mellanox/gpu_direct_rdma_access)   
+[gpu_direct_rdma_access](https://github.com/Mellanox/gpu_direct_rdma_access)     
+
+
+```
+struct rdma_buffer *rdma_buffer_reg(struct rdma_device *rdma_dev, void *addr, size_t length)
+{
+    struct rdma_buffer *rdma_buff;
+    int    ret_val;
+
+    rdma_buff = calloc(1, sizeof *rdma_buff);
+    if (!rdma_buff) {
+        fprintf(stderr, "rdma_buff memory allocation failed\n");
+        return NULL;
+    }
+
+    enum ibv_access_flags access_flags = IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_WRITE;
+    /*In the case of local buffer we can use IBV_ACCESS_LOCAL_WRITE only flag*/
+    DEBUG_LOG("ibv_reg_mr(pd %p, buf %p, size = %lu, access_flags = 0x%08x\n",
+               rdma_dev->pd, addr, length, access_flags);
+    rdma_buff->mr = ibv_reg_mr(rdma_dev->pd, addr, length, access_flags);
+    if (!rdma_buff->mr) {
+        fprintf(stderr, "Couldn't register GPU MR\n");
+        goto clean_rdma_buff;
+    }
+    DEBUG_LOG("ibv_reg_mr completed: buf %p, size = %lu, rkey = 0x%08x\n",
+               addr, length, rdma_buff->mr->rkey);
+
+    rdma_buff->buf_addr = addr;
+    rdma_buff->buf_size = length;
+    rdma_buff->rkey     = rdma_buff->mr->rkey; /*not used for local buffer case*/
+    rdma_buff->rdma_dev = rdma_dev;
+    rdma_dev->rdma_buff_cnt++;
+
+    return rdma_buff;
+
+clean_rdma_buff:
+    /* We don't decrement device rdma_buff_cnt because we still did not increment it,
+    we just free the allocated for rdma_buff memory. */
+    free(rdma_buff);
+    
+    return NULL;
+}
+```
+
+
 
 #  nvidia-peermem.ko
 The NVIDIA GPU driver package provides a kernel module, nvidia-peermem.ko, which provides Mellanox InfiniBand based HCAs (Host Channel Adapters) direct peer-to-peer read and write access to the NVIDIA GPU's video memory. It allows GPUDirect RDMA-based applications to use GPU computing power with the RDMA interconnect without needing to copy data to host memory.

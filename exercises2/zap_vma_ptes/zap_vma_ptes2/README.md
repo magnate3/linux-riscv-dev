@@ -68,6 +68,32 @@ The entire address range must be fully contained within the vma.
 Returns 0 if successful.
 ```
 
+
+```
+/**
+ * zap_vma_ptes - remove ptes mapping the vma
+ * @vma: vm_area_struct holding ptes to be zapped
+ * @address: starting address of pages to zap
+ * @size: number of bytes to zap
+ *
+ * This function only unmaps ptes assigned to VM_PFNMAP vmas.
+ *
+ * The entire address range must be fully contained within the vma.
+ *
+ * Returns 0 if successful.
+ */
+int zap_vma_ptes(struct vm_area_struct *vma, unsigned long address,
+		unsigned long size)
+{
+	if (address < vma->vm_start || address + size > vma->vm_end ||
+	    		!(vma->vm_flags & VM_PFNMAP))
+		return -1;
+	zap_page_range_single(vma, address, size, NULL);
+	return 0;
+}
+EXPORT_SYMBOL_GPL(zap_vma_ptes);
+```
+
 #  VM_PFNMAP   
 
 
@@ -364,4 +390,221 @@ static int pmem_remap_pfn_range(int id, struct vm_area_struct *vma,
 	zap_page_range(vma, vma->vm_start + offset, len, NULL);
 	return pmem_map_pfn_range(id, vma, data, offset, len);
 }
+```
+> ##  unmap_single_vma  
+
+unmap_single_vma() => unmap_page_range() => zap_pud_range() => zap_pmd_range() => zap_pte_range()   
+```
+static void unmap_single_vma(struct mmu_gather *tlb,
+		struct vm_area_struct *vma, unsigned long start_addr,
+		unsigned long end_addr,
+		struct zap_details *details)
+{
+	unsigned long start = max(vma->vm_start, start_addr);
+	unsigned long end;
+
+	if (start >= vma->vm_end)
+		return;
+	end = min(vma->vm_end, end_addr);
+	if (end <= vma->vm_start)
+		return;
+
+	if (vma->vm_file)
+		uprobe_munmap(vma, start, end);
+
+	if (unlikely(vma->vm_flags & VM_PFNMAP))
+		untrack_pfn(vma, 0, 0);
+
+	if (start != end) {
+		if (unlikely(is_vm_hugetlb_page(vma))) {
+			/*
+			 * It is undesirable to test vma->vm_file as it
+			 * should be non-null for valid hugetlb area.
+			 * However, vm_file will be NULL in the error
+			 * cleanup path of mmap_region. When
+			 * hugetlbfs ->mmap method fails,
+			 * mmap_region() nullifies vma->vm_file
+			 * before calling this function to clean up.
+			 * Since no pte has actually been setup, it is
+			 * safe to do nothing in this case.
+			 */
+			if (vma->vm_file) {
+				i_mmap_lock_write(vma->vm_file->f_mapping);
+				__unmap_hugepage_range_final(tlb, vma, start, end, NULL);
+				i_mmap_unlock_write(vma->vm_file->f_mapping);
+			}
+		} else
+			unmap_page_range(tlb, vma, start, end, details);
+	}
+}
+```
+
+#  zap_pte_range
+
+```
+static unsigned long zap_pte_range(struct mmu_gather *tlb,
+				struct vm_area_struct *vma, pmd_t *pmd,
+				unsigned long addr, unsigned long end,
+				struct zap_details *details)
+{
+	struct mm_struct *mm = tlb->mm;
+	int force_flush = 0;
+	int rss[NR_MM_COUNTERS];
+	spinlock_t *ptl;
+	pte_t *start_pte;
+	pte_t *pte;
+	swp_entry_t entry;
+	struct page *pending_page = NULL;
+
+again:
+	init_rss_vec(rss);
+	start_pte = pte_offset_map_lock(mm, pmd, addr, &ptl);
+	pte = start_pte;
+	flush_tlb_batched_pending(mm);
+	arch_enter_lazy_mmu_mode();
+	do {
+		pte_t ptent = *pte;
+		if (pte_none(ptent)) {
+			continue;
+		}
+
+		if (pte_present(ptent)) {
+			struct page *page;
+
+			page = vm_normal_page(vma, addr, ptent);
+			if (unlikely(details) && page) {
+				/*
+				 * unmap_shared_mapping_pages() wants to
+				 * invalidate cache without truncating:
+				 * unmap shared but keep private pages.
+				 */
+				if (details->check_mapping &&
+				    details->check_mapping != page_rmapping(page))
+					continue;
+			}
+			ptent = ptep_get_and_clear_full(mm, addr, pte,
+							tlb->fullmm);
+			tlb_remove_tlb_entry(tlb, pte, addr);
+			if (unlikely(!page))
+				continue;
+
+			if (!PageAnon(page)) {
+				if (pte_dirty(ptent)) {
+					/*
+					 * oom_reaper cannot tear down dirty
+					 * pages
+					 */
+					if (unlikely(details && details->ignore_dirty))
+						continue;
+					force_flush = 1;
+					set_page_dirty(page);
+				}
+				if (pte_young(ptent) &&
+				    likely(!(vma->vm_flags & VM_SEQ_READ)))
+					mark_page_accessed(page);
+			}
+			rss[mm_counter(page)]--;
+			page_remove_rmap(page, false);
+			if (unlikely(page_mapcount(page) < 0))
+				print_bad_pte(vma, addr, ptent, page);
+			if (unlikely(__tlb_remove_page(tlb, page))) {
+				force_flush = 1;
+				pending_page = page;
+				addr += PAGE_SIZE;
+				break;
+			}
+			continue;
+		}
+
+		entry = pte_to_swp_entry(ptent);
+		if (!non_swap_entry(entry)) {
+			/* Genuine swap entry, hence a private anon page */
+			if (!should_zap_cows(details))
+				continue;
+			rss[MM_SWAPENTS]--;
+		} else if (is_migration_entry(entry)) {
+			struct page *page;
+
+			page = migration_entry_to_page(entry);
+			if (details && details->check_mapping &&
+			    details->check_mapping != page_rmapping(page))
+				continue;
+			rss[mm_counter(page)]--;
+		}
+		if (unlikely(!free_swap_and_cache(entry)))
+			print_bad_pte(vma, addr, ptent, NULL);
+		pte_clear_not_present_full(mm, addr, pte, tlb->fullmm);
+	} while (pte++, addr += PAGE_SIZE, addr != end);
+
+	add_mm_rss_vec(mm, rss);
+	arch_leave_lazy_mmu_mode();
+
+	/* Do the actual TLB flush before dropping ptl */
+	if (force_flush)
+		tlb_flush_mmu_tlbonly(tlb);
+	pte_unmap_unlock(start_pte, ptl);
+
+	/*
+	 * If we forced a TLB flush (either due to running out of
+	 * batch buffers or because we needed to flush dirty TLB
+	 * entries before releasing the ptl), free the batched
+	 * memory too. Restart if we didn't do everything.
+	 */
+	if (force_flush) {
+		force_flush = 0;
+		tlb_flush_mmu_free(tlb);
+		if (pending_page) {
+			/* remove the page with new size */
+			__tlb_remove_pte_page(tlb, pending_page);
+			pending_page = NULL;
+		}
+		if (addr != end)
+			goto again;
+	}
+
+	return addr;
+}
+
+```
+
+# test3
+
+```
+[53697.422954] sample_write
+[53697.425479] no page for vma addr  275185664 
+[53697.429771]   ------------------------------
+[53697.434027]   virtual user addr: 0000000010670000
+[53697.438728]   pgd: ffff805ea39aea00 (0000005fdaee0003) 
+[53697.438732]   p4d: ffff805ea39aea00 (0000005fdaee0003) 
+[53697.443938]   pud: ffff805ea39aea00 (0000005fdaee0003) 
+[53697.449155]   pmd: ffff805fdaee0000 (0000005fd6810003) 
+[53697.454361]   pte: ffff805fd6818338 (00e8005e14c40f53), pfn : 00000000005e14c4 
+[53697.459578] vma addr 275185664 ,and   pfn1 : 00000000005e14c4 , pfn2 : 0000000000001067 
+[53697.474919] Got page.
+
+[53697.478717]   p4d_page: ffff7fe017f6bb80
+[53697.482625]   pud_page: ffff7fe017f6bb80
+[53697.486532]   pmd_page: ffff7fe017f5a040
+[53697.490458]   pte_page: ffff7fe017853100
+[53697.494367]   physical addr: 0000005e14c40000
+[53697.498719]   page addr: 0000005e14c40000
+[53697.502715]   ------------------------------
+[53697.507093] sample_read
+[53697.509540] #########  after zap_vma_ptes( 0 ) ############# 
+[53697.515262]   ------------------------------
+[53697.519532]   virtual user addr: 0000000010670000
+[53697.524220]   pgd: ffff805ea39aea00 (0000005fdaee0003) 
+[53697.524223]   p4d: ffff805ea39aea00 (0000005fdaee0003) 
+[53697.529436]   pud: ffff805ea39aea00 (0000005fdaee0003) 
+[53697.534641]   pmd: ffff805fdaee0000 (0000005fd6810003) 
+[53697.539856]   pte: ffff805fd6818338 (0000000000000000), pfn : 0000000000000000 
+[53697.545061] vma addr 275185664 ,and   pfn1 : 0000000000000000 , pfn2 : 0000000000001067 
+[53697.560407]   p4d_page: ffff7fe017f6bb80
+[53697.564313]   pud_page: ffff7fe017f6bb80
+[53697.568228]   pmd_page: ffff7fe017f5a040
+[53697.572136]   pte_page: ffff7fe000000000
+[53697.576042]   physical addr: 0000000000000000
+[53697.580396]   page addr: 0000000000000000
+[53697.584390]   ------------------------------
+[53697.588709] sample_release
 ```

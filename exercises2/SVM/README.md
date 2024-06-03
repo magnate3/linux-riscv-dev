@@ -4,6 +4,8 @@
 [Qemu-in-guest-SVM-demo](https://github.com/BullSequana/Qemu-in-guest-SVM-demo)   
 
 
+
+
 # SVM-demo
 
 ```
@@ -13,8 +15,88 @@ CONFIG_INTEL_IDXD_SVM=y
 CONFIG_INTEL_IOMMU_SVM=y
 ```
 
-# CONFIG_IOMMU_SVA
+# CONFIG_IOMMU_SVA  IOMMU_DOMAIN_SVA
 
+```
+#define IOMMU_DOMAIN_BLOCKED    (0U)
+#define IOMMU_DOMAIN_IDENTITY   (__IOMMU_DOMAIN_PT)
+#define IOMMU_DOMAIN_UNMANAGED  (__IOMMU_DOMAIN_PAGING)
+#define IOMMU_DOMAIN_DMA        (__IOMMU_DOMAIN_PAGING |        \
+                                 __IOMMU_DOMAIN_DMA_API)
+#define IOMMU_DOMAIN_DMA_FQ     (__IOMMU_DOMAIN_PAGING |        \
+                                 __IOMMU_DOMAIN_DMA_API |       \
+                                 __IOMMU_DOMAIN_DMA_FQ)
+#define IOMMU_DOMAIN_SVA        (__IOMMU_DOMAIN_SVA)
+```
+
+
+```
+	case IOMMU_DOMAIN_SVA:
+		return intel_svm_domain_alloc();
+```
+
+# page fault
+
+> ##  iommu_sva_handle_iopf -->  handle_mm_fault
+```
+/*
+ * I/O page fault handler for SVA
+ */
+enum iommu_page_response_code
+iommu_sva_handle_iopf(struct iommu_fault *fault, void *data)
+{
+	vm_fault_t ret;
+	struct vm_area_struct *vma;
+	struct mm_struct *mm = data;
+	unsigned int access_flags = 0;
+	unsigned int fault_flags = FAULT_FLAG_REMOTE;
+	struct iommu_fault_page_request *prm = &fault->prm;
+	enum iommu_page_response_code status = IOMMU_PAGE_RESP_INVALID;
+
+	if (!(prm->flags & IOMMU_FAULT_PAGE_REQUEST_PASID_VALID))
+		return status;
+
+	if (!mmget_not_zero(mm))
+		return status;
+
+	mmap_read_lock(mm);
+
+	vma = vma_lookup(mm, prm->addr);
+	if (!vma)
+		/* Unmapped area */
+		goto out_put_mm;
+
+	if (prm->perm & IOMMU_FAULT_PERM_READ)
+		access_flags |= VM_READ;
+
+	if (prm->perm & IOMMU_FAULT_PERM_WRITE) {
+		access_flags |= VM_WRITE;
+		fault_flags |= FAULT_FLAG_WRITE;
+	}
+
+	if (prm->perm & IOMMU_FAULT_PERM_EXEC) {
+		access_flags |= VM_EXEC;
+		fault_flags |= FAULT_FLAG_INSTRUCTION;
+	}
+
+	if (!(prm->perm & IOMMU_FAULT_PERM_PRIV))
+		fault_flags |= FAULT_FLAG_USER;
+
+	if (access_flags & ~vma->vm_flags)
+		/* Access fault */
+		goto out_put_mm;
+
+	ret = handle_mm_fault(vma, prm->addr, fault_flags, NULL);
+	status = ret & VM_FAULT_ERROR ? IOMMU_PAGE_RESP_INVALID :
+		IOMMU_PAGE_RESP_SUCCESS;
+
+out_put_mm:
+	mmap_read_unlock(mm);
+	mmput(mm);
+
+	return status;
+}
+```
 
 #  iommu_dma_alloc_iova
 ```

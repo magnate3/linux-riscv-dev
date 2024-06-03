@@ -1,4 +1,29 @@
 
+# NULL == cookie and NULL == iovad 导致 cordump
+
+
+```
+static dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain,
+                size_t size, dma_addr_t dma_limit, struct device *dev)
+{
+        struct iommu_dma_cookie *cookie = domain->iova_cookie;
+        struct iova_domain *iovad ;
+        unsigned long shift, iova_len, iova = 0;
+
+        if(NULL == cookie)
+        {
+             pr_err("cookie is NULL \n");
+             return 0;
+        }
+        iovad = &cookie->iovad;
+        if(NULL == iovad)
+        {
+             pr_err("iovad is NULL \n");
+             return 0;
+        }
+```
+
+
 #  insmod  iommu_test.ko 
 ```
 ./dpdk-devbind.py  -u 0000:05:00.0

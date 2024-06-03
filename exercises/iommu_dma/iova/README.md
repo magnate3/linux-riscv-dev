@@ -185,6 +185,115 @@ iommu_map 采用固定的地址VBASE + j * PAGE_SIZE
 [172014.324387] pci iommu test successfully 
 ```
 
+# iova 地址分配   
+
+```
+ else if (cmd == VFIO_IOMMU_MAP_DMA) {
+                struct vfio_iommu_type1_dma_map map;
+                uint32_t mask = VFIO_DMA_MAP_FLAG_READ |
+                                VFIO_DMA_MAP_FLAG_WRITE;
+
+                minsz = offsetofend(struct vfio_iommu_type1_dma_map, size);
+
+                if (copy_from_user(&map, (void __user *)arg, minsz))
+                        return -EFAULT;
+
+                if (map.argsz < minsz || map.flags & ~mask)
+                        return -EINVAL;
+
+                return vfio_dma_do_map(iommu, &map);
+
+```
+
+```
+ dma_addr_t iova = map->iova;
+```
+
+
+```
+
+        dma->iova = iova;
+        dma->vaddr = vaddr;
+        dma->prot = prot;
+        get_task_struct(current);
+        dma->task = current;
+        dma->pfn_list = RB_ROOT;
+
+        /* Insert zero-sized and grow as we map chunks of it */
+        vfio_link_dma(iommu, dma);
+
+        /* Don't pin and map if container doesn't contain IOMMU capable domain*/
+        if (!IS_IOMMU_CAP_DOMAIN_IN_CONTAINER(iommu))
+                dma->size = size;
+        else
+                ret = vfio_pin_map_dma(iommu, dma, size);
+```
+
++  vfio_pin_map_dma
+
+```
+              ret = vfio_iommu_map(iommu, iova + dma->size, pfn, npage,
+                                     dma->prot);
+                if (ret) {
+                        vfio_unpin_pages_remote(dma, iova + dma->size, pfn,
+                                                npage, true);
+                        break;
+                }
+```
+
+> ##  IOMMU_DOMAIN_DMA coredump (不支持IOMMU_DOMAIN_DMA)  
+
+```
+domain = test_iommu_domain_alloc(&pci_bus_type,IOMMU_DOMAIN_DMA);
+```
+
+```
+static void __iommu_setup_dma_ops(struct device *dev, u64 dma_base, u64 size,
+                                  const struct iommu_ops *ops)
+{
+        struct iommu_domain *domain;
+
+        if (!ops)
+                return;
+
+        /*
+         * The IOMMU core code allocates the default DMA domain, which the
+         * underlying IOMMU driver needs to support via the dma-iommu layer.
+         */
+        domain = iommu_get_domain_for_dev(dev);
+
+        if (!domain)
+                goto out_err;
+
+        if (domain->type == IOMMU_DOMAIN_DMA) {
+                if (iommu_dma_init_domain(domain, dma_base, size, dev))
+                        goto out_err;
+
+                dev->dma_ops = &iommu_dma_ops;
+        }
+
+        return;
+
+out_err:
+         pr_warn("Failed to set up IOMMU for device %s; retaining platform DMA ops\n",
+                 dev_name(dev));
+}
+```
+
+```
+
+[ 2609.453126] [<ffff000008566090>] alloc_iova+0xac/0x1c8
+[ 2609.458240] [<ffff000008566f00>] alloc_iova_fast+0x78/0x28c
+[ 2609.463792] [<ffff0000010c01cc>] pva_dma_alloc_and_map_at.constprop.8+0x198/0x4cc [iommu_test2]
+[ 2609.472449] [<ffff0000010c05ac>] PCIe_probe+0xac/0x168 [iommu_test2]
+[ 2609.478774] [<ffff000008475fa8>] local_pci_probe+0x48/0xb0
+[ 2609.484234] [<ffff0000080ed870>] work_for_cpu_fn+0x24/0x34
+[ 2609.489696] [<ffff0000080f13ac>] process_one_work+0x174/0x3b0
+[ 2609.495414] [<ffff0000080f180c>] worker_thread+0x224/0x48c
+[ 2609.500875] [<ffff0000080f8638>] kthread+0x10c/0x138
+[ 2609.505818] [<ffff000008084f54>] ret_from_fork+0x10/0x18
+```
+
 # test2
 
 
@@ -194,6 +303,25 @@ CONFIG_IOMMU_IOVA=y
 [root@centos7 boot]# 
 ```
 
+```
+[root@centos7 iommu]# ip l set enp5s0 down
+[root@centos7 iommu]# ./dpdk-devbind.py  -u 0000:05:00.0
+Warning: no supported DPDK kernel modules are loaded
+[root@centos7 iommu]# insmod  iommu_test2.ko 
+[root@centos7 iommu]# echo 0x19e5 0x0200 > /sys/bus/pci/drivers/PCIe_demo/new_id
+[root@centos7 iommu]# dmesg | tail -n 10
+[   35.720157] bridge: filtering via arp/ip/ip6tables is no longer available by default. Update your scripts to load br_netfilter if you need this.
+[   36.492390] Netfilter messages via NETLINK v0.30.
+[   36.502525] ip_set: protocol 6
+[ 6225.170756] hinic 0000:05:00.0 enp5s0: set rx mode work
+[ 6225.531487] hinic 0000:05:00.0: IO stopped
+[ 6225.684676] hinic 0000:05:00.0 enp5s0: HINIC_INTF is DOWN
+[ 6245.491796] hinic 0000:05:00.0: HiNIC driver - removed
+[ 6255.628949] iommu_test2: loading out-of-tree module taints kernel.
+[ 6255.635169] iommu_test2: module verification failed: signature and/or required key missing - tainting kernel
+[ 6257.792685] test_valid_domain cookie is NULL 
+[root@centos7 iommu]# 
+```
 
 ```
 

@@ -1,6 +1,7 @@
 obj-m := 
 obj-m +=   iommu_test.o
 obj-m +=   iommu_test2.o
+#obj-m +=   iommu_test3.o
 EXTRA_CFLAGS += -DCONFIG_IOMMU_API=1
 EXTRA_CFLAGS += -DCONFIG_IOMMU_IOVA=1
 #ccflags-y += -DCONFIG_IOMMU_API

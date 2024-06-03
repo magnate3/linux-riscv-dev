@@ -127,13 +127,39 @@ struct iommu_dma_cookie {
         struct list_head                msi_page_list;
         spinlock_t                      msi_lock;
 };
+static bool test_valid_domain(struct iommu_domain *domain)
+{
+        struct iommu_dma_cookie *cookie = domain->iova_cookie;
+        struct iova_domain *iovad;
+        if(NULL == cookie){
+            pr_err("%s cookie is NULL \n",__func__);
+            return false;
+        }
+        iovad = &cookie->iovad;
+        if(NULL == iovad)
+        {
+             pr_err("%s cookie is NULL \n",__func__);
+             return false;
+        }
+        pr_info("domain is valid \n");
+        return true;
+}
 static dma_addr_t iommu_dma_alloc_iova(struct iommu_domain *domain,
                 size_t size, dma_addr_t dma_limit, struct device *dev)
 {
         struct iommu_dma_cookie *cookie = domain->iova_cookie;
-        struct iova_domain *iovad = &cookie->iovad;
+        struct iova_domain *iovad;
         unsigned long shift, iova_len, iova = 0;
-
+        if(NULL == cookie){
+            pr_info("cookie is NULL \n");
+            return 0;
+        }
+        iovad = &cookie->iovad;
+        if(NULL == iovad)
+        {
+             pr_err("iovad is NULL \n");
+             return 0;
+        }
         if (cookie->type == IOMMU_DMA_MSI_COOKIE) {
                 cookie->msi_iova += size;
                 return cookie->msi_iova - size;
@@ -176,26 +202,28 @@ static void iommu_dma_free_iova(struct iommu_domain *domain,
                 free_iova_fast(iovad, iova_pfn(iovad, iova),
                                 size >> iova_shift(iovad));
 }
-static void *pva_dma_alloc_and_map_at(struct device *dev, size_t size,
+static void *pva_dma_alloc_and_map_at( struct iommu_domain *domain ,struct device *dev, size_t size,
 				      dma_addr_t iova, gfp_t flags,
 				      unsigned long attrs)
 {
-	struct iommu_domain *domain;
+	//struct iommu_domain *domain;
 	unsigned long shift, pg_size, mp_size;
 	dma_addr_t tmp_iova, offset;
 	phys_addr_t pa, pa_new;
 	void *cpu_va;
 	int ret;
 
+#if 0
 	domain = iommu_get_domain_for_dev(dev);
 	if (!domain) {
 		dev_err(dev, "IOMMU domain not found");
 		return NULL;
 	}
-
+#endif
 	shift = __ffs(domain->pgsize_bitmap);
 	pg_size = 1UL << shift;
 	mp_size = pg_size;
+	pr_info("start to alloc iova \n");
 
 	/* Reserve iova range */
 	tmp_iova = iommu_dma_alloc_iova(domain, size,  dma_get_mask(dev), dev);
@@ -211,6 +239,7 @@ static void *pva_dma_alloc_and_map_at(struct device *dev, size_t size,
 		return NULL;
 	}
 
+	pr_info("start to alloc dma attr\n");
 	/* Allocate a memory first and get a tmp_iova */
 	cpu_va = dma_alloc_attrs(dev, size, &tmp_iova, flags, attrs);
 	if (!cpu_va)
@@ -264,10 +293,31 @@ fail_dma_alloc:
 
 	return NULL;
 }
+static struct iommu_domain *test_iommu_domain_alloc(struct bus_type *bus,
+                                                 unsigned type)
+{
+        struct iommu_domain *domain;
+
+        if (bus == NULL || bus->iommu_ops == NULL)
+                return NULL;
+
+        domain = bus->iommu_ops->domain_alloc(type);
+        if (!domain)
+                return NULL;
+
+        domain->ops  = bus->iommu_ops;
+        domain->type = type;
+        /* Assume all sizes by default; the driver may override this later */
+        domain->pgsize_bitmap  = bus->iommu_ops->pgsize_bitmap;
+
+        return domain;
+}
+
 static int PCIe_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
     int r=0;
     struct iommu_domain *domain;
+    struct device *dev = &pdev->dev; 
     	/* Enable PCI device */
 	r = pci_enable_device(pdev);
 	if (r < 0) {
@@ -276,22 +326,36 @@ static int PCIe_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	}
 	pci_set_master(pdev);
     domain = iommu_domain_alloc(&pci_bus_type);
+#if 0
+    // cause coredump
+    domain = test_iommu_domain_alloc(&pci_bus_type,IOMMU_DOMAIN_DMA);
     if (!domain) {
 		printk("System Error: Domain failed.\n");
 		r = -ENOMEM;
 		goto err_domain;
      }
-   
+     ///if (domain->type == IOMMU_DOMAIN_DMA) {
+     ///           if (iommu_dma_init_domain(domain, dma_base, size, dev))
+     ///                   goto out_err;
+
+     ///           dev->dma_ops = &iommu_dma_ops;
+     ///}
+#endif
+     if(!test_valid_domain(domain)) 
+     {
+	  goto err_domain;
+           
+     }
 /* IOMMU PageFault */
    iommu_set_fault_handler(domain, test_iommu_pf, &pdev);	
 
 	/* Attach Device */
-	r = iommu_attach_device(domain, &pdev->dev);
-	if (r) {
+    r = iommu_attach_device(domain, &pdev->dev);
+    if (r) {
 		printk("System Error: Can't attach iommu device.\n");
 		goto err_domain;
 	}
-     pva_dma_alloc_and_map_at(&pdev->dev,PAGE_SIZE*PAGE_NR, 0, GFP_KERNEL | __GFP_ZERO,DMA_ATTR_SKIP_CPU_SYNC);
+     pva_dma_alloc_and_map_at(domain,&pdev->dev,PAGE_SIZE*PAGE_NR, 0, GFP_KERNEL | __GFP_ZERO,DMA_ATTR_SKIP_CPU_SYNC);
 err_attach:
      iommu_detach_device(domain, &pdev->dev); 
 err_domain:

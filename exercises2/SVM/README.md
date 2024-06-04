@@ -8,6 +8,8 @@
 
 # SVM-demo
 
+![images](sva1.png)
+
 ```
 grep SVM config-5.13.0-39-generic 
 # CONFIG_DRM_NOUVEAU_SVM is not set
@@ -168,6 +170,76 @@ out_put_mm:
     [<000000002582384c>] do_vfs_ioctl+0x8b0/0xa80
     [<000000004e1a2c02>] ksys_ioctl+0x84/0xb8
 ```
+
+# arm64 sva
+
+
+```
+
+struct iommu_domain *arm_smmu_sva_domain_alloc(void)
+{
+        struct iommu_domain *domain;
+
+        domain = kzalloc(sizeof(*domain), GFP_KERNEL);
+        if (!domain)
+                return NULL;
+        domain->ops = &arm_smmu_sva_domain_ops;
+
+        return domain;
+}
+static const struct iommu_domain_ops arm_smmu_sva_domain_ops = {
+        .set_dev_pasid          = arm_smmu_sva_set_dev_pasid,
+        .free                   = arm_smmu_sva_domain_free
+};
+```
+
+> ## iommu_map
+
+不需要实现 (ops->map || ops->map_pages  ,  pin pages    
+
+```
+static int __iommu_map(struct iommu_domain *domain, unsigned long iova,
+                       phys_addr_t paddr, size_t size, int prot, gfp_t gfp)
+{
+        const struct iommu_domain_ops *ops = domain->ops;
+        unsigned long orig_iova = iova;
+        unsigned int min_pagesz;
+        size_t orig_size = size;
+        phys_addr_t orig_paddr = paddr;
+        int ret = 0;
+
+        if (unlikely(!(ops->map || ops->map_pages) ||
+                     domain->pgsize_bitmap == 0UL))
+                return -ENODEV;
+```
+# iommu_sva_bind_device   
+```
+static int __iommu_set_group_pasid(struct iommu_domain *domain,
+                                   struct iommu_group *group, ioasid_t pasid)
+{
+        struct group_device *device;
+        int ret = 0;
+
+        list_for_each_entry(device, &group->devices, list) {
+                ret = domain->ops->set_dev_pasid(domain, device->dev, pasid);
+                if (ret)
+                        break;
+        }
+
+        return ret;
+}
+```
+
+#  kfd_iommu   (HMM-based SVM memory)
+参考·`HSA Kernel Code (KFD v0.6) | PPT`   
+
+[英特尔Data Streaming Accelerator SVM功能](https://www.ctyun.cn/developer/article/497381907484741)   
+
+```
+amd_iommu_bind_pasid
+kfd_iommu_bind_process_to_device
+```
+![images](sva2.png)
 
 # references
 

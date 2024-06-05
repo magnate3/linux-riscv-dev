@@ -286,6 +286,8 @@ root@target:~/p2pmem-test#
 
 [NVME CMB原理和常规使用方案详解](https://blog.csdn.net/weixin_43778179/article/details/134145730)    
 
+`CMB用来存储nvme的CQ 和SQ，这样CQ 和SQ可以不要存储在host memory上`   
+
 + 1 ***CMB 控制器内存buffer (controller memory buffer)***
 一些高级的NVME SSD控制器内部有自己的内存，可以把它映射到用户内存空间。和使用spdk_memory_alloc从系统内存分配的内存相比，这样能少做一次DMA拷贝。
 

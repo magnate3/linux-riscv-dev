@@ -3,8 +3,42 @@
 
 [Qemu-in-guest-SVM-demo](https://github.com/BullSequana/Qemu-in-guest-SVM-demo)   
 
+SVM (Shared Virtual Memory)    
+
+CUDA UVM (Unified Virtual Memory)    
+ 
+ 
+Shared Virtual Addressing (SVA) provides a way for device drivers to bind
+process address spaces to devices. This requires the IOMMU to support page
+table format and features compatible with the CPUs, and usually requires
+the system to support I/O Page Faults (IOPF) and Process Address Space ID
+(PASID). When all of these are available, ***DMA can access virtual addresses
+of a process.*** A PASID is allocated for each process, and the device driver
+programs it into the device in an implementation-specific way.
+
+# HMM and SVM   
+
+● IOMMU with ATS and PASID (AMD, ARM, Intel, PowerPC)     
+● HMM (software solution) mirror CPU page table into device page table   
+● HMM for CPU inaccessible device memory (DEVICE_PRIVATE)   
+● HMM helpers for memory migration   
 
 
++ Shared virtual address (SVA) with software (HMM in linux kernel):
+● Copy CPU page table to the device page table   
+● Keep CPU and device page tables synchronized at all times   
+● Same virtual address must point to same physical address at all times  
+
+
++ Shared virtual address (SVA) with hardware (IOMMU):   
+● ATS: Address Translation Service  
+● PASID: Process Address Space ID   
+Event flow:   
+1)Device requests a virtual address translation (ATS) for a given PASID  
+2)IOMMU maps PASID to a CPU page table   
+3)IOMMU maps virtual address to physical address (through CPU page table)   
+4)IOMMU replies to device with a physical address   
+5)Device uses the physical address to access the memory   
 
 # SVM-demo
 
@@ -16,6 +50,17 @@ grep SVM config-5.13.0-39-generic
 CONFIG_INTEL_IDXD_SVM=y
 CONFIG_INTEL_IOMMU_SVM=y
 ```
+
+> ## pin memory 和sva
+
+[Introduction to Shared Virtual Memory](http://liujunming.top/2022/03/30/Introduction-to-Shared-Virtual-Memory/)   
+
+`引入SVM后不需要进程pin内存，而是通过page fault触发缺页处理进行映射。`
+
+引入SVM后的效果，最大的区别是设备访问地址在经过iommu的DMAR转换时会参考引用CPU的mmu页表，在地址缺页时同样会产生缺页中断。为什么要这样设计呢？因为要想设备直接使用进程空间的虚拟地址可能采用的有两种方法。一种是把整个进程地址空间全部pin住，但这点一般是不现实的，除非类似DPDK应用程序全部采用静态内存，否则如果进程动态分配一个内存，那么这个地址设备是不感知的。另一种方法就是采用动态映射，就像进程访问虚拟地址一样，mmu发现缺页就会动态映射，所以从设备发来的地址请求也会经过CPU缺页处理，并将映射关系同步到iommu的页表中。     
+
+
+ 
 
 # CONFIG_IOMMU_SVA  IOMMU_DOMAIN_SVA
 
@@ -212,6 +257,66 @@ static int __iommu_map(struct iommu_domain *domain, unsigned long iova,
                      domain->pgsize_bitmap == 0UL))
                 return -ENODEV;
 ```
+
+> ## 不需要iommu_map
+```
+static ssize_t amdgpu_iomem_read(struct file *f, char __user *buf,
+                                 size_t size, loff_t *pos)
+{
+        struct amdgpu_device *adev = file_inode(f)->i_private;
+        struct iommu_domain *dom;
+        ssize_t result = 0;
+        int r;
+
+        /* retrieve the IOMMU domain if any for this device */
+        dom = iommu_get_domain_for_dev(adev->dev);
+
+        while (size) {
+                phys_addr_t addr = *pos & PAGE_MASK;
+                loff_t off = *pos & ~PAGE_MASK;
+                size_t bytes = PAGE_SIZE - off;
+                unsigned long pfn;
+                struct page *p;
+                void *ptr;
+
+                bytes = bytes < size ? bytes : size;
+
+                /* Translate the bus address to a physical address.  If
+                 * the domain is NULL it means there is no IOMMU active
+                 * and the address translation is the identity
+                 */
+                addr = dom ? iommu_iova_to_phys(dom, addr) : addr;
+
+                pfn = addr >> PAGE_SHIFT;
+                if (!pfn_valid(pfn))
+                        return -EPERM;
+
+                p = pfn_to_page(pfn);
+                if (p->mapping != adev->mman.bdev.dev_mapping)
+                        return -EPERM;
+
+                ptr = kmap_local_page(p);
+                r = copy_to_user(buf, ptr + off, bytes);
+                kunmap_local(ptr);
+                if (r)
+                        return -EFAULT;
+
+                size -= bytes;
+                *pos += bytes;
+                result += bytes;
+        }
+
+        return result;
+}
+```
+
+> ## dma_map_sgtable
+
+[深入了解iommu系列一：iommu硬件架构和驱动初始化](https://kernelnote.com/deep-dive-iommu-hardware-driver.html)
+
+引入iommu的另外一个收益就是可以把多个分散的dma操作聚合成一个连续的DMA操作。举个例子，驱动程序可能分配两个大小为4KB的且在物理内存地址上不连续的buffer，那么通过dma_map_sgtable这样的api可以直接把它们合并成一个8KB的在iova上是连续的DMA操作，这样一来原来需要两次DMA操作现在只需要一次操作就搞定了。
+
+
 # iommu_sva_bind_device   
 ```
 static int __iommu_set_group_pasid(struct iommu_domain *domain,
@@ -240,6 +345,27 @@ amd_iommu_bind_pasid
 kfd_iommu_bind_process_to_device
 ```
 ![images](sva2.png)
+
+## kfd migrate amdgpu_copy_buffer
+[AMD GPU任务调度（3） —— fence机制](https://blog.csdn.net/huang987246510/article/details/106865386/)   
+```
+    [<ffffffffc0b9914f>] drm_sched_fence_create+0x1f/0x1d0 [gpu_sched]
+    [<ffffffffc0b944de>] drm_sched_job_init+0x10e/0x240 [gpu_sched]
+    [<ffffffffc138dd37>] amdgpu_job_submit+0x27/0x2d0 [amdgpu]
+    [<ffffffffc0f7ae6e>] amdgpu_copy_buffer+0x49e/0x700 [amdgpu]
+    [<ffffffffc0f7b6ca>] amdgpu_ttm_copy_mem_to_mem+0x5fa/0xf00 [amdgpu]
+    [<ffffffffc0f7ce06>] amdgpu_bo_move+0x356/0x2180 [amdgpu]
+    [<ffffffffc0a79897>] ttm_bo_handle_move_mem+0x1c7/0x620 [ttm]
+    [<ffffffffc0a7d297>] ttm_bo_validate+0x2c7/0x450 [ttm]
+    [<ffffffffc0f83444>] amdgpu_bo_fault_reserve_notify+0x2a4/0x640 [amdgpu]
+    [<ffffffffc0f93313>] amdgpu_gem_fault+0x123/0x2d0 [amdgpu]
+    [<ffffffffab55c3b3>] __do_fault+0xf3/0x3e0
+    [<ffffffffab56e5ab>] __handle_mm_fault+0x1bcb/0x2ac0
+    [<ffffffffab56f5ca>] handle_mm_fault+0x12a/0x490
+    [<ffffffffab0908b9>] do_user_addr_fault+0x259/0xb70
+    [<ffffffffac7b6935>] exc_page_fault+0x55/0xb0
+    [<ffffffffac800acb>] asm_exc_page_fault+0x1b/0x20
+```
 
 # references
 

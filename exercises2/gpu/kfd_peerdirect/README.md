@@ -190,3 +190,29 @@ static void mn_invalidate_range(struct mmu_notifier *mn,
                 amd_iommu_flush_tlb(dev_state->domain, pasid_state->pasid);
 }
 ```
+
+# sdma
+This is a multi-purpose DMA engine. The kernel driver uses it for various things including paging and GPU page table updates. It’s also exposed to userspace for use by user mode drivers (OpenGL, Vulkan, etc.)
+
+amdgpu_ttm_access_memory_sdma   
+```
+        amdgpu_res_first(abo->tbo.resource, offset, len, &src_mm);
+        src_addr = amdgpu_ttm_domain_start(adev, bo->resource->mem_type) +
+                src_mm.start;
+        dst_addr = amdgpu_bo_gpu_offset(adev->mman.sdma_access_bo);
+        if (write)
+                swap(src_addr, dst_addr);
+
+        amdgpu_emit_copy_buffer(adev, &job->ibs[0], src_addr, dst_addr,
+                                PAGE_SIZE, false);
+
+        amdgpu_ring_pad_ib(adev->mman.buffer_funcs_ring, &job->ibs[0]);
+        WARN_ON(job->ibs[0].length_dw > num_dw);
+
+        fence = amdgpu_job_submit(job);
+```
+# references
+
+[AMD GPU ](https://xxlnx.github.io/page/2/)   
+[CPU视角下的GPU物理内存 (VRAM/GTT)](https://xxlnx.github.io/2020/05/25/amdgpu/GPU_Physical_Memory/)   
+[AMD GPU 虚拟内存](https://xxlnx.github.io/2020/07/05/amdgpu/AMD_GPU_Virtual_Memory/)   

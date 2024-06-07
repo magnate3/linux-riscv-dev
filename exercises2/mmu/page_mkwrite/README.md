@@ -83,6 +83,60 @@ static int op_page_mkwrite(struct vm_fault *vmf)
 ```
 的返回值不是op_page_mkwrite，内核会hang    
 
+
++ kernel 先执行 mmap_fault 后执行 op_page_mkwrite   
+```
+[21950.346169] sample char device init
+[21950.346289] mmap-example: mmap-test registered with major 241
+[21974.809204] page index offset = 0 
+[21974.812592] op_page_mkwrite 
+[21974.815470] page index offset = 1 
+[21974.818856] op_page_mkwrite 
+[21974.821723] page index offset = 2 
+[21974.825114] op_page_mkwrite 
+[21974.827982] page index offset = 3 
+[21974.831367] op_page_mkwrite 
+```
+
+
+```
+/*
+ * Notify the address space that the page is about to become writable so that
+ * it can prohibit this or wait for the page to get into an appropriate state.
+ *
+ * We do this without the lock held, so that it can sleep if it needs to.
+ */
+static vm_fault_t do_page_mkwrite(struct vm_fault *vmf)
+{
+	vm_fault_t ret;
+	struct page *page = vmf->page;
+	unsigned int old_flags = vmf->flags;
+
+	vmf->flags = FAULT_FLAG_WRITE|FAULT_FLAG_MKWRITE;
+
+	if (vmf->vma->vm_file &&
+	    IS_SWAPFILE(vmf->vma->vm_file->f_mapping->host))
+		return VM_FAULT_SIGBUS;
+
+	ret = vmf->vma->vm_ops->page_mkwrite(vmf);
+	/* Restore original flags so that caller is not surprised */
+	vmf->flags = old_flags;
+	if (unlikely(ret & (VM_FAULT_ERROR | VM_FAULT_NOPAGE)))
+		return ret;
+	if (unlikely(!(ret & VM_FAULT_LOCKED))) {
+		lock_page(page);
+		if (!page->mapping) {
+			unlock_page(page);
+			return 0; /* retry */
+		}
+		ret |= VM_FAULT_LOCKED;
+	} else
+		VM_BUG_ON_PAGE(!PageLocked(page), page);
+	return ret;
+}
+
+```
+
 #   mmap syscall
 
 mm/mmap.c mmap_pgoff---->do_mmap_pgoff---->mmap_region---->file->f_op->mmap---->ext4_file_mmap---->vma->vm_ops = &ext4_file_mmap.   
@@ -135,7 +189,8 @@ do_page_fault
 			
 			
 ``` 
-
+# 页写保护处理 do_wp_page
+linux0.12采取了load-on-demand和copy-on-write的策略，当调用系统调用fork出一个子进程时，子进程和父亲进程会共享物理内存，并且子进程和父进程的页表项会被置为只读，当子进程或者父进程的任何一方企图对自己的进程空间线性地址进行写操作时，CPU会触发写保护中断操作，do_wp_page这时候会被调用。其主要作用就是新开辟一页内存，以便进程空间线性地址进行写操作可以继续执行   
 
 
 #   page_mkwrite and fault

@@ -322,7 +322,7 @@ Warning: no supported DPDK kernel modules are loaded
 [ 6257.792685] test_valid_domain cookie is NULL 
 [root@centos7 iommu]# 
 ```
-
+`test_valid_domain cookie is NULL`     
 ```
 
 /**

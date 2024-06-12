@@ -28,3 +28,15 @@
 于是呢，就引入了ACS（访问控制）来决定一个TLP是否能正常路由，还是被阻塞或者重定向。
 可以参考这个patch的评论PCI/P2PDMA: Clear ACS P2P flags for all devices behind switches。
 也可以参考SBSA的测试用例SBSA PCIe ATS test。
+
+
+#  ZONE_DEVICE
+The ZONE_DEVICE facility builds upon SPARSEMEM_VMEMMAP to offer struct page mem_map services for device driver identified physical address ranges. The “device” aspect of ZONE_DEVICE relates to the fact that the page objects for these address ranges are never marked online, and that a reference must be taken against the device, not just the page to keep the memory pinned for active use. ZONE_DEVICE, via devm_memremap_pages(), performs just enough memory hotplug to turn on pfn_to_page(), page_to_pfn(), and get_user_pages() service for the given range of pfns. Since the page reference count never drops below 1 the page is never tracked as free memory and the page’s struct list_head lru space is repurposed for back referencing to the host device / driver that mapped the memory.    
+
+While SPARSEMEM presents memory as a collection of sections, optionally collected into memory blocks, ZONE_DEVICE users have a need for smaller granularity of populating the mem_map. Given that ZONE_DEVICE memory is never marked online it is subsequently never subject to its memory ranges being exposed through the sysfs memory hotplug api on memory block boundaries. The implementation relies on this lack of user-api constraint to allow sub-section sized memory ranges to be specified to arch_add_memory(), the top-half of memory hotplug. Sub-section support allows for 2MB as the cross-arch common alignment granularity for devm_memremap_pages().   
+
+The users of ZONE_DEVICE are:   
+
+pmem: Map platform persistent memory to be used as a direct-I/O target via DAX mappings.  
+hmm: Extend ZONE_DEVICE with ->page_fault() and ->page_free() event callbacks to allow a device-driver to coordinate memory management events related to device-memory, typically GPU memory. See Documentation/vm/hmm.rst.   
+p2pdma: Create struct page objects to allow peer devices in a PCI/-E topology to coordinate direct-DMA operations between themselves, i.e. bypass host memory.   

@@ -39,8 +39,58 @@ static const struct file_operations mmap_fops = {
 };
 ```
 
+#  get_unmapped_area
+
+
+```
+get_unmapped_area(struct file *file, unsigned long addr, unsigned long len,
+                unsigned long pgoff, unsigned long flags)
+{
+        unsigned long (*get_area)(struct file *, unsigned long,
+                                  unsigned long, unsigned long, unsigned long);
+
+        unsigned long error = arch_mmap_check(addr, len, flags);
+        if (error)
+                return error;
+
+        /* Careful about overflows.. */
+        if (len > TASK_SIZE)
+                return -ENOMEM;
+
+        get_area = current->mm->get_unmapped_area;
+        if (file) {
+                if (file->f_op->get_unmapped_area)
+                        get_area = file->f_op->get_unmapped_area;
+        } else if (flags & MAP_SHARED) {
+                /*
+                 * mmap_region() will call shmem_zero_setup() to create a file,
+                 * so use shmem's get_unmapped_area in case it can be huge.
+                 * do_mmap_pgoff() will clear pgoff, so match alignment.
+                 */
+                pgoff = 0;
+                get_area = shmem_get_unmapped_area;
+        }
+
+        addr = get_area(file, addr, len, pgoff, flags);
+        if (IS_ERR_VALUE(addr))
+                return addr;
+
+        if (addr > TASK_SIZE - len)
+                return -ENOMEM;
+        if (offset_in_page(addr))
+                return -EINVAL;
+
+        error = security_mmap_addr(addr);
+        return error ? error : addr;
+}
+
+EXPORT_SYMBOL(get_unmapped_area);
+```
+
 
 # kgsl
+
+[参考源码](https://github.com/F2LX/kernel_xiaomi_sdm660/blob/3d0fc3246b67bff47f3452a20097d1d937c1d4b3/drivers/gpu/msm/kgsl.c#L4294)     
 ```
 static unsigned long
 kgsl_get_unmapped_area(struct file *file, unsigned long addr,
@@ -235,9 +285,68 @@ static int kgsl_mmap(struct file *file, struct vm_area_struct *vma)
 }
 
 ```
++ vma->vm_ops    
 + vm_insert_page   
++  vma->vm_file = file;   
 
+```
+	vma->vm_ops = &kgsl_gpumem_vm_ops;
+	vm_insert_page(vma, addr, page);
+		 
+```
+> ## memdesc->pages  分配
+```
+int
+kgsl_sharedmem_page_alloc_user(struct kgsl_memdesc *memdesc,
+			uint64_t size)
+{
+	int ret = 0;
+	unsigned int j, page_size, len_alloc;
+	unsigned int pcount = 0;
+	size_t len;
+	unsigned int align;
 
+	static DEFINE_RATELIMIT_STATE(_rs,
+					DEFAULT_RATELIMIT_INTERVAL,
+					DEFAULT_RATELIMIT_BURST);
+
+	size = PAGE_ALIGN(size);
+	if (size == 0 || size > UINT_MAX)
+		return -EINVAL;
+
+	align = (memdesc->flags & KGSL_MEMALIGN_MASK) >> KGSL_MEMALIGN_SHIFT;
+
+	page_size = kgsl_get_page_size(size, align);
+
+	/*
+	 * The alignment cannot be less than the intended page size - it can be
+	 * larger however to accomodate hardware quirks
+	 */
+
+	if (align < ilog2(page_size)) {
+		kgsl_memdesc_set_align(memdesc, ilog2(page_size));
+		align = ilog2(page_size);
+	}
+
+	/*
+	 * There needs to be enough room in the page array to be able to
+	 * service the allocation entirely with PAGE_SIZE sized chunks
+	 */
+
+	len_alloc = PAGE_ALIGN(size) >> PAGE_SHIFT;
+
+	memdesc->ops = &kgsl_page_alloc_ops;
+
+	/*
+	 * Allocate space to store the list of pages. This is an array of
+	 * pointers so we can track 1024 pages per page of allocation.
+	 * Keep this array around for non global non secure buffers that
+	 * are allocated by kgsl. This helps with improving the vm fault
+	 * routine by finding the faulted page in constant time.
+	 */
+
+	memdesc->pages = kgsl_malloc(len_alloc * sizeof(struct page *));
+```
 
 ```
 static void *io_uring_validate_mmap_request(struct file *file,

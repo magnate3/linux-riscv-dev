@@ -80,8 +80,16 @@ static int op_page_mkwrite(struct vm_fault *vmf)
      //return VM_FAULT_NOPAGE;
      return VM_FAULT_LOCKED;
 }
+struct vm_operations_struct mmap_vm_ops = {
+        .open = mmap_open,
+        .close = mmap_close,
+        .fault = mmap_fault,
+#if 1
+        .page_mkwrite = op_page_mkwrite,
+#endif
+};
 ```
-的返回值不是op_page_mkwrite，内核会hang    
+的返回值不VM_FAULT_LOCKED，内核会hang    
 
 
 + kernel 先执行 mmap_fault 后执行 op_page_mkwrite   
@@ -135,6 +143,20 @@ static vm_fault_t do_page_mkwrite(struct vm_fault *vmf)
 	return ret;
 }
 
+```
+
+# mr_vm_mkwrite
+
+```
+/* Notify when pages are promoted from WriteProtect to Read/Write */
+static int mr_vm_mkwrite(struct vm_fault *vmf)
+{
+        struct vm_area_struct *vma = vmf->vma;
+        pr_info("mkwrite: vma=%p, file=%p, as=%p, va=%p\n", vma, vma->vm_file,
+                        vma->vm_file ? vma->vm_file->f_mapping : NULL,
+                        (void*)vmf->address);
+        return VM_FAULT_LOCKED;
+}
 ```
 
 #   mmap syscall

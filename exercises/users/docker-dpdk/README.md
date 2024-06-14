@@ -16,7 +16,9 @@ make -j 2 install T=x86_64-native-linuxapp-gcc
 CONFIG_RTE_LIBRTE_IGB_PMD=n
 CONFIG_RTE_EAL_IGB_UIO=n
 ```
+
 CONFIG_RTE_KNI_KMOD   
+
 ````
 CONFIG_RTE_LIBRTE_KNI=n
 CONFIG_RTE_KNI_KMOD=n
@@ -30,10 +32,12 @@ CONFIG_RTE_KNI_VHOST_DEBUG_TX=n
 ```
 
 2) 设置ovs依赖的dpdk路径    
+
 ```
 OVS_CFLAGS =  -I/ovs/dpdk/x86_64-native-linuxapp-gcc/include -mssse3   
 OVS_LDFLAGS =  -L/ovs/dpdk/x86_64-native-linuxapp-gcc/lib   
 ```
+
 # run
 
 1) host上设置大页  mount -t hugetlbfs nodev /mnt/huge   

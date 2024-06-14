@@ -74,13 +74,13 @@ echo 1024 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepag
 # run dpdk2.2
 
 ```
-docker run -it -d  --net=host --name  ovs2  \
+docker run -it -d  --net=host --cap-add=NET_ADMIN --name ovs2  \
         -v /sys/bus/pci/devices:/sys/bus/pci/devices \
         -v /mnt/huge:/mnt/huge \
         -v /sys/devices/system/node:/sys/devices/system/node \
         -v /dev:/dev \
         -v /var/run/dpdk:/var/run/dpdk \
-        78a4db632840  /bin/bash
+         817d4c0c2a1f   /bin/bash
 ```
 
 ```
@@ -90,6 +90,7 @@ docker rm -f d8ae8f12e31f
 
 ```
 docker export -o  ovs-dpdk-img.tar 1e22992f69ce 
+docker import  ovs-dpdk-img.tar   ovs-dpdk-img
 ```
 
 # bug

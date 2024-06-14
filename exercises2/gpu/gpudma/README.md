@@ -25,12 +25,29 @@
 
 + 4  ioctl(fd, IOCTL_GPUMEM_STATE, state)   
 
-+ 5  mmap(0, state->page_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, (off_t)state->pages[i])    
++ 5 cpu虚拟地址：     
+    mmap(0, state->page_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, (off_t)state->pages[i])      
 
 # 内核  
 
 ##  IOCTL_GPUMEM_LOCK --> ioctl_mem_lock
 
+```
+
+    CUresult status = cuMemAlloc(&dptr, size);
+    if(wasError(status)) {
+        goto do_free_context;
+    }
+
+    fprintf(stderr, "Allocate memory address: 0x%llx\n",  (unsigned long long)dptr);
+
+    status = cuPointerSetAttribute(&flag, CU_POINTER_ATTRIBUTE_SYNC_MEMOPS, dptr);
+    // TODO: add kernel driver interaction...
+    lock.addr = dptr;
+    lock.size = size;
+    res = ioctl(fd, IOCTL_GPUMEM_LOCK, &lock);
+```
+entry->virt_start = (param.addr & GPU_BOUND_MASK);  GPU虚拟地址     
 ```
    INIT_LIST_HEAD(&entry->list);
     entry->handle = entry;

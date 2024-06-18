@@ -64,6 +64,19 @@ AM_LDFLAGS = $(SSL_LDFLAGS) $(OVS_LDFLAGS) $(am__append_2)
   ovs-vsctl add-br br0 -- set bridge br0 datapath_type=netdev
 ```
 
+## ovs log
+
+参考 lib/timeval.c   
+
+```
+#include "openvswitch/vlog.h"
+
+VLOG_DEFINE_THIS_MODULE(timeval);
+```
+```
+VLOG_ERR("wake up from WaitForMultipleObjects after deadline");
+```
+
 ## ovs 数据库
 
 /etc/openvswitch/conf.db

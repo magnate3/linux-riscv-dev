@@ -54,3 +54,12 @@ Write/Read test ...
 [347457.025418] [<ffff000008255a7c>] SyS_mmap_pgoff+0xc0/0x23c
 [347457.030965] [<ffff000008089548>] sys_mmap+0x54/0x68
 ```
+
+# truncate
+truncate 通过simple_setattr实现   
+```
+const struct inode_operations ramfs_file_inode_ops = {
+    .setattr = simple_setattr,
+    .getattr = simple_getattr,
+};
+```

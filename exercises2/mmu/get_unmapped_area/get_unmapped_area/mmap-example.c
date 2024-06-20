@@ -88,7 +88,7 @@ struct vm_operations_struct mmap_vm_ops = {
 	.open = mmap_open,
 	.close = mmap_close,
 	.fault = mmap_fault,
-#if 1
+#if 0
         .page_mkwrite = op_page_mkwrite,
 #endif
 };

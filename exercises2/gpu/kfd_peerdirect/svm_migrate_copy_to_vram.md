@@ -47,7 +47,7 @@ vram物理页
 
 #  gart table  
 
-
+[GPU体系架构(二)：GPU存储体系](https://www.cnblogs.com/hellobb/p/11023873.html)   
 
 
 
@@ -61,6 +61,34 @@ GART(Graphics Address Re-Mapping Table)
 GTT   
 Global Graphics Translation Table，负责GPU虚拟地址空间到物理地址空间的映射，好像是intel来的   
  
+ 
+ 对于integrated gpu而言，因为GPU和CPU处于同一die中，所以GPU和CPU很多时候是共享总线的。除了GPU自己的local memory之外，CPU和GPU之间有时候需要共享一些数据，例如在渲染的时候，CPU将顶点数据放入主存当中，供GPU使用。由于主存的内容对GPU来说是不可见的，所以GPU是不能直接访问这些数据的。为了让GPU访问CPU主存的内容，业界引入了一个叫GART（即Graphic Address Remapping Table）的技术。GART是一个 I/O memory management unit (IOMMU) ，说白了就是一个内存地址的映射表，可以将CPU的内存地址重新映射到GPU的地址空间，这样就可以让显卡直接访问(DMA,direct memory access)host system memory。   
+ 
+ 
+# 华为昇腾Ascend uvm
+
+
+[华为昇腾Ascend uvm](https://zhuanlan.zhihu.com/p/679635240)   
+
+[源码](https://github.com/apulis/Apulis-AI-Platform/blob/2cf1fbb50e08b477940f5f336b1b897a49608b72/src/ClusterBootstrap/test_npu/driver/kernel/devmmcommon/devmm_dev.c)    
+
+
+```
+STATIC int devmm_svm_vm_fault_host_proc(struct devmm_svm_process *svm_proc,
+    struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+
+
+    page_map_info.nid = NUMA_NO_NODE;
+    page_map_info.page_num = page_num;
+    page_map_info.inpages = pages;
+    ret = devmm_alloc_pages(&page_map_info, svm_proc);  /*申请物理内存*
+	ret = devmm_page_fault_h2d_sync(svm_id, pages, start, adjust_order, heap); /*发送页信息到device*/
+	ret = devmm_pages_remap(svm_proc, start, 1ULL << adjust_order, pages); /*建立映射*/
+```
++ devmm_alloc_pages函数会在主机端申请物理页。在不使用大页或者巨页的情况下，每次缺页中断会申请一个页，devmm_alloc_pages最终会调用numa的page申请接口alloc_pages_node申请物理内存。    
++ devmm_page_fault_h2d_sync会将申请到的页信息发送到device，device会使用得到的页面信息做dma拷贝    
++   devmm_pages_remap会调用remap_pfn_range函数为申请到的物理地址建立页表并将vma插入自己的进程空间中。同时会调用get_page函数锁住这个页面    
  
 # references
 

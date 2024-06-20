@@ -378,6 +378,25 @@ static void *io_uring_validate_mmap_request(struct file *file,
 
 ```
 
+#  kgsl_gpumem_vm_fault
+
+
+```
+static int
+kgsl_gpumem_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+	struct kgsl_mem_entry *entry = vma->vm_private_data;
+
+	if (!entry)
+		return VM_FAULT_SIGBUS;
+	if (!entry->memdesc.ops || !entry->memdesc.ops->vmfault)
+		return VM_FAULT_SIGBUS;
+
+	return entry->memdesc.ops->vmfault(&entry->memdesc, vma, vmf);
+}
+
+```
+
 #  io_uring_nommu_get_unmapped_area
 ```
 #ifdef CONFIG_MMU

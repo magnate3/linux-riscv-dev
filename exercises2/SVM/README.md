@@ -367,6 +367,105 @@ kfd_iommu_bind_process_to_device
     [<ffffffffac800acb>] asm_exc_page_fault+0x1b/0x20
 ```
 
+# svm mmap   
+
+```
+STATIC struct vm_operations_struct devmm_vm_ops_managed = {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 14, 4)
+    .split = devmm_svm_vm_split,
+#endif
+};
+```
+
+```
+STATIC void devmm_init_svm_process(struct devmm_svm_process *process, struct vm_area_struct *vma)
+{
+    u32 i;
+
+    process->normal_exited = DEVMM_SVM_ABNORMAL_EXITED_FLAG;
+    process->start_addr = DEVMM_SVM_MEM_START;
+    process->end_addr = DEVMM_SVM_MEM_START + DEVMM_SVM_MEM_SIZE - 1;
+```
+
+start_addr 和 end_addr    
+```
+STATIC int devmm_svm_mmap(struct file *file, struct vm_area_struct *vma)
+{
+    struct devmm_svm_process *svm_process = NULL;
+
+    if ((vma->vm_start != DEVMM_SVM_MEM_START) || (vma->vm_end != (DEVMM_SVM_MEM_START + DEVMM_SVM_MEM_SIZE))) {
+        devmm_drv_err("svm map err. vm_start=0x%lx,vm_end=0x%lx,vm_pgoff=0x%lx, vm_flags=0x%lx.\n", vma->vm_start,
+                      vma->vm_end, vma->vm_pgoff, vma->vm_flags);
+        return -ESRCH;
+    }
+
+    svm_process = devmm_svm_mmap_init_struct(&devmm_vm_ops_managed, vma);
+    if (svm_process == NULL) {
+        devmm_drv_err("svm map init_struct err.vm_start=0x%lx,vm_end=0x%lx,vm_pgoff=0x%lx, vm_flags=0x%lx.\n",
+                      vma->vm_start, vma->vm_end, vma->vm_pgoff, vma->vm_flags);
+        return -ESRCH;
+    }
+    /* init vma */
+    svm_process->vma = vma;
+    vma->vm_ops = &devmm_vm_ops_managed;
+    vma->vm_flags |= VM_LOCKED;
+    vma->vm_flags |= VM_DONTEXPAND;
+    vma->vm_flags |= VM_PFNMAP;
+    vma->vm_flags |= VM_WRITE;
+    vma->vm_flags |= VM_DONTDUMP;
+
+    file->private_data = kzalloc(sizeof(struct devmm_private_data), GFP_KERNEL);
+    if (file->private_data == NULL) {
+        devmm_drv_err("kzalloc devmm_private_data fail."
+                      "vm_start=0x%lx,vm_end=0x%lx,vm_pgoff=0x%lx,vm_flags=0x%lx.\n",
+                      vma->vm_start, vma->vm_end, vma->vm_pgoff, vma->vm_flags);
+        return -ENOMEM;
+    }
+
+    ((struct devmm_private_data *)file->private_data)->process = svm_process;
+
+    devmm_drv_switch("vm_start=0x%lx,vm_end=0x%lx,vm_pgoff=0x%lx,vm_flags=0x%lx\n", vma->vm_start, vma->vm_end,
+                     vma->vm_pgoff, vma->vm_flags);
+
+    devmm_init_svm_process(svm_process, vma);
+
+    return 0;
+}
+
+```
+
+>  ##  pagefault    devmm_svm_vm_fault_host   
+```
+struct devmm_svm_process *devmm_svm_mmap_init_struct(struct vm_operations_struct *ops_managed,
+                                                     struct vm_area_struct *vma)
+{
+    struct devmm_svm_process *svm_proc = NULL;
+    if (devmm_get_pro_by_pid(devmm_get_current_pid(), DEVMM_SVM_INITED_FLAG, DEVMM_END_HOST) != NULL) {
+        devmm_drv_err("svm process remap err.\n");
+        return NULL;
+    }
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 11, 0)
+    ops_managed->fault = devmm_svm_vmf_fault_host;
+#else
+    ops_managed->fault = devmm_svm_vm_fault_host;
+#endif
+    svm_proc = devmm_get_idle_process_set_init(devmm_get_current_pid(), DEVMM_SVM_INVALID_PID,
+                                               DEVMM_SVM_INITING_FLAG);
+    return svm_proc;
+}
+```
+
+
+```
+STATIC int devmm_svm_vm_fault_host(struct vm_area_struct *vma, struct vm_fault *vmf)
+{
+ ret = devmm_alloc_pages(NUMA_NO_NODE, 0, page_num, pages, svm_process);
+ ret = devmm_page_fault_h2d_sync(dev_id, pages, start, adjust_order, heap);
+  ret = devmm_insert_pages_to_vma(svm_process, start, adjust_order, pages);
+}
+```
+
 # references
 
 [Linux x86-64 IOMMU详解（六）——Intel IOMMU参与下的DMA Coherent Mapping流程](https://blog.csdn.net/qq_34719392/article/details/117699839)   

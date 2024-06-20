@@ -109,7 +109,7 @@ devmm_page_fault_h2d_sync(svm_id, pages, start, adjust_order, heap); /*发送页
 + 1 devmm_va_to_palist 怎么获取host侧物理地址？ 直接查页表      
 
 
-> ## svm mmap   
+> ## svm mmap(cpu访问触发pagefault)   
 
 ```
 STATIC struct vm_operations_struct devmm_vm_ops_managed = {

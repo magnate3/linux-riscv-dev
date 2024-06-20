@@ -367,7 +367,7 @@ kfd_iommu_bind_process_to_device
     [<ffffffffac800acb>] asm_exc_page_fault+0x1b/0x20
 ```
 
-# svm mmap   
+# svm mmap  (cpu访问触发pagefault)  
 
 ```
 STATIC struct vm_operations_struct devmm_vm_ops_managed = {
@@ -462,7 +462,7 @@ STATIC int devmm_svm_vm_fault_host(struct vm_area_struct *vma, struct vm_fault *
 {
  ret = devmm_alloc_pages(NUMA_NO_NODE, 0, page_num, pages, svm_process);
  ret = devmm_page_fault_h2d_sync(dev_id, pages, start, adjust_order, heap);
-  ret = devmm_insert_pages_to_vma(svm_process, start, adjust_order, pages);
+ ret = devmm_insert_pages_to_vma(svm_process, start, adjust_order, pages);
 }
 ```
 

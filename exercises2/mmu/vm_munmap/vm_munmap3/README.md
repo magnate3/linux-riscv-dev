@@ -1,6 +1,104 @@
 
++ user    
+申请start_addr = 0xffff95010000的虚拟地址
+```
+   ctrl.user_addr = 0xffff95010000;
+   if(ioctl(fd, IOCTL_ALLOC_VMA, &ctrl) < 0){
+           printf("Testcase Failed\n");
+           goto err2;
+       }
+```
+
+
++ kernel  
+vm_mmap(file, user_addr, total  申请start_addr = 0xffff95010000的虚拟地址   
+```
+user_addr = addr.user_addr;
+        if(0 != user_addr) {
+             vm_area = find_vma(current->mm, user_addr);
+             if(NULL == vm_area)
+             {
+                  pr_info("vma addr 0x%lx  not exist \n", user_addr);
+             }
+             else
+             {
+                  pr_info("vma addr 0x%lx  exist \n", user_addr);
+             }
+        }
+        user_addr = vm_mmap(file, user_addr, total,
+                            PROT_READ | PROT_WRITE | PROT_EXEC,
+                            MAP_ANONYMOUS | MAP_PRIVATE, 0);
+```  
+
+#  find_vma
+
+
+
+```
+        if(0 != user_addr) {
+             vm_area = find_vma(current->mm, user_addr);
+             if(NULL == vm_area)
+             {
+                  pr_info("vma addr 0x%lx  not exist \n", user_addr);
+             }
+             else
+             {
+                  pr_info("vma addr 0x%lx  exist \n", user_addr);
+             }
+        }
+```
+
+```
+[root@centos7 vm_munmap2]# ./test-mmap 
+alloced virt addr : 0xffff95010000 
+Changed message: Hello from *user* this is file: mmap-test
+
+Write/Read test ...
+[root@centos7 vm_munmap2]# 
+```
+
+kernel msg:   
+用户空间 0xffff95010000地址没有使用， 但是find_vma返回不是NULL       
+```
+[841111.574452] mmap-example: mmap-test registered with major 241
+[842992.391234] vma addr 0xffff95010000  exist 
+[842992.395556] page index offset = 0 
+[842992.399066] page index offset = 1 
+[842992.402575] page index offset = 2 
+[842992.406067] page index offset = 3 
+```
+
+#  do_mmap
+```
+unsigned long do_mmap(struct file *file, unsigned long addr,
+            unsigned long len, unsigned long prot,
+            unsigned long flags, vm_flags_t vm_flags,
+            unsigned long pgoff, unsigned long *populate,
+            struct list_head *uf)
+{
+    struct mm_struct *mm = current->mm;
+    // 在进程虚拟内存空间中寻找一块未映射的虚拟内存范围
+    // 这段虚拟内存范围后续将会用于 mmap 内存映射
+    addr = get_unmapped_area(file, addr, len, pgoff, flags);
+
+   
+    // 这里就是 mmap 内存映射的核心
+    addr = mmap_region(file, addr, len, vm_flags, pgoff, uf);
+
+    // 当 mmap 设置了 MAP_POPULATE 或者 MAP_LOCKED 标志
+    // 那么在映射完之后，需要立马为这块虚拟内存分配物理内存页，后续访问就不会发生缺页了
+    if (!IS_ERR_VALUE(addr) &&
+        ((vm_flags & VM_LOCKED) ||
+         (flags & (MAP_POPULATE | MAP_NONBLOCK)) == MAP_POPULATE))
+        // 设置需要分配的物理内存大小
+        *populate = len;
+    return addr;
+}
+```
 
 #  do_munmap  存在的vma    
+
+
 ```
 /*
  * detach and kill segment if marked destroyed.
@@ -188,7 +286,86 @@ for(vma = find_vma(current->mm, addr); ; vma = vma->vm_next)
 
 # 添加vma   
 
-do_mmap  -->  add_vma_to_mm     
+
+##  mmap_region
+
+vm_mmap  -->  vm_mmap_pgoff -->   do_mmap -->   mmap_region-->   op_mmap   
+```
+[841030.648739] [<ffff0000088568a8>] dump_stack+0x84/0xa8
+[841030.653855] [<ffff0000017e0200>] op_mmap+0x20/0x68 [mmap_example]
+[841030.660008] [<ffff000008257c74>] mmap_region+0x348/0x51c
+[841030.665380] [<ffff000008258138>] do_mmap+0x2f0/0x34c
+[841030.670410] [<ffff00000823467c>] vm_mmap_pgoff+0xf0/0x124
+[841030.675870] [<ffff00000823471c>] vm_mmap+0x6c/0x80
+[841030.680726] [<ffff0000017e04c4>] device_ioctl+0x14c/0x298 [mmap_example]
+[841030.687484] [<ffff0000082c6e18>] do_vfs_ioctl+0xcc/0x8fc
+[841030.692856] [<ffff0000082c76d8>] SyS_ioctl+0x90/0xa4
+```
+
+```
+unsigned long
+mmap_region(struct file *file, unsigned long addr,
+            unsigned long len, unsigned long flags,
+            unsigned int vm_flags, unsigned long pgoff,
+            int accountable)
+{
+    struct mm_struct *mm = current->mm;
+    struct vm_area_struct *vma, *prev;
+    int correct_wcount = 0;
+    int error;
+    ...
+
+    // 1. 申请一个虚拟内存区管理结构(vma)
+    vma = kmem_cache_zalloc(vm_area_cachep, GFP_KERNEL);
+    ...
+
+    // 2. 设置vma结构各个字段的值
+    vma->vm_mm = mm;
+    vma->vm_start = addr;
+    vma->vm_end = addr + len;
+    vma->vm_flags = vm_flags;
+    vma->vm_page_prot = protection_map[vm_flags & (VM_READ|VM_WRITE|VM_EXEC|VM_SHARED)];
+    vma->vm_pgoff = pgoff;
+
+    if (file) {
+        ...
+        vma->vm_file = file;
+
+        /* 3. 此处是内存映射的关键点，调用文件对象的 mmap() 回调函数来设置vma结构的 fault() 回调函数。
+         *    vma对象的 fault() 回调函数的作用是：
+         *        - 当访问的虚拟内存没有映射到物理内存时，
+         *        - 将会调用 fault() 回调函数对虚拟内存地址映射到物理内存地址。
+         */
+        error = file->f_op->mmap(file, vma);
+        ...
+    }
+    ...
+
+    // 4. 把 vma 结构连接到进程虚拟内存区的链表和红黑树中。
+    vma_link(mm, vma, prev, rb_link, rb_parent);
+    ...
+
+    return addr;
+}
+
+```
+
+mmap_region() 函数主要完成以下 4 件事情：    
+
+
++ 1 申请一个 vm_area_struct 结构（vma），内核使用 vma 来管理进程的虚拟内存地址。   
+
+
++ 2 设置 vma 结构各个字段的值。    
+
+
++ 3  通过调用文件对象的 mmap() 回调函数来设置vma结构的 fault() 回调函数，一般文件对象的 mmap() 回调函数为：generic_file_mmap()。   
+
+
++ 4  把新创建的 vma 结构连接到进程的虚拟内存区链表和红黑树中。     
+
+ 
+##   add_vma_to_mm
 ```
 /*
  * add a VMA into a process's mm_struct in the appropriate place in the list

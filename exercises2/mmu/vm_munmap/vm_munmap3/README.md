@@ -289,6 +289,8 @@ for(vma = find_vma(current->mm, addr); ; vma = vma->vm_next)
 
 ##  mmap_region
 
+[从内核世界透视 mmap 内存映射的本质（源码实现篇）](https://ost.51cto.com/posts/27288)   
+
 vm_mmap  -->  vm_mmap_pgoff -->   do_mmap -->   mmap_region-->   op_mmap   
 ```
 [841030.648739] [<ffff0000088568a8>] dump_stack+0x84/0xa8

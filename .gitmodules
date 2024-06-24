@@ -16,3 +16,6 @@
 [submodule "exercises2/donard/nvme_donard"]
 	path = exercises2/donard/nvme_donard
 	url = https://github.com/sbates130272/nvme_donard.git
+[submodule "exercises2/gpu/cubefs.wiki"]
+	path = exercises2/gpu/cubefs.wiki
+	url = https://github.com/cubefs/cubefs.wiki.git

@@ -474,7 +474,7 @@ ip,nw_dst=10.0.0.0/16 actions=output:1
 
 MegaFlow Cache 性能最关键的就是看如何能实现更好的泛化能力，即每个条目都能匹配尽可能多 的数据包，减少用户态和内核态之间进行交互的次数。同时需要尽可能降低哈希查询的次数，在尽可能 少的表里得到预期的结果。    
 
-![images](../pic/tss.webp)
+![images](./pic/tss.webp)
 
 +  Megaflow 需要多次 hash table    
 在 OVS 中，Megaflow 需要查询多次 hash table 是因为 Megaflow 是由多个字段组成，每个字段都需要在相应的 hash table 中查找匹配的流表项。例如，Megaflow 可能包含源 MAC 地址、目的 MAC 地址、源 IP 地址、目的 IP 地址、协议类型等字段，每个字段都需要在相应的 hash table 中进行查询，才能找到匹配的流表项。   

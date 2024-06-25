@@ -451,5 +451,35 @@ local_dev_probe
 ```
 添加dpdk网卡成功
 
+# Megaflow
+为了避免这种性能极度恶化的情况，Open vSwitch 引入了 MegaFlow。和 MicroFlow 的精确匹配 不同，MegaFlow 可以做到模糊匹配，一个条目可以匹配一组数据包。它的实现和用户态的 TSS 类似， 但是在组织上有所不同。   
+
+一是没有优先级，这样可以快速返回无需遍历所有的哈希表；   
+
+二是 MegaFlow 中不像用户态中大量 table 组成了 pipeline，只通过一个 table 来进行匹配。   
+
+我们来看下面一条OpenFlow流表规则。   
+
+priority=200,ip,nw_dst=10.0.0.0/16 actions=output:1   
+它的作用就是匹配所有目的IP是10.0.0.0/16的网络包，从网卡1送出。对于下面的传输层连接，对应 的action都是一样的。   
+
+11.0.0.2:5742 -> 10.0.0.10:3306   
+11.0.0.2:5743 -> 10.0.0.10:3306   
+11.0.0.2:5744 -> 10.0.0.11:3306   
+11.0.0.3:5742 -> 10.0.0.10:3306   
+但是对应于microflow cache来说，就要有4条cache，需要上送4次ovs-vswitchd。但是实际上，如 果在kernel datapath如果有下面一条cache，只匹配目的IP地址：   
+
+ip,nw_dst=10.0.0.0/16 actions=output:1   
+那么数以亿计的传输层连接，可以在OVS内核模块，仅通过这条cache，完成转发。因为只有一条 cache，所以也只有一次上送ovs-vswitchd。这样能大大减少内核态向用户态上送的次数，从而提升网 络性能。这样一条非精确匹配的cache，被OpenVSwitch称为megaflow。  
+
+MegaFlow Cache 性能最关键的就是看如何能实现更好的泛化能力，即每个条目都能匹配尽可能多 的数据包，减少用户态和内核态之间进行交互的次数。同时需要尽可能降低哈希查询的次数，在尽可能 少的表里得到预期的结果。
+![images](../pic/tss.webp)
++  Megaflow 需要多次 hash table    
+在 OVS 中，Megaflow 需要查询多次 hash table 是因为 Megaflow 是由多个字段组成，每个字段都需要在相应的 hash table 中查找匹配的流表项。例如，Megaflow 可能包含源 MAC 地址、目的 MAC 地址、源 IP 地址、目的 IP 地址、协议类型等字段，每个字段都需要在相应的 hash table 中进行查询，才能找到匹配的流表项。   
+此外，OVS 中的 hash table 是基于哈希函数实现的，哈希函数可能会出现碰撞，导致多个流表项映射到同一个桶中。在这种情况下，需要对该桶中的所有流表项进行线性搜索，以找到与 Megaflow 匹配的流表项。因此，Megaflow 需要查询多次 hash table，以确保找到所有与 Megaflow 匹配的流表项。
++  Microflow 需要一次 hash table     
+在 OVS 中，Microflow 只需要查询一次 hash table 是因为 Microflow 是由固定数量的字段组成，包括源 MAC 地址、目的 MAC 地址、协议类型、源端口号和目的端口号。这些字段被组合成一个 5-tuple，可以通过哈希函数转换为一个哈希值，然后用该哈希值在 OVS 的 flow table 中查找匹配的流表项。由于 Microflow 的字段数量是固定的，且哈希函数能够有效地将 5-tuple 映射到 flow table 中的桶中，因此只需要查询一次 hash table 就能够找到与 Microflow 匹配的流表项。
+ 
+
 # 控制器
 [OpenvSwitch/OpenFlow 架构解析与实践案例](https://www.cnblogs.com/jmilkfan-fanguiju/p/10589725.html)

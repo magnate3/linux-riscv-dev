@@ -54,7 +54,7 @@ static int nvme_rdma_nvfs_map_data(struct ib_device *ibdev, struct request *rq, 
  
 #  struct file_operations nvfs_dev_fops
 
-
+没有read、write     
 ```
 struct file_operations nvfs_dev_fops = {
 	.compat_ioctl = nvfs_ioctl,
@@ -145,6 +145,83 @@ static int nvfs_pin_gpu_pages(nvfs_ioctl_map_t *input_param,
 	ret = nvfs_nvidia_p2p_get_pages(0, 0, gpu_virt_start, rounded_size,
 			       &gpu_info->page_table,
                                nvfs_get_pages_free_callback, nvfs_mgroup);
+}
+```
+
+#  nvfs_direct_io
+
+
+```
+/*
+ * Start IO operation
+ */
+static ssize_t
+nvfs_direct_io(int op, struct file *filp, char __user *buf,
+		size_t len, loff_t ppos, nvfs_io_t* nvfsio)
+{
+        struct iovec iov = { .iov_base = buf, .iov_len = len };
+        struct iov_iter iter;
+        ssize_t ret;
+
+	init_sync_kiocb(&nvfsio->common, filp);
+        nvfsio->common.ki_pos = ppos;
+	nvfsio->common.private = NULL;
+
+#ifdef HAVE_KI_COMPLETE
+	if(nvfsio->sync) {
+                nvfsio->common.ki_complete = NULL;
+        } else {
+                nvfsio->common.ki_complete = nvfs_io_complete;
+        }
+#else
+	nvfsio->sync = true;
+#endif
+
+#ifdef CONFIG_FAULT_INJECTION
+        if (nvfs_fault_trigger(&nvfs_rw_verify_area_error)) {
+                ret = -EFAULT;
+        }
+        else
+#endif
+        {
+		ret = nvfs_rw_verify_area(op, filp, buf, &ppos, len);
+		#ifdef SIMULATE_BUG_RW_VERIFY_FAILURE
+		ret = -EINVAL;
+		#endif
+	}
+
+	if (ret) {
+		nvfs_err("rw_verify_area failed with %zd\n", ret);
+		// reset attached mgroup state for failed IO.
+		nvfs_io_ret(&nvfsio->common, ret);
+		return ret;
+	}
+
+        iov_iter_init(&iter, op, &iov, 1, len);
+
+//TODO: If the config is not present fallback to vfs_read/vfs_write
+#ifdef HAVE_CALL_READ_WRITE_ITER
+        if(op == WRITE) {
+                set_write_flag(&nvfsio->common);
+                file_start_write(filp);
+
+                ret = nvfs_io_ret(&nvfsio->common,
+				call_write_iter(filp, &nvfsio->common, &iter));
+                if (S_ISREG(file_inode(filp)->i_mode))
+                        __sb_writers_release(file_inode(filp)->i_sb,
+				SB_FREEZE_WRITE);
+        } else {
+                ret = nvfs_io_ret(&nvfsio->common,
+				call_read_iter(filp, &nvfsio->common, &iter));
+        }
+#endif
+
+        nvfs_dbg("nvfs_direct_io : ret = %ld len = %lu\n" , ret, len);
+        if (ret == -EIOCBQUEUED) {
+                BUG_ON(nvfsio->sync);
+                nvfs_dbg("%s queued\n", opstr(op));
+        }
+        return ret;
 }
 ```
 

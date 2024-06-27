@@ -1,5 +1,26 @@
-# write read
+# sendfile
 
+
+[senfile](https://blog.csdn.net/weixin_46381158/article/details/129094170)   
+
+```
+init_sync_kiocb
+```
+
+
+# gds write read (类似sendfile)
+```
+int fd = open(file_name, O_DIRECT,...)
+CUFileHandle_t *fh; 
+CUFileDescr_t desc; 
+desc.type=CU_FILE_HANDLE_TYPE_OPAQUE_FD;
+desc.handle.fd = fd;
+cuFileHandleRegister(&fh, &desc);
+void *gpumem_buf;
+cudaMalloc(gpumem_buf, buf_size);
+cuFileRead(&fh, gpumem_buf, buf_size, …);
+doit<<<gpumem_buf, …>>>
+```
 [gpu-direct](https://joyxu.github.io/2022/06/06/gpu-direct/)    
 其中cudaMalloc/cuFileBufRegister会从GPU内存分配，并调用nvidia-fs.ko做映射，得到一个va和gpu pa/dma、cpu pa的映射，
 后面再调用cuFileRead/cuFileWrite的时候把这个va传递给虚拟文件系统VFS，并通过kernel的call_write_iter/call_read_iter
@@ -23,6 +44,15 @@ cuFileRead/cuFileWrite
         dma_map_bvec
      call nvfs register dma callback
 ```
+
+> ## get_user_pages_fast    
+
+
+ nvfs_mgroup_pin_shadow_pages -->  get_user_pages_fast   
+ 
+ 
+Linux kernel get_user_pages_fast   is used to pin shadow pages.
+
 > ## cuFileBufRegister(NVFS_IOCTL_MAP) and nvidia_p2p_get_pages   
 The cuFileBufRegister function makes the pages that underlie a range of GPU virtual
 memory accessible to a third-party device. This process is completed by pinning the GPU
@@ -222,6 +252,33 @@ nvfs_direct_io(int op, struct file *filp, char __user *buf,
                 nvfs_dbg("%s queued\n", opstr(op));
         }
         return ret;
+}
+```
+
+init_sync_kiocb -->  call_read_iter    
+
+> ## new_sync_read   
+
+
+
+```
+
+static ssize_t new_sync_read(struct file *filp, char __user *buf, size_t len, loff_t *ppos)
+{
+        struct iovec iov = { .iov_base = buf, .iov_len = len };
+        struct kiocb kiocb;
+        struct iov_iter iter;
+        ssize_t ret; 
+
+        init_sync_kiocb(&kiocb, filp);
+        kiocb.ki_pos = (ppos ? *ppos : 0);
+        iov_iter_init(&iter, READ, &iov, 1, len);
+
+        ret = call_read_iter(filp, &kiocb, &iter);
+        BUG_ON(ret == -EIOCBQUEUED);
+        if (ppos)
+                *ppos = kiocb.ki_pos;
+        return ret; 
 }
 ```
 

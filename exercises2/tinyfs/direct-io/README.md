@@ -1,3 +1,6 @@
+
+
+
 # Direct IO实现
 
 ```
@@ -25,6 +28,77 @@ Write/Read test ...
 [root@centos7 myfs2]# 
 ```
 
+## IOCB_DIRECT   
+```
+ext4_file_read_iter(kio, iter)
+    \--generic_file_read_iter(iocb, to)
+        \--if (iocb->ki_flags & IOCB_DIRECT) 
+               ext4_dio_read_iter(iocb, to);
+            else
+                generic_file_buffered_read(iocb, iter, retval)
+ 
+```
+
+```
+static ssize_t
+ext2_direct_IO(struct kiocb *iocb, struct iov_iter *iter)
+{
+
+
+        ret = blockdev_direct_IO(iocb, inode, iter, ext2_get_block);
+}
+```
+__blockdev_direct_IO() 会调用 do_blockdev_direct_IO()，在这里面我们要准备一个 struct dio 结构和 struct dio_submit 结构，用来描述将要发生的写入请求    
+
+
+ do_blockdev_direct_IO  -->     do_direct_IO   
+ 
+ 
+ dio_get_page -->  dio_refill_pages  -->    iov_iter_get_pages   -->    get_user_pages_fast
+ 
+> ## get_user_pages_fast pin user addr       
+
+
+```
+
+ssize_t iov_iter_get_pages(struct iov_iter *i,
+                   struct page **pages, size_t maxsize, unsigned maxpages,
+                   size_t *start)
+{
+        if (maxsize > i->count)
+                maxsize = i->count;
+
+        if (unlikely(i->type & ITER_PIPE))
+                return pipe_get_pages(i, pages, maxsize, maxpages, start);
+        iterate_all_kinds(i, maxsize, v, ({
+                unsigned long addr = (unsigned long)v.iov_base;
+                size_t len = v.iov_len + (*start = addr & (PAGE_SIZE - 1));
+                int n;
+                int res;
+
+                if (len > maxpages * PAGE_SIZE)
+                        len = maxpages * PAGE_SIZE;
+                addr &= ~(PAGE_SIZE - 1);
+                n = DIV_ROUND_UP(len, PAGE_SIZE);
+                res = get_user_pages_fast(addr, n, (i->type & WRITE) != WRITE, pages);
+                if (unlikely(res < 0))
+                        return res;
+                return (res == n ? len : res * PAGE_SIZE) - *start;
+        0;}),({
+                /* can't be more than PAGE_SIZE */
+                *start = v.bv_offset;
+                get_page(*pages = v.bv_page);
+                return v.bv_len;
+        }),({
+                return -EFAULT;
+        })
+        )
+        return 0;
+}
+EXPORT_SYMBOL(iov_iter_get_pages);
+```
+ 
+ 
 ## pagecache写入磁盘要实现 writepage    
 ```
 int generic_writepages(struct address_space *mapping,

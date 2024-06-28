@@ -1,6 +1,9 @@
 
-  
+# 块大小  
 
+文件件系统和底层块设备都有自己的块大小设置，而且，这两者可以不相同。块设备的默认块大小为512字节，有兴趣的可以自己查看下hd_init()这个函数。文件系统，如ext3，默认块大小是1024字节（可以自己挂载文件系统的时候设置，但最小1024字节，最大为PAGE_SIZE），有兴趣的同学可以自己查看下ext3_fill_super()这个函数。因此一般说来，文件系统块大小是块设备默认大小的整数倍。    
+
+ 
 # Direct IO实现
  direct_io既有优点也有缺点，看具体场景。对于大文件的顺序i/o，direct_io可以有效减少大量的内存拷贝。但是对于小文件的随机访问，不采用direct_io而保留kernel的page cache，在cache命令率较高的情况下可以有效的减少i/o的路径       
 ```
@@ -53,8 +56,13 @@ __blockdev_direct_IO() 会调用 do_blockdev_direct_IO()，在这里面我们要
 
  do_blockdev_direct_IO  -->     do_direct_IO   
  
+ do_direct_IO 函数在dio_get_page过程中通过get_user_pages_fast来获取用户态传递进来的地址对应的page。      
+ dio_get_page -->  dio_refill_pages  -->    iov_iter_get_pages   -->    get_user_pages_fast    
  
- dio_get_page -->  dio_refill_pages  -->    iov_iter_get_pages   -->    get_user_pages_fast
+ 
+ __blockdev_direct_IO --> do_direct_IO --> dio_get_page --> get_user_pages_fast，direct IO针对的是用户空间        
+ 
+ ![images](dio1.png)   
  
 > ## get_user_pages_fast pin user addr       
 

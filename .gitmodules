@@ -22,3 +22,6 @@
 [submodule "exercises2/gpu/ssd2gpu"]
 	path = exercises2/gpu/ssd2gpu
 	url = https://github.com/matsuu/ssd2gpu.git
+[submodule "exercises2/gpu/nvidia_p2p_get_pages/bafs-driver"]
+	path = exercises2/gpu/nvidia_p2p_get_pages/bafs-driver
+	url = https://github.com/ZaidQureshi/bafs-driver.git

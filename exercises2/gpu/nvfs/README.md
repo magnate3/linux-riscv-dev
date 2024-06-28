@@ -86,6 +86,43 @@ GPU device memory in the BAR space. This information is obtained by running $ pe
 top -g and getting the call graph of cuFileBufRegister    
 
 
+>  ### nvfs_map
+
+ nvfs_map_gpu_info
++ 调用 nvfs_get_endfence_page  ,pin end_fence_addr     
+```
+end_fence = (void *)input_param->end_fence_addr;
+#ifdef HAVE_PIN_USER_PAGES_FAST
+		ret = pin_user_pages_fast((unsigned long) end_fence, 1, 1,
+			&gpu_info->end_fence_page);
+#else
+		ret = get_user_pages_fast((unsigned long) end_fence, 1, 1,
+			&gpu_info->end_fence_page);
+#endif
+```
++ 调用  nvfs_pin_gpu_pages ，nvfs_nvidia_p2p_get_pages    
+nvfs_nvidia_p2p_get_pages获取的物理地址page_table通过nvfs_mgroup_get_gpu_physical_address 被使用            
+```
+uint64_t nvfs_mgroup_get_gpu_physical_address(nvfs_mgroup_ptr_t nvfs_mgroup, struct page* page)
+{
+	struct nvfs_gpu_args *gpu_info = &nvfs_mgroup->gpu_info;
+	unsigned long gpu_page_index = ULONG_MAX;
+	pgoff_t pgoff = 0;
+	dma_addr_t phys_base_addr, phys_start_addr;
+
+	nvfs_mgroup_get_gpu_index_and_off(nvfs_mgroup, page,
+			&gpu_page_index, &pgoff);
+
+	phys_base_addr = gpu_info->page_table->pages[gpu_page_index]->physical_address;
+	phys_start_addr = phys_base_addr + pgoff;
+
+	return phys_start_addr;
+}
+```
+
+
+
+
 ## nvfs register dma callback
 
  

@@ -19,3 +19,6 @@
 [submodule "exercises2/gpu/cubefs.wiki"]
 	path = exercises2/gpu/cubefs.wiki
 	url = https://github.com/cubefs/cubefs.wiki.git
+[submodule "exercises2/gpu/ssd2gpu"]
+	path = exercises2/gpu/ssd2gpu
+	url = https://github.com/matsuu/ssd2gpu.git

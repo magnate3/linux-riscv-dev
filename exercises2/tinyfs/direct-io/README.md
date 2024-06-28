@@ -1,8 +1,8 @@
 
-
+  
 
 # Direct IO实现
- direct_io既有优点也有缺点，看具体场景。对于大文件的顺序i/o，direct_io可以有效减少大量的内存拷贝。但是对于小文件的随机访问，不采用direct_io而保留kernel的page cache，在cache命令率较高的情况下可以有效的减少i/o的路径     
+ direct_io既有优点也有缺点，看具体场景。对于大文件的顺序i/o，direct_io可以有效减少大量的内存拷贝。但是对于小文件的随机访问，不采用direct_io而保留kernel的page cache，在cache命令率较高的情况下可以有效的减少i/o的路径       
 ```
 [76358.790433] [<ffff00000821c468>] do_writepages+0x30/0x98
 [76358.795721] [<ffff00000820c818>] __filemap_fdatawrite_range+0xe0/0x144

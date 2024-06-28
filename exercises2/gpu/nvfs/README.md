@@ -1,3 +1,23 @@
+
+# CPU和GPU通信
+ 
+ 
+ ![images](../pic/gpu2.png)     
+ 如果我们把它抽象下，一般可以看成下面的模型：   
+  ![images](../pic/gpu3.png) 
++ GPU context   
+GPU context代表GPU当前状态，每个context有自己的page table，多个context可以同时共存   
+
++ GPU Channel   
+每个GPU context都有一个或者多个GPU Channel，CPU发给GPU的命令通过GPU Channel传递，
+一般GPU Channel是一个软件概念，通常是一个ring buffer    
+
+CPU和GPU通信主要有几下几种方式：   
+
++ 通过PCIe BAR空间映射出来的寄存器    
++ 通过PCIe BAR空间把GPU的内存映射到CPU的地址空间中   
++ 通过GPU的页表把CPU的系统内存映射到GPU的地址空间中   
++ 通过MSI中断 
 # sendfile
 
 

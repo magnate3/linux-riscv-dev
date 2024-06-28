@@ -10,7 +10,7 @@ init_sync_kiocb
 
 # gds write read (类似sendfile)
 
-![images](gds1.png)       
+![images](../pic/gds1.png)       
 
 ```
 int fd = open(file_name, O_DIRECT,...)

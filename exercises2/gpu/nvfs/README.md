@@ -68,10 +68,37 @@ cuFileRead/cuFileWrite
      call nvfs register dma callback
 ```
 
+> ## input_param->cpuvaddr 怎么获取   
+
+获取input_param->cpuvaddr地址参考 [gpu-direct-rdma](https://github.com/karakozov/gpudma/blob/7ecec64b69549a3f36b248340f449bd5e1457158/module/gpumemdrv.c)    
+```
+   size_t size = 0x100000;
+    CUdeviceptr dptr = 0;
+    unsigned int flag = 1;
+    unsigned char *h_odata = NULL;
+    h_odata = (unsigned char *)malloc(size);
+
+    CUresult status = cuMemAlloc(&dptr, size);
+	// TODO: add kernel driver interaction...
+    lock.addr = dptr;
+    lock.size = size;
+    res = ioctl(fd, IOCTL_GPUMEM_LOCK, &lock);
+```
+1 malloc(size)    
+
+2 cuMemAlloc(&dptr, size),没有采用cudaMallocManaged   
+
+3 ioctl(fd, IOCTL_GPUMEM_LOCK, &lock)   
+
+4 ioctl(fd, IOCTL_GPUMEM_STATE, state)   
+
+5 cpu虚拟地址：   
+mmap(0, state->page_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, (off_t)state->pages[i])   
+
 > ## get_user_pages_fast    
 
 
- nvfs_mgroup_pin_shadow_pages -->  get_user_pages_fast   
+ nvfs_mgroup_pin_shadow_pages -->  get_user_pages_fast( pin_user_pages_fast)   
  
  
 Linux kernel get_user_pages_fast   is used to pin shadow pages.
@@ -240,6 +267,14 @@ static int nvfs_pin_gpu_pages(nvfs_ioctl_map_t *input_param,
 
 #  nvfs_direct_io
 
+
+```
+ret = nvfs_direct_io(op, f,
+                                        nvfsio->cpuvaddr,
+                                        bytes_issued,
+                                        fd_offset,
+                                        nvfsio);
+```
 
 ```
 /*

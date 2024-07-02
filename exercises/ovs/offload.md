@@ -36,6 +36,70 @@ ovs-vsctl --no-wait set Open_vSwitch . other_config:hw-offload=true
 ./utilities/ovs-appctl   dpctl/dump-flows type=ovs
 ```
 
+#  dp_netdev_flow_add
+```
+static int
+dpif_netdev_flow_put(struct dpif *dpif, const struct dpif_flow_put *put)
+{
+    struct dp_netdev *dp = get_dp_netdev(dpif);
+    struct dp_netdev_flow *netdev_flow;
+    struct netdev_flow_key key;
+    struct dp_netdev_pmd_thread *pmd;
+    struct match match;
+    ovs_u128 ufid;
+    unsigned pmd_id = put->pmd_id == PMD_ID_NULL
+                      ? NON_PMD_CORE_ID : put->pmd_id;
+    int error;
+
+    error = dpif_netdev_flow_from_nlattrs(put->key, put->key_len, &match.flow);
+    if (error) {
+        return error;
+    }
+    error = dpif_netdev_mask_from_nlattrs(put->key, put->key_len,
+                                          put->mask, put->mask_len,
+                                          &match.flow, &match.wc);
+    if (error) {
+        return error;
+    }
+
+    pmd = dp_netdev_get_pmd(dp, pmd_id);
+    if (!pmd) {
+        return EINVAL;
+    }
+
+    /* Must produce a netdev_flow_key for lookup.
+     * This interface is no longer performance critical, since it is not used
+     * for upcall processing any more. */
+    netdev_flow_key_from_flow(&key, &match.flow);
+
+    if (put->ufid) {
+        ufid = *put->ufid;
+    } else {
+        dpif_flow_hash(dpif, &match.flow, sizeof match.flow, &ufid);
+    }
+
+    ovs_mutex_lock(&pmd->flow_mutex);
+    /* TODO: Special lookup to check if a dp rule already exists.
+     * Requires to check the filter program chain too. */
+    netdev_flow = dp_netdev_pmd_lookup_flow(pmd, &key, NULL, NULL);
+    if (!netdev_flow) {
+        if (put->flags & DPIF_FP_CREATE) {
+            if (cmap_count(&pmd->flow_table) < MAX_FLOWS) {
+                if (put->stats) {
+                    memset(put->stats, 0, sizeof *put->stats);
+                }
+                dp_netdev_flow_add(pmd, &match, &ufid, put->filter_prog_chain,
+                                   put->actions, put->actions_len);
+                error = 0;
+            } else {
+                error = EFBIG;
+            }
+        } else {
+            error = ENOENT;
+        }
+    }
+```
+
 #  dpdk-testpmd 
 ```
 1.usertools/dpdk-devbind.py --force --bind=vfio-pci 0000:86:00.0 0000:86:00.1

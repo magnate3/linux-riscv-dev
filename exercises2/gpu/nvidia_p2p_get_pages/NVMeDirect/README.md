@@ -1,5 +1,5 @@
 
- ![images](../pic/peer3.png)
+ ![images](../../pic/peer3.png)
 #  NV_PIN_GPU_MEMORY |  NV_UNPIN_GPU_MEMORY
 ```
 static int pin(struct pin_buf_priv *pb)

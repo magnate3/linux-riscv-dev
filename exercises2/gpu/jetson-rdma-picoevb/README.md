@@ -1,5 +1,7 @@
 # Introduction
 
+[jetson-rdma-picoevb](https://github.com/NVIDIA/jetson-rdma-picoevb)   
+
 This repository provides a minimal hardware-based demonstration of GPUDirect
 RDMA. This feature allows a PCIe device to directly access CUDA memory, thus
 allowing zero-copy sharing of data between CUDA and a PCIe device.
@@ -14,9 +16,30 @@ in this repository, and the data flow between components, is shown below:
 
 ![RDMA Configuration and Data Flow](rdma-flow.svg)
 
+> ##  gpu 访问cpu内存(cudaHostRegister + cudaHostGetDevicePointer)   
+
+The GPU CUDA Kernel is really not affected by the RDMA implementation. The Kernel receives a pointer to the pinned GPU memory and runs as needed. The only piece worth mentioning, in my opinion, is the option to map a region in the host’s physical address to be accessed directly by the GPU. I found this useful to create an IPC/Mailbox between the GPU and FPGA.   
+
+I used a simple method (and surely not best practice). First, the host used mmap() “ /dev/mem” at the FPGA PCIe BAR address offset (0xb5c00000 in my example… Yes i know… i used a static address and it should be dynamically given by the PCIe driver but remember: “it was written with the sole intention of testing the hardware”) with the size of the BAR registers to get a virtual address of the FPGA BAR that can be accessed by the Host.   
+```
+fd_fpga = open(“/dev/mem”, O_RDWR|O_SYNC);
+fpga_reg = (int *)mmap(0, 0x10000, PROT_READ|PROT_WRITE, MAP_SHARED, fd_fpga, 0xb5c00000);
+```
+After that, the CUDA code received the pointer to the mapped virtual address and used two functions, one to register the host memory address and a second to receive a pointer that can be directly used by the CUDA Kernel running on the GPU.    
+```
+checkCudaErrors(cudaHostRegister(fpga_reg, 0x10000, cudaHostRegisterIoMemory));
+checkCudaErrors(cudaHostGetDevicePointer((void **)&d_fpga_reg, (void *)fpga_reg, 0));
+```
+I used this method to have the GPU directly write to the FPGA when certain events occurred i.e. when the first data word arrived, the last data word arrived or when the GPU processing has completed.
 
 > ## 1 分配内存
 
+```
+cudamalloc(): 在GPU设备内存上分配内存。需要指定要分配的字节数。返回一个指向device内存的指针。
+malloc():标准的C库函数,在主机(CPU)内存上分配内存。需要指定要分配的字节数。返回一个指向host内存的指针。
+cudahostalloc(): 在主机(CPU)内存上分配页对齐的内存。需要指定要分配的字节数。返回一个指向host内存的指针。
+cudamallochost(): 等同于cudahostalloc()。在主机(CPU)内存上分配页对齐的内存。
+```
 
 ```
 #ifdef NV_BUILD_DGPU

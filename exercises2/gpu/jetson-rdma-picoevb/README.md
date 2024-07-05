@@ -75,14 +75,41 @@ cudamallochost(): 等同于cudahostalloc()。在主机(CPU)内存上分配页对
 ```
 ```
 static int pevb_ioctl_pin_cuda(struct pevb_file *pevb_file, unsigned long arg)
+{
+	void __user *argp = (void __user *)arg;
+	struct picoevb_rdma_pin_cuda pin_params;
+	struct pevb_cuda_surface *cusurf;
+
+	if (copy_from_user(&pin_params, argp, sizeof(pin_params)))
+
+	cusurf = kzalloc(sizeof(*cusurf), GFP_KERNEL);
+	cusurf->pevb_file = pevb_file;
+	cusurf->va = pin_params.va & GPU_PAGE_MASK;
+	cusurf->offset = pin_params.va & GPU_PAGE_OFFSET;
+	cusurf->len = pin_params.size;
+	aligned_len = (cusurf->offset + cusurf->len + GPU_PAGE_SIZE - 1) &
+		GPU_PAGE_MASK;
+
 	ret = nvidia_p2p_get_pages(
 #ifdef NV_BUILD_DGPU
 		0, 0,
 #endif
 		cusurf->va, aligned_len, &cusurf->page_table,
 		pevb_p2p_free_callback, cusurf);
+	if (ret < 0) {
+		kfree(cusurf);
+		return ret;
+	}
+	cusurf->handle = idr_alloc(&pevb_file->cuda_surfaces, cusurf, 0, 0,
+		GFP_KERNEL);
+	
+
+	pin_params.handle = cusurf->handle;
+	ret = copy_to_user(argp, &pin_params, sizeof(pin_params));
 ```
-nvidia_p2p_get_pages --> RmP2PGetPagesPersistent  
++  1 cusurf->va是cudaMalloc或cudaHostAlloc分配虚拟地址      
+
++  2 cusurf->handle  指向nvidia_p2p_get_pages分配的物理地址
 
 > ## 3 cuda计算   
 
@@ -121,14 +148,68 @@ cudaDeviceSynchronize()：该方法将停止CPU端线程的执行，直到GPU端
 		return 1;
 	}
 ```
+ 
 
-> ### pevb_ioctl_h2c2h_dma
+
+
+> ### pevb_ioctl_h2c2h_dma  
+
+
 pevb_get_userbuf_cuda -->   nvidia_p2p_dma_map_pages(pevb->pdev, cusurf->page_table）  -->    
 
 nvidia_p2p_dma_map_pages从cusurf->page_table中获取pages，建立dma映射   
 
 
+
+
+
+
+
+> ###  pevb_get_userbuf_cuda
+
++ 1 通过nvidia_p2p_dma_map_pages，建立nvidia_p2p_dma_map_pages的物理地址的dma映射   
+
+
+![images](../pic/cuda2.png)       
+
+```
+static int pevb_get_userbuf_cuda(struct pevb_file *pevb_file,
+	struct pevb_userbuf *ubuf, __u64 handle64, __u64 len, int to_dev)
+{
+	struct pevb *pevb = pevb_file->pevb;
+	int id, ret, i;
+	struct pevb_cuda_surface *cusurf;
+	u64 offset, len_left;
+
+
+	cusurf = idr_find(&pevb_file->cuda_surfaces, id);
+
+
+#ifdef NV_BUILD_DGPU
+	ret = nvidia_p2p_dma_map_pages(pevb->pdev, cusurf->page_table,
+		&ubuf->priv.cuda.map);
+#else
+	ret = nvidia_p2p_dma_map_pages(&pevb->pdev->dev, cusurf->page_table,
+		&ubuf->priv.cuda.map, to_dev ? DMA_TO_DEVICE : DMA_FROM_DEVICE);
+#endif
+	for (i = 0; i < ubuf->priv.cuda.map->entries; i++) {
+#ifdef NV_BUILD_DGPU
+		dma_addr_t dma_this = ubuf->priv.cuda.map->dma_addresses[i];
+		u64 len_this = min(GPU_PAGE_SIZE - offset, len_left);
+#else
+		dma_addr_t dma_this = ubuf->priv.cuda.map->hw_address[i];
+		u64 len_this = ubuf->priv.cuda.map->hw_len[i];
+#endif
+
+		dma_this += offset;
+		pevb_userbuf_add_dma_chunk(ubuf, dma_this, len_this);
+```
+
+
+
+
 > ####  nvidia_p2p_dma_map_pages
+
 
 [os-nvidia-open-gpu-kernel-modules](https://github.com/pexip/os-nvidia-open-gpu-kernel-modules/blob/ad486d664dbabee7760eab1170e536dca84403e6/src/nvidia/arch/nvalloc/unix/src/osapi.c#L3993)
 

@@ -4,9 +4,16 @@
 
 [ZaidQureshi/bam](https://github.com/ZaidQureshi/bam)   
 
-
+![images](../../pic/bam1.png)
 #  smartio
-***bam/deprecated/examples/read-blocks/smartio.c***    
+***bam/deprecated/examples/read-blocks/smartio.c***   
+
+
++ nvm_dis_dma_create(&buffer, ctrl, buffer_size, 0)  创建buffer,buffer是nvidia_p2p_dma_map_pages后的dma address
+
++ 
+
+ 
 ```
    status = nvm_dis_dma_create(&buffer, ctrl, buffer_size, 0);
     if (!nvm_ok(status))

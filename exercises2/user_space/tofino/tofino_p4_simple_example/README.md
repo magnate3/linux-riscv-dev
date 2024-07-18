@@ -149,5 +149,52 @@ Entry data (action : Ingress.ciL2Fwd.aiOut):
 
 bfrt.tofino_p4_simple_example.pipe.Ingress.ciL2Fwd.tiWire> 
 ```
++ from netaddr import IPAddress    
+```
+bfrt_python
+from netaddr import IPAddress
+bfrt.single_pass.pipe.MyIngress.ipv4_host
+add_with_send(IPAddress('1.1.1.1'), 1)
+add_with_send(IPAddress('192.168.5.1'), 141)
+add_with_send(IPAddress('192.168.5.2'), 142)
+add_with_send(IPAddress('192.168.5.3'), 143)
+add_with_send(IPAddress('192.168.5.4'), 144)
+add_with_send(IPAddress('192.168.5.5'), 176)
+```
+
++ -i 
+```
+./run_bfshell.sh -b ~/albert/simple_l3/bfrt_python/setup.py -i 
+```
+
+
++ 定义变量pipe = bfrt.sample_lpm.pipe.MainControlImpl
+```
+Running bf_swtichd application:
+===============================
+export SDE=    ////////sde path
+export SDE_INSTALL=$SDE/install
+export LD_LIBRARY_PATH=$SDE_INSTALL/lib/:$SDE_INSTALL/lib/x86_64-linux-gnu/:$SDE_INSTALL/lib64:$SDE_INSTALL/lib64/pkgconfig
+export PYTHONPATH=$SDE_INSTALL/lib/python3.8/:$SDE_INSTALL/lib/python3.8/lib-dynload:$SDE_INSTALL/lib/python3.8/site-packages
+export PYTHONHOME=$SDE_INSTALL/lib/python3.8
+
+mkdir -p $SDE_INSTALL/share/examples
+cp -rf examples/pna/simple_lpm/ $SDE_INSTALL/share/examples/
+cd $SDE_INSTALL/bin
+
+./bf_switchd --install-dir $SDE_INSTALL --conf-file $SDE_INSTALL/share/examples/simple_lpm/simple_lpm.conf --init-mode=cold --status-port 7777
+
+BF_RT commands:
+===============
+bfrt_python
+bfrt.sample_lpm.enable
+pipe = bfrt.sample_lpm.pipe.MainControlImpl
+from netaddr import IPAddress
+pipe.ipv4_da_lpm.add_with_next_hop(dstAddr=IPAddress('192.168.2.0'), dstAddr_p_length=24,vport=2)
+pipe.ipv4_da_lpm.get(dstAddr=IPAddress('192.168.2.0'),dstAddr_p_length=24)
+pipe.ipv4_da_lpm.dump
+pipe.ipv4_da_lpm.delete(dstAddr=IPAddress('192.168.2.0'),dstAddr_p_length=24)
+pipe.ipv4_da_lpm.dump
+```
 
 

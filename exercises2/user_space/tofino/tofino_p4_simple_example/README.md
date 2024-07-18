@@ -1,4 +1,9 @@
 
+# make
+
+[参考SwitchML P4 program](https://switchml.readthedocs.io/en/latest/readmes/p4.html)   
+
+```
 root@localhost:/sde/bf-sde-9.2.0/p4studio# mkdir build-test
 root@localhost:/sde/bf-sde-9.2.0/p4studio# cd build-test/
 export SDE=/sde/bf-sde-9.2.0
@@ -9,6 +14,7 @@ cmake $SDE/p4studio/ -DCMAKE_INSTALL_PREFIX=$SDE_INSTALL \
                      -DCMAKE_MODULE_PATH=$SDE/cmake \
                      -DP4_NAME=tofino_p4_simple_example \
                      -DP4_PATH=$SOURCE_DIR/tofino_p4_simple_example/prog.p4 
+```
 
 ```
 root@localhost:/sde/bf-sde-9.2.0/p4studio/build-test# make

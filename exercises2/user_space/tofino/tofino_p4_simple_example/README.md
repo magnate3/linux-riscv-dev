@@ -69,7 +69,7 @@ cp tofino_p4_simple_example/tofino/tofino_p4_simple_example.conf  /sde/bf-sde-8.
 # controller  (tofino   pd forward add_entry)
 
 
-## ./run_bfshell.sh 
+## ./run_bfshell.sh (容器内执行)
 
 配置流表
 ```
@@ -112,3 +112,42 @@ pm show
 root@localhost:/sde/bf-sde-8.9.1# ./run_bfshell.sh  -f cmd.txt 
 
 ```
+
+
++  ./run_bfshell.sh  -b    
+
+
+```
+root@localhost:/sde/bf-sde-9.7.1# ./run_bfshell.sh  -b  /sde/bf-sde-9.7.1/p4studio/build-test/setup_table/table-setup.py 
+Using SDE /sde/bf-sde-9.7.1
+Using SDE_INSTALL /sde/bf-sde-9.7.1/install
+Connecting to localhost port 7777 to check status on these devices: [0]
+Waiting for device 0 to be ready
+Timeout or error while waiting for devices to be ready
+/sde/bf-sde-9.7.1/install/bin/bfshell /sde/bf-sde-9.7.1/p4studio/build-test/setup_table/table-setup.py
+bfrt_python /sde/bf-sde-9.7.1/p4studio/build-test/setup_table/table-setup.py
+```
+
+# bfrt_python
+```
+bfrt.tofino_p4_simple_example.pipe.Ingress.ciL2Fwd.tiWire> add_with_aiOut(out_port=1)
+
+bfrt.tofino_p4_simple_example.pipe.Ingress.ciL2Fwd.tiWire> dump
+---------------------------------------------------------> dump()
+----- tiWire Dump Start -----
+Default Entry:
+Entry data (action : Ingress.ciL2Fwd.aiReflect):
+
+Entry 0:
+Entry key:
+    ig_intr_md.ingress_port        : 0x00
+Entry data (action : Ingress.ciL2Fwd.aiOut):
+    out_port                       : 0x01
+
+----- tiWire Dump End -----
+
+
+bfrt.tofino_p4_simple_example.pipe.Ingress.ciL2Fwd.tiWire> 
+```
+
+

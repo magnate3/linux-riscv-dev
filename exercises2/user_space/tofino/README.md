@@ -6,6 +6,91 @@
    Executing: /sde/bf-sde-9.7.1/pkgsrc/p4-build/configure --prefix="/sde/bf-sde-9.7.1/install" --with-p4c="/sde/bf-sde-9.7.1/install/bin/bf-p4c" P4_PATH="/sde/bf-sde-9.7.1/pkgsrc/p4-examples/p4_16_programs/tna_ports/tna_ports.p4" P4_NAME="tna_ports" P4_PREFIX="tna_ports" P4_VERSION="p4-16" P4_ARCHITECTURE="tna" P4JOBS=8 P4FLAGS=" -g --verbose 2 --parser-timing-reports --display-power-budget --create-graphs" --with-tofino P4PPFLAGS="" 
 ```
 
+## tofino
+
+3. **Bringing up ports and testing the program**
+
+The first thing you probably want to do is bring up some ports. This can be done in the control script, but you can also do it manually from bfshell > ucli > pm:
+
+
+```
+bfshell> ucli
+Starting UCLI from bf-shell 
+Cannot read termcap database;
+using dumb terminal settings.
+bf-sde> pm
+bf-sde.pm> ?
+# ... list of commands (not shown)
+```
+pm has a bunch of commands. The most important ones are: 
+
+``show [-a]`` -- show the currently configured ports. If run with -a, show all ports.
+
+```
+bf-sde.pm> show -a
+-----+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
+PORT |MAC |D_P|P/PT|SPEED  |FEC |RDY|ADM|OPR|LPBK    |FRAMES RX       |FRAMES TX       |E
+-----+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
+1/0  |23/0|128|3/ 0|-------|----|YES|---|---|--------|----------------|----------------|-
+1/1  |23/1|129|3/ 1|-------|----|YES|---|---|--------|----------------|----------------|-
+```
+Important columns are: 
+PORT -- the front panel port name. 
+D_P -- the port's id from inside of P4. 
+RDY -- is a cable detected? 
+ADM -- is the port configured? 
+OPR -- is the port down (DWN) or up (UP)?
+Most of the other columns are self explanatory. LPBK is whether the port is configured as a loopback port. 
+
+To configure a port, use port-add. To bring a configured port up, use port-enb.
+
+`` port-add        <port_str> <speed (1G, 10G, 25G, 40G, 40G_NB, 50G(50G/50G-R2, 50G-R1), 100G(100G/100G-R4, 100G-R2),200G(200G/200G-R4, 200G-R8), 400G 40G_NON_BREAKABLE)> <fec (NONE, FC, RS)>``
+
+``<port_str>`` is the port's front panel id. 100G ports can be split into 4 separate 25G or 10G ports, so each port id has two components: the physical port name and the id of the port's channel: ``<port id>/<channel id>``
+
+So, for example, `1/0` and `2/0` are the first two ports in 100G mode. If you configure port 1 in 4x25G mode, you can also use ports `1/1`, `1/2`, and `1/3`. 
+
+You configure each port individually. So, to bring up 1/0 - 1/3 in 10G mode with no FEC, use: 
+
+```
+bf-sde.pm> port-add 1/0 10G NONE
+bf-sde.pm> port-add 1/1 10G NONE
+bf-sde.pm> port-add 1/2 10G NONE
+bf-sde.pm> port-add 1/3 10G NONE
+bf-sde.pm> show                 
+-----+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
+PORT |MAC |D_P|P/PT|SPEED  |FEC |RDY|ADM|OPR|LPBK    |FRAMES RX       |FRAMES TX       |E
+-----+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
+1/0  |23/0|128|3/ 0|10G    |NONE|YES|DIS|DWN|  NONE  |               0|               0| 
+1/1  |23/1|129|3/ 1|10G    |NONE|YES|DIS|DWN|  NONE  |               0|               0| 
+1/2  |23/2|130|3/ 2|10G    |NONE|YES|DIS|DWN|  NONE  |               0|               0| 
+1/3  |23/3|131|3/ 3|10G    |NONE|YES|DIS|DWN|  NONE  |               0|               0| 
+```
+
+Next, to bring up a configured port, say ``1/0``, use ``port-enb``: 
+```
+bf-sde.pm> port-add 1/0 1G NONE 
+2024-07-18 09:07:09.452871 BF_PM ERROR - pm_port_valid_speed_and_channel_internal:711 Port validation failed for Dev-family: 0 dev : 0 d_p : 168 : 1/0 speed : 1g num-lanes: 1 error-msg: 1G not supported on this  port
+Add failed Invalid arguments (3)
+
+```
+
+```
+bf-sde.pm> port-enb 1/0
+bf-sde.pm> show
+-----+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
+PORT |MAC |D_P|P/PT|SPEED  |FEC |RDY|ADM|OPR|LPBK    |FRAMES RX       |FRAMES TX       |E
+-----+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
+1/0  |23/0|128|3/ 0|10G    |NONE|YES|ENB|DWN|  NONE  |               0|               0| 
+1/1  |23/1|129|3/ 1|10G    |NONE|YES|DIS|DWN|  NONE  |               0|               0| 
+```
+
+At this point, once the ethernet autonegotiation completes the OPR column for an enabled port should change to "UP". 
+
+Once you have a server connected to a port that's UP, you can test the program: send a packet into the switch from the server, the P4 program should send a copy of the exact same packet back. You should see the frames RX and frames TX counters increase in the CLI. 
+
+
+
 ## docker 
 ```
 docker export -o  p4i-docker.tar 1f43ce1c21ba 

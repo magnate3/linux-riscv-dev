@@ -76,13 +76,17 @@ Add failed Invalid arguments (3)
 ```
 
 ```
+bf-sde.pm> port-add 1/0 10G NONE
+bf-sde.pm> port-add 1/1 10G NONE
 bf-sde.pm> port-enb 1/0
+bf-sde.pm> port-enb 1/1
 bf-sde.pm> show
------+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
-PORT |MAC |D_P|P/PT|SPEED  |FEC |RDY|ADM|OPR|LPBK    |FRAMES RX       |FRAMES TX       |E
------+----+---+----+-------+----+---+---+---+--------+----------------+----------------+-
-1/0  |23/0|128|3/ 0|10G    |NONE|YES|ENB|DWN|  NONE  |               0|               0| 
-1/1  |23/1|129|3/ 1|10G    |NONE|YES|DIS|DWN|  NONE  |               0|               0| 
+-----+----+---+----+-------+----+--+--+---+---+---+--------+----------------+----------------+-
+PORT |MAC |D_P|P/PT|SPEED  |FEC |AN|KR|RDY|ADM|OPR|LPBK    |FRAMES RX       |FRAMES TX       |E
+-----+----+---+----+-------+----+--+--+---+---+---+--------+----------------+----------------+-
+1/0  |29/0|168|3/40|10G    |NONE|Au|Au|NO |ENB|DWN|  NONE  |               0|               0| 
+1/1  |29/1|169|3/41|10G    |NONE|Au|Au|NO |ENB|DWN|  NONE  |               0|               0| 
+bf-sde.pm> 
 ```
 
 At this point, once the ethernet autonegotiation completes the OPR column for an enabled port should change to "UP". 

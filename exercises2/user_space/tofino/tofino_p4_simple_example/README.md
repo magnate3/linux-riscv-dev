@@ -197,4 +197,10 @@ pipe.ipv4_da_lpm.delete(dstAddr=IPAddress('192.168.2.0'),dstAddr_p_length=24)
 pipe.ipv4_da_lpm.dump
 ```
 
+> ##  bfrt.mirror
+
+```
+bfrt.mirror.cfg.add_with_normal
+```
+
 

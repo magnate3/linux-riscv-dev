@@ -62,11 +62,12 @@ size_t udp_pkt_sz  = sizeof(udp_packet);
 bf_pkt *upkt = NULL;
 uint8_t *udp_pkt_8;
 
+bf_switchd_context_t *switchd_main_ctx = NULL;
 // bfswitchd initialization. Needed for all programs
 void init_bf_switchd() {
-  bf_switchd_context_t *switchd_main_ctx = NULL;
   char *install_dir;
   char target_conf_file[100];
+  //char board_port_map_conf_file[512];
   int ret;
 	p4_pd_status_t status;
   install_dir = getenv("SDE_INSTALL");
@@ -81,6 +82,9 @@ void init_bf_switchd() {
   memset(switchd_main_ctx, 0, sizeof(bf_switchd_context_t));
   switchd_main_ctx->install_dir = install_dir;
   switchd_main_ctx->conf_file = target_conf_file;
+  //switchd_main_ctx->board_port_map_conf_file = board_port_map_conf_file;
+  sprintf(switchd_main_ctx->board_port_map_conf_file, "%s/share/platforms/board-maps/accton/board_lane_map_7350.json", install_dir);
+  //switchd_ctx->dev_sts_port = 7777; // Use default status port of 7777.
   switchd_main_ctx->skip_p4 = false;
   switchd_main_ctx->skip_port_add = false;
   switchd_main_ctx->running_in_background = true;
@@ -287,6 +291,7 @@ int main (int argc, char **argv) {
 int main(int argc, char **argv) {
   init_bf_switchd();
   init_tables();
+  if (switchd_main_ctx) free(switchd_main_ctx);
   return 0;
 }
 #endif

@@ -1,9 +1,24 @@
 
-# make
+# make（容器内执行）
 
 [参考SwitchML P4 program](https://switchml.readthedocs.io/en/latest/readmes/p4.html)   
 
+
 ```
+    cmd="cmake $SDE/p4studio                        \
+           -DCMAKE_MODULE_PATH=\"$SDE/cmake\"       \
+           -DCMAKE_INSTALL_PREFIX=\"$P4_INSTALL\"   \
+           -DP4_PATH=\"$P4_REALPATH\"               \
+           -DP4_NAME=\"$P4_NAME\"                   \
+           -DP4_LANG=\"${P4_VERSION/_/-}\"          \
+           -DP4FLAGS=\"$P4FLAGS\"                   \
+           $targets $thrift $pd"
+```
+ --enable-thrift   --std p4-16 --target tofino --arch tna
+ 
+ + 1 cmake
+```
+
 root@localhost:/sde/bf-sde-8.9.1/p4studio# mkdir build-test
 root@localhost:/sde/bf-sde-8.9.1/p4studio# cd build-test/
 export SDE=/sde/bf-sde-8.9.1
@@ -16,6 +31,11 @@ cmake $SDE/p4studio/ -DCMAKE_INSTALL_PREFIX=$SDE_INSTALL \
                      -DP4_PATH=$SOURCE_DIR/tofino_p4_simple_example/prog.p4 
 ```
 
+```
+tofino_p4_simple_example/tofino/manifest.json:178:  "compile_command": "/sde/bf-sde-8.9.1/install/bin/bf-p4c --std p4-16 --target tofino --arch tna --bf-rt-schema tofino_p4_simple_example/tofino/bf-rt.json -o /sde/bf-sde-8.9.1/p4studio/build-test/tofino_p4_simple_example/tofino -g /sde/bf-sde-8.9.1/pkgsrc/p4-examples/p4_16_programs/tofino_p4_simple_example/prog.p4",
+```
+
++ 2 make
 ```
 root@localhost:/sde/bf-sde-8.9.1/p4studio/build-test# make
 [  0%] Built target driver
@@ -118,14 +138,14 @@ root@localhost:/sde/bf-sde-8.9.1# ./run_bfshell.sh  -f cmd.txt
 
 
 ```
-root@localhost:/sde/bf-sde-9.7.1# ./run_bfshell.sh  -b  /sde/bf-sde-9.7.1/p4studio/build-test/setup_table/table-setup.py 
-Using SDE /sde/bf-sde-9.7.1
-Using SDE_INSTALL /sde/bf-sde-9.7.1/install
+root@localhost:/sde/bf-sde-8.9.1# ./run_bfshell.sh  -b  /sde/bf-sde-8.9.1/p4studio/build-test/setup_table/table-setup.py 
+Using SDE /sde/bf-sde-8.9.1
+Using SDE_INSTALL /sde/bf-sde-8.9.1/install
 Connecting to localhost port 7777 to check status on these devices: [0]
 Waiting for device 0 to be ready
 Timeout or error while waiting for devices to be ready
-/sde/bf-sde-9.7.1/install/bin/bfshell /sde/bf-sde-9.7.1/p4studio/build-test/setup_table/table-setup.py
-bfrt_python /sde/bf-sde-9.7.1/p4studio/build-test/setup_table/table-setup.py
+/sde/bf-sde-8.9.1/install/bin/bfshell /sde/bf-sde-8.9.1/p4studio/build-test/setup_table/table-setup.py
+bfrt_python /sde/bf-sde-8.9.1/p4studio/build-test/setup_table/table-setup.py
 ```
 
 # bfrt_python
@@ -166,7 +186,12 @@ add_with_send(IPAddress('192.168.5.5'), 176)
 ```
 ./run_bfshell.sh -b ~/albert/simple_l3/bfrt_python/setup.py -i 
 ```
-
++  exec(cmds)
+```
+bfrt_python
+cmds='''<GENERATED LEO CONTROL PLANE HERE>'''
+exec(cmds)
+```
 
 + 定义变量pipe = bfrt.sample_lpm.pipe.MainControlImpl
 ```

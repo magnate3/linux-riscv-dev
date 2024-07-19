@@ -225,9 +225,18 @@ These statistics were used to create Table 3 as follows:
 - VLIWs: (from mau.resources.log) The program uses 93 VLIW instructions.
 - Queues: Not shown here. The program configures 2 physical queues per port, on a 32-port switch this is 64 queues.
 
+
+## Compiling a P4 program
+bf-p4c can compile a P4 program that is written for TNA or V1 model.    
+
+To compile a P4_16 program written for V1model, use [2]:    
+
+bf-p4c --std p4-16 --arch v1model --p4runtime-files <prog>.p4info.pb.txt <prog>.p4   
+
 # proj
 
 [The Cheetah Load Balancer - NSLab @ KTH](https://github.com/cheetahlb)   
 [AnotherKamila/sdn-loadbalancer](https://github.com/AnotherKamila/sdn-loadbalancer)   
+[P4NAT](https://github.com/zhy1658858023/P4NAT/blob/main/ServiceNAT_tofino/ServiceNAT_tofino.p4)     
  
 

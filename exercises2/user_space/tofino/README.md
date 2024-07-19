@@ -226,12 +226,67 @@ These statistics were used to create Table 3 as follows:
 - Queues: Not shown here. The program configures 2 physical queues per port, on a 32-port switch this is 64 queues.
 
 
+
+##  table_summary.log
+
+```
+cat  tofino/pipe/logs/table_summary.log
+Table allocation done 1 time(s), state = INITIAL
+Number of stages in table allocation: 3
+  Number of stages for ingress table allocation: 3
+  Number of stages for egress table allocation: 1
+Critical path length through the table dependency graph: 3
+Number of tables allocated: 7
++-------+------------------------------------------+
+|Stage  |Table Name                                |
++-------+------------------------------------------+
+|0      |cond-5                                    |
+|0      |MyIngress.tbl_compute_hash                |
+|0      |MyEgress.tbl_do_add_timestamp             |
+|0      |MyEgress.do_bytes_count_malicious_egress  |
+|0      |MyEgress.do_bytes_count_benign_egress     |
+|1      |MyIngress.tbl_update_bloom_filter         |
+|2      |MyIngress.tbl_drop_table                  |
+|0      |cond-6                                    |
+|2      |cond-7                                    |
+|0      |cond-8                                    |
++-------+------------------------------------------+
+``` 
+
+
+
 ## Compiling a P4 program
 bf-p4c can compile a P4 program that is written for TNA or V1 model.    
 
 To compile a P4_16 program written for V1model, use [2]:    
 
 bf-p4c --std p4-16 --arch v1model --p4runtime-files <prog>.p4info.pb.txt <prog>.p4   
+
+
+```
+ cd $SDE/pkgsrc/p4-build
+    ./configure \
+    --prefix=$SDE_INSTALL --enable-thrift --with-tofino \
+    P4_NAME=$prog_name P4_PATH=$1 P4_ARCHITECTURE=tna P4_VERSION=p4-14 P4FLAGS="-g --create-graphs"
+```
+
+
+```
+	cmake ${SDE}/p4studio -B build/$* \
+		-DCMAKE_MODULE_PATH=${SDE}/cmake \
+		-DCMAKE_INSTALL_PREFIX="${SDE_INSTALL}" \
+		-DP4_PATH="$(realpath $<)" \
+		-DP4_NAME="$(basename $(nodir $<))" \
+		-DP4_LANG=p4-16 \
+		-DTOFINO2=ON \
+		-DP4FLAGS=${P4FLAGS}
+```
+
+
+```Text   
+Run bf-p4c -g beaucoup.p4 to compile. The -v flag is necessary for additional visualization.
+Run p4i -w beaucoup.tofino, then open http://localhost:3000/ to inspect. If you're running p4i on a server under CLI, you may need to add the --no-browser flag.
+```
 
 # proj
 

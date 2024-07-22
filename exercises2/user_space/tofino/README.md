@@ -272,14 +272,15 @@ bf-p4c --std p4-16 --arch v1model --p4runtime-files <prog>.p4info.pb.txt <prog>.
 
 
 ```
-	cmake ${SDE}/p4studio -B build/$* \
-		-DCMAKE_MODULE_PATH=${SDE}/cmake \
-		-DCMAKE_INSTALL_PREFIX="${SDE_INSTALL}" \
-		-DP4_PATH="$(realpath $<)" \
-		-DP4_NAME="$(basename $(nodir $<))" \
-		-DP4_LANG=p4-16 \
-		-DTOFINO2=ON \
-		-DP4FLAGS=${P4FLAGS}
+P4FLAGS="-g --verbose 2"
+cmake ${SDE}/p4studio \
+    -DCMAKE_INSTALL_PREFIX=${SDE_INSTALL} \
+    -DCMAKE_MODULE_PATH=${SDE}/cmake \
+    -DP4_NAME=heavy_hitter_5tupple\
+    -DP4_PATH=$(realpath ${script_dir}/heavy_hitter_5tupple.p4)\
+    -DP4FLAGS="${P4FLAGS}"
+
+make && make install
 ```
 
 

@@ -116,6 +116,12 @@ docker run -d --rm --name p4i -v /sde:/sde -w /sde/bf-sde-9.7.1/build/ -p 3000:3
  xvfb-run ./p4i --disable-gpu --no-sandbox -w /work/tofino/bf-sde-9.7.1/build/
 ```
 
+```
+xvfb-run ./p4i -w /work/tofino/bf-sde-8.9.1/build/pkgsrc/p4-examples/tna_exact_match/tofino
+```
+
+![images](p4i.png)   
+
 
 ```
 root@ubuntux86:# xvfb-run ./p4i --no-sandbox --disable-gpu -h

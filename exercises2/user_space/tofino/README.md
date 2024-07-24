@@ -122,6 +122,7 @@ xvfb-run ./p4i -w /work/tofino/bf-sde-8.9.1/build/pkgsrc/p4-examples/tna_exact_m
 
 ![images](p4i.png)   
 
+没有  /home/ubuntu/.local/p4i/LICENCE文件
 
 ```
 root@ubuntux86:# xvfb-run ./p4i --no-sandbox --disable-gpu -h
@@ -290,9 +291,18 @@ make && make install
 ```
 
 
+
+
 ```Text   
 Run bf-p4c -g beaucoup.p4 to compile. The -v flag is necessary for additional visualization.
 Run p4i -w beaucoup.tofino, then open http://localhost:3000/ to inspect. If you're running p4i on a server under CLI, you may need to add the --no-browser flag.
+```
+
+# include 
+
+
+```
+ install/share/p4c/p4include/tofino1_base.p4
 ```
 
 # proj

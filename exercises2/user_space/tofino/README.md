@@ -424,7 +424,16 @@ tofino/pipe/context.json
                 "immediate_fields": []
               }
 ```
-![images](nat1.png)   
+![images](nat1.png)
+
+![images](nat2.png)   
+
+# sram
+
+tofino/pipe/logs/resources.json
+
+![images](nat3.png)   
+
 # proj
 
 [The Cheetah Load Balancer - NSLab @ KTH](https://github.com/cheetahlb)   

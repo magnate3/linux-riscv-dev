@@ -98,8 +98,20 @@ Take up 0 egress stages
     instruction: ingresshdr.tcp_ipv4_checksum.checksum_encode_update_condition_4(action, $DEFAULT)
     instruction: ingresshdr.tcp_ipv6_checksum.checksum_encode_update_condition_5(action, $DEFAULT)
 ```
+```
+apply {
+          if(ig_md.nat64 && hdr.tcp_ipv6_checksum.isValid())
+            {
+        	hdr.tcp_ipv4_checksum.urgent_ptr = hdr.tcp_ipv6_checksum.urgent_ptr;
+ 	        hdr.tcp_ipv6_checksum.setInvalid();
+            }   
+}
+```
 
-
+```
+      - set hdr.tcp_ipv4_checksum.urgent_ptr, hdr.tcp_ipv6_checksum.urgent_ptr
+      - set hdr.tcp_ipv6_checksum.$valid, 0
+```
 # header
 
 
@@ -135,5 +147,36 @@ Take up 0 egress stages
 
         hdr.p40f_result_hdr.p0f_result.result = result;
     }
+```
+
+# bug
+
+
+# bug1
+
+```
+error: This program violates action constraints imposed by Tofino.
+
+  The following field slices must be allocated in the same container as they are present within the same byte of header ingress::hdr.ipv6:
+        ingress::hdr.ipv6.traffic_class
+        ingress::hdr.ipv6.version
+
+  However, the program requires multiple instruction types for the same container in the same action (SwitchIngress.ipv4_translate):
+        The following slice(s) are written using add instruction.
+          ingress::hdr.ipv6.traffic_class
+        The following slice(s) are written using assignment instruction.
+          ingress::hdr.ipv6.version
+
+Therefore, the program requires an action impossible to synthesize for Tofino ALU. Rewrite action SwitchIngress.ipv4_translate to use the same instruction for all the above field slices that must be in the same container.
+
+Number of errors exceeded set maximum of 1
+```
+
+```
+hdr.ipv6.version = zzz;
+hdr.ipv6.traffic_class = xxx;
+……
+hdr.ipv6.hop_limit = yyyy;
+hdr.ipv6.traffic_class = hdr.ipv6.hop_limit +64;
 ```
 

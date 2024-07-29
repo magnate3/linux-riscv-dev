@@ -122,7 +122,7 @@ xvfb-run ./p4i -w /work/tofino/bf-sde-8.9.1/build/pkgsrc/p4-examples/tna_exact_m
 
 ![images](p4i.png)   
 
-没有  /home/ubuntu/.local/p4i/LICENCE文件
+没有  /home/ubuntu/.local/p4i/LICENCE文件   
 
 ```
 root@ubuntux86:# xvfb-run ./p4i --no-sandbox --disable-gpu -h
@@ -298,13 +298,133 @@ Run bf-p4c -g beaucoup.p4 to compile. The -v flag is necessary for additional vi
 Run p4i -w beaucoup.tofino, then open http://localhost:3000/ to inspect. If you're running p4i on a server under CLI, you may need to add the --no-browser flag.
 ```
 
+
+
+
+
 # include 
+
+
 
 
 ```
  install/share/p4c/p4include/tofino1_base.p4
 ```
 
+
+# phv
+
+```
+grep 'ethernet.dst_addr' -rn pipe/logs/pa.results.log
+56:  32-bit PHV 0 (ingress): phv0[31:0] = hdr.ethernet.dst_addr[31:0] (deparsed)
+128:  16-bit PHV 135 (ingress): phv135[15:0] = hdr.ethernet.dst_addr[47:32] (deparsed)
+168:  32-bit PHV 266 (egress): phv266[31:0] = hdr.ethernet.dst_addr[31:0] (tagalong capable) (deparsed)
+230:  16-bit PHV 344 (egress): phv344[15:0] = hdr.ethernet.dst_addr[47:32] (tagalong capable) (deparsed)
+```
+以下两个分布在normal中   
+```
+56:  32-bit PHV 0 (ingress): phv0[31:0] = hdr.ethernet.dst_addr[31:0] (deparsed)
+
+```
+
+# psa
+
+
+```
+// BEGIN:Programmable_blocks
+parser IngressParser<H, M, RESUBM, RECIRCM>(
+    packet_in buffer,
+    out H parsed_hdr,
+    inout M user_meta,
+    in psa_ingress_parser_input_metadata_t istd,
+    in RESUBM resubmit_meta,
+    in RECIRCM recirculate_meta);
+
+control Ingress<H, M>(
+    inout H hdr, inout M user_meta,
+    in    psa_ingress_input_metadata_t  istd,
+    inout psa_ingress_output_metadata_t ostd);
+
+control IngressDeparser<H, M, CI2EM, RESUBM, NM>(
+    packet_out buffer,
+    out CI2EM clone_i2e_meta,
+    out RESUBM resubmit_meta,
+    out NM normal_meta,
+    inout H hdr,
+    in M meta,
+    in psa_ingress_output_metadata_t istd);
+
+parser EgressParser<H, M, NM, CI2EM, CE2EM>(
+    packet_in buffer,
+    out H parsed_hdr,
+    inout M user_meta,
+    in psa_egress_parser_input_metadata_t istd,
+    in NM normal_meta,
+    in CI2EM clone_i2e_meta,
+    in CE2EM clone_e2e_meta);
+
+control Egress<H, M>(
+    inout H hdr, inout M user_meta,
+    in    psa_egress_input_metadata_t  istd,
+    inout psa_egress_output_metadata_t ostd);
+
+control EgressDeparser<H, M, CE2EM, RECIRCM>(
+    packet_out buffer,
+    out CE2EM clone_e2e_meta,
+    out RECIRCM recirculate_meta,
+    inout H hdr,
+    in M meta,
+    in psa_egress_output_metadata_t istd,
+    in psa_egress_deparser_input_metadata_t edstd);
+
+package IngressPipeline<IH, IM, NM, CI2EM, RESUBM, RECIRCM>(
+    IngressParser<IH, IM, RESUBM, RECIRCM> ip,
+    Ingress<IH, IM> ig,
+    IngressDeparser<IH, IM, CI2EM, RESUBM, NM> id);
+
+package EgressPipeline<EH, EM, NM, CI2EM, CE2EM, RECIRCM>(
+    EgressParser<EH, EM, NM, CI2EM, CE2EM> ep,
+    Egress<EH, EM> eg,
+    EgressDeparser<EH, EM, CE2EM, RECIRCM> ed);
+
+package PSA_Switch<IH, IM, EH, EM, NM, CI2EM, CE2EM, RESUBM, RECIRCM> (
+    IngressPipeline<IH, IM, NM, CI2EM, RESUBM, RECIRCM> ingress,
+    PacketReplicationEngine pre,
+    EgressPipeline<EH, EM, NM, CI2EM, CE2EM, RECIRCM> egress,
+    BufferingQueueingEngine bqe);
+```
+
+# dump
+
+
+```
+dump(table=True)
+dump(table=True)
+```
+
+# vliw
+tofino/pipe/context.json   
+
+```
+{
+                "action_name": "SwitchIngress.ipv4_translate",
+                "action_handle": 536870913,
+                "table_name": "--END_OF_PIPELINE--",
+                "next_table": 0,
+                "next_table_full": 16,
+                "vliw_instruction": 1,
+                "vliw_instruction_full": 65,
+                "next_tables": [
+                  {
+                    "next_table_name": "tbl_tofinonat64l454",
+                    "next_table_logical_id": 0,
+                    "next_table_stage_no": 1
+                  }
+                ],
+                "immediate_fields": []
+              }
+```
+![images](nat1.png)   
 # proj
 
 [The Cheetah Load Balancer - NSLab @ KTH](https://github.com/cheetahlb)   

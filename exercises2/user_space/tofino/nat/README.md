@@ -74,6 +74,31 @@ Number of errors exceeded set maximum of 1
 
 ```
 
+# time
+
+```
+root@localhost:/sde/bf-sde-8.9.1/p4studio/build-test/nat64# echo "Take up `cat build/tofino-nat64/tofino/pipe/tofino-nat64.bfa | grep -c -E "stage.+ingress"` ingress stages"
+Take up 5 ingress stages
+root@localhost:/sde/bf-sde-8.9.1/p4studio/build-test/nat64# echo "Take up `cat build/tofino-nat64/tofino/pipe/tofino-nat64.bfa |   grep -c -E "stage.+egress"` egress stages"
+Take up 0 egress stages
+```
+
+#  instruction
+
+
+```
+/sde/bf-sde-8.9.1/p4studio/build-test/nat64# echo "`cat build/tofino-nat64/tofino/pipe/tofino-nat64.bfa |   grep  -E "instruction.+action"`"
+    instruction: ipv4_lpm_0(action, $DEFAULT)
+    instruction: ipv6_lpm_0(action, $DEFAULT)
+    instruction: tbl_tofinonat64l456$tind(action, $DEFAULT)
+    instruction: tbl_tofinonat64l448$tind(action, $DEFAULT)
+    instruction: ingress_reset_invalidated_checksum_fields_1$tind(action, $DEFAULT)
+    instruction: ingress_reset_invalidated_checksum_fields_0$tind(action, $DEFAULT)
+    instruction: ingresshdr.ipv4.hdr_checksum_encode_update_condition_3(action, $DEFAULT)
+    instruction: ingresshdr.tcp_ipv4_checksum.checksum_encode_update_condition_4(action, $DEFAULT)
+    instruction: ingresshdr.tcp_ipv6_checksum.checksum_encode_update_condition_5(action, $DEFAULT)
+```
+
 
 # header
 
@@ -111,3 +136,4 @@ Number of errors exceeded set maximum of 1
         hdr.p40f_result_hdr.p0f_result.result = result;
     }
 ```
+

@@ -309,6 +309,73 @@ error: : source of modify_field invalid
         ig_md.operand4 = ig_md.operand2 * ig_md.operand3;
 ```
 
+改成如下：
+
+```
+struct metadata_t {
+    bit<16>  operand1;
+    bit<16>  operand2;
+    bit<16>  operand3;
+    bit<16>  operand4;
+    bit<16>  operand5;
+    bit<16>  operand6;
+    bit<16>  operand7;
+    bit<16>  operand8;
+}
+```
+
+```
+    action fib_action1() {
+        ig_md.operand1 = hdr.ipv4.total_len*2;
+    }
+    action fib_action2() {
+        ig_md.operand2 = hdr.ipv4.total_len +4;
+    }
+    action fib_action3() {
+        ig_md.operand3 = ig_md.operand2 * 2;
+        //ig_md.operand3 = ig_md.operand2 * ig_md.operand1;
+    }
+    action fib_action4() {
+        ig_md.operand4 = ig_md.operand3 * 2;
+        //ig_md.operand4 = ig_md.operand2 * ig_md.operand3;
+    }
+    action fib_action5() {
+        ig_md.operand5 = ig_md.operand4 * 2;
+        //ig_md.operand5 = ig_md.operand3 * ig_md.operand4;
+    }
+    action fib_action6() {
+        ig_md.operand6 = ig_md.operand5 * 2;
+        //ig_md.operand6 = ig_md.operand4 * ig_md.operand5;
+    }
+    action fib_action7() {
+        ig_md.operand7 = ig_md.operand6 * 2;
+        //ig_md.operand7 = ig_md.operand5 * ig_md.operand6;
+    }
+    action fib_action8() {
+        ig_md.operand8 = ig_md.operand7 * 2;
+        //ig_md.operand8 = ig_md.operand6 * ig_md.operand7;
+    }
+        table ipv4_lpm {
+        key = {
+            hdr.ipv4.dst_addr: exact;
+        }
+        actions = {
+            ipv4_translate;
+            register_action;
+            fib_action1;
+            fib_action2;
+            fib_action3;
+            fib_action4;
+            fib_action5;
+            fib_action6;
+            fib_action7;
+            fib_action8;
+             @defaultonly NoAction;
+        }
+        size = 1024;
+        const default_action = NoAction();
+    }
+```
 
 
 

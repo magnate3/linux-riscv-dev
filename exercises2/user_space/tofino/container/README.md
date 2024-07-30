@@ -130,7 +130,7 @@ Number of errors exceeded set maximum of 1
 ```
 
 # bug3
-````
+```
 @pa_container_size("ingress", "hdr.ip6.hop_limit", 8)
 @pa_container_size("ingress", "hdr.ip4.ttl", 8)
 ```

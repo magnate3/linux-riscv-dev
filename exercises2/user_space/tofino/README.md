@@ -8,7 +8,7 @@
 
 ## tofino
 
-3. **Bringing up ports and testing the program**
+**Bringing up ports and testing the program**
 
 The first thing you probably want to do is bring up some ports. This can be done in the control script, but you can also do it manually from bfshell > ucli > pm:
 
@@ -176,8 +176,6 @@ docker run --rm -it -v /work/tofino:/sde --workdir /sde --cap-add=SYS_ADMIN --ne
 docker run --rm -it -v /work/tofino:/sde --workdir /sde --cap-add=SYS_ADMIN --net=host  --cap-add=NET_ADMIN -p 9222:9222 socrateslee/xvfb-chrome --xvfb-run --remote-debugging-port=9222  --disable-gpu
 ```
 
-export HTTP_PROXY=http://127.0.0.1:8123 
-Environment="HTTPS_PROXY=http://127.0.0.1:8123"
 #   Print out Tofino resource utilization statistics
 
 **Pipeline resources:**
@@ -298,16 +296,13 @@ make && make install
 
 
 
-```Text   
-Run bf-p4c -g beaucoup.p4 to compile. The -v flag is necessary for additional visualization.
-Run p4i -w beaucoup.tofino, then open http://localhost:3000/ to inspect. If you're running p4i on a server under CLI, you may need to add the --no-browser flag.
-```
+ 
 
 
 
 
 
-# include 
+## 编译的include文件 
 
 
 
@@ -316,23 +311,7 @@ Run p4i -w beaucoup.tofino, then open http://localhost:3000/ to inspect. If you'
  install/share/p4c/p4include/tofino1_base.p4
 ```
 
-
-# phv
-
-```
-grep 'ethernet.dst_addr' -rn pipe/logs/pa.results.log
-56:  32-bit PHV 0 (ingress): phv0[31:0] = hdr.ethernet.dst_addr[31:0] (deparsed)
-128:  16-bit PHV 135 (ingress): phv135[15:0] = hdr.ethernet.dst_addr[47:32] (deparsed)
-168:  32-bit PHV 266 (egress): phv266[31:0] = hdr.ethernet.dst_addr[31:0] (tagalong capable) (deparsed)
-230:  16-bit PHV 344 (egress): phv344[15:0] = hdr.ethernet.dst_addr[47:32] (tagalong capable) (deparsed)
-```
-以下两个分布在normal中   
-```
-56:  32-bit PHV 0 (ingress): phv0[31:0] = hdr.ethernet.dst_addr[31:0] (deparsed)
-
-```
-
-# psa
+### psa
 
 
 ```
@@ -398,6 +377,24 @@ package PSA_Switch<IH, IM, EH, EM, NM, CI2EM, CE2EM, RESUBM, RECIRCM> (
     EgressPipeline<EH, EM, NM, CI2EM, CE2EM, RECIRCM> egress,
     BufferingQueueingEngine bqe);
 ```
+
+
+# phv
+
+```
+grep 'ethernet.dst_addr' -rn pipe/logs/pa.results.log
+56:  32-bit PHV 0 (ingress): phv0[31:0] = hdr.ethernet.dst_addr[31:0] (deparsed)
+128:  16-bit PHV 135 (ingress): phv135[15:0] = hdr.ethernet.dst_addr[47:32] (deparsed)
+168:  32-bit PHV 266 (egress): phv266[31:0] = hdr.ethernet.dst_addr[31:0] (tagalong capable) (deparsed)
+230:  16-bit PHV 344 (egress): phv344[15:0] = hdr.ethernet.dst_addr[47:32] (tagalong capable) (deparsed)
+```
+以下两个分布在normal中   
+```
+56:  32-bit PHV 0 (ingress): phv0[31:0] = hdr.ethernet.dst_addr[31:0] (deparsed)
+
+```
+
+
 
 # dump
 

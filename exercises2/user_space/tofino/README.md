@@ -93,7 +93,12 @@ At this point, once the ethernet autonegotiation completes the OPR column for an
 
 Once you have a server connected to a port that's UP, you can test the program: send a packet into the switch from the server, the P4 program should send a copy of the exact same packet back. You should see the frames RX and frames TX counters increase in the CLI. 
 
-
+```
+bf-sde.pm> port-add -/-  10G NONE
+bf-sde.pm> show -a   
+bf-sde.pm> an-set -/- 2
+bf-sde.pm> port-enb -/-
+```
 
 ## docker 
 ```
@@ -439,7 +444,70 @@ tofino/pipe/logs/resources.json
 ```
 action ipv6_lpm_0$action_data:
 ```
+# Match Types
 
+In the case of key fields, these are qualified by their match type. So far
+`LongestPrefixMatch` (LPM), `Ternary` and `Exact` are defined. These match types
+encapsulate the field to which they refer. This was a design decision to have 
+generic field objects decoupled from whether or not they were part of a key.
+
+
+
+## Exact
+
+This match type is exactly what it says on the tin. It will match and only match
+exactly the field value which it encapsulates.
+
+Example:
+
+```python
+mac_exact = Exact(match=MacAddress('ff:ff:ff:ff:ff:ff'))
+```
+
+## Longest Prefix Match
+
+A longest prefix match is where a field has a value and a number representing 
+the number of leading bits the match engine is to consider. The "longest" part
+means that, when considering a match, the engine will select the most specific
+value, i.e, the field with the largest amount of matching leading bits.
+
+If we consider LPM within the context of an IP address, we could consider the
+case of two fields which overlap each other:
+
+1. `192.168.16.0/24`
+2. `192.168.0.0/16`
+
+> Since any value beyond the prefix will not be considered in the match, it
+> doesn't matter what their values are, and convention is to set them to zero.
+
+An address of `192.168.0.1` will match the second rule, and `192.168.16.57`
+would match the first.
+
+Since the gRPC message for an LPM contain both the value and the prefix, no
+special processing is required other than to select the correct object in any
+request and populate it's fields.
+
+Example:
+
+```python
+ipv4_lpm = LongestPrefixMatch(match=IPv4Address('192.168.0.0'), prefix=24)
+```
+
+## Ternary
+
+Ternary fields match on a value and a mask. The mask bits indicate to the engine
+which bits are to be considered.
+
+The mask is specified as value with the exact type of the match value.
+
+In the following example, only the first and third octets are considered in the
+match.
+
+Example:
+
+```python
+ipv4_ternary = Ternary(match=IPv4Address('192.168.0.1'), mask=IPv4Address('255.0.255.0'))
+```
 
 
 # proj

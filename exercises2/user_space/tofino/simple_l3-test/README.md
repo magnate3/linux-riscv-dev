@@ -150,3 +150,19 @@ bf-sde> snap-capture-get -h 0xff581 -p 3
 
 bf-sde> 
 ```
+
+## 
+
+
+```
+bf-sde>  pipe_mgr
+bf-sde.pipe_mgr> snap-hdl-dump  -h 0xff581 -d 0
+
+ --- Dumping snapshot hdls for dev 0 ---  
+Num of Handles on dev 0 is 1 
+Hdl 0xff581 --> dev 0, pipe 65535, start_stage 0, oper-start-stage 0, end_stage 11, dir ingress 
+
+bf-sde.pipe_mgr> 
+```
+
+![images](test3.png)  

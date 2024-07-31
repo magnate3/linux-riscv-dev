@@ -1,6 +1,15 @@
+# 交换机配置
 
+```
+bf-sde.pm> port-add -/-  10G NONE
+bf-sde.pm> show -a   
+bf-sde.pm> an-set -/- 2
+bf-sde.pm> port-enb -/-
+```
 
+![images](test1.png)   
 
+# 流表配置   
 ```
 bfrt.simple_l3.pipe.Ingress.ipv4_lpm> add_with_l3_switch(ip_address('10.10.15.134'), 32, port=160, new_mac_da=0x74a4b500eee5)
 

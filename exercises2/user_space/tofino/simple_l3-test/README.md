@@ -95,6 +95,7 @@ snap-capture-get -h 0x581
 pipe_mgr snap-delete -h 0x581 
 ```
 
++ 进入ucli   
 ```
 bf-sde> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 0
 Snapshot created with handle 0xff581 
@@ -151,7 +152,7 @@ bf-sde> snap-capture-get -h 0xff581 -p 3
 bf-sde> 
 ```
 
-## 
+## pipe_mgr
 
 
 ```

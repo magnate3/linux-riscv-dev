@@ -102,9 +102,9 @@ Snapshot created with handle 0xff581
 bf-sde> snap-ig-mode-set -h 0xff581 -m 1
 2024-07-31 19:08:29.988417 BF_PIPE ERROR - Tofino supports only "ingress" trigger mode
 Snapshot ingress trigger mode set to 1 
-bf-sde> snap-trig-add -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87  -m 0x0
+bf-sde> snap-trig-add -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87  -m 0xFFFFFFFF
 
-Trigger: Adding Field hdr_ipv4_dst_addr, value 0xa0a0f87, mask 0x0
+Trigger: Adding Field hdr_ipv4_dst_addr, value 0xa0a0f87, mask 0xFFFFFFFF
 Success in adding field hdr_ipv4_dst_addr to trigger 
 bf-sde> snap-state-set -h 0xff581 -e 1
 Snapshot state set to 1 
@@ -150,6 +150,34 @@ bf-sde> snap-capture-get -h 0xff581 -p 3
 
 
 bf-sde> 
+```
+
++  only stage1   
+```
+bf-sde.pipe_mgr> snap-capture-get -h 0xff581 -p 1 -s 1
+
+Snapshot capture for handle 0xff581 
+Dumping snapshot capture for dev 0, pipe 1, start-stage 0, end-stage 11, dir ingress 
+-------------- Snapshot Capture for stage 1, direction Ingress ----------------
+```
+
++ 以太网匹配    
+
+```
+
+bf-sde> snap-trig-add -h 0xff581 -n hdr_ethernet_ether_type -v 0x86DD   -m 0xffff
+```
+
++ trigger删除   
+
+```
+snap-trig-del -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87  -m 0x0
+```
+
++ ipv6   
+
+```
+snap-trig-add -h 0xff581 -n hdr_ipv6_dst_addr -v 0x0x20080000000000000000000000000005  -m 0x0
 ```
 
 ## pipe_mgr

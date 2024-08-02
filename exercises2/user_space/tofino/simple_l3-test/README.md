@@ -302,3 +302,25 @@ control Ingress(
     }
 }
 ```
+
+
+```
+bf-sde.pm> show -p 2/3 
+-----+----+---+----+-------+----+--+--+---+---+---+--------+----------------+----------------+-
+PORT |MAC |D_P|P/PT|SPEED  |FEC |AN|KR|RDY|ADM|OPR|LPBK    |FRAMES RX       |FRAMES TX       |E
+-----+----+---+----+-------+----+--+--+---+---+---+--------+----------------+----------------+-
+2/3  |31/3|187|3/59|10G    |NONE|Ds|Au|NO |ENB|DWN|  NONE  |               0|               0| 
+bf-sde.pm> show -p 2/3 -d
+================================================================================
+             2/3 : Port Identifier
+              NO : is port internal
+            31/3 : MAC
+             187 : Dev Port
+            3/59 : Pipe/Port 
+         10G     : Speed
+            NONE : FEC
+             NO  : Ready for Bring Up
+              NO : Autoneg eligibility
+   FORCE_DISABLE : AN policy set
+             ENB : Admin State
+```

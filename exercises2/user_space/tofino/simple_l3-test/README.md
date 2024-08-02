@@ -73,7 +73,10 @@ bfrt.simple_l3.pipe.snapshot>
 
 能够在交换机控制面装多个”钩子“，并且打印符合”钩子“要求的第一个数据包经 过的时候的stage信息；  
 进入ucli    
-
+创建快照并获取它的句柄。在这种情况下。我们创造
+   设备 0 ( -d 0 )、管道 0 ( -p 0 ) 上的快照，阶段 0 到 5 ( -s 0 -e 5 )，在入口管道中（将其设置为
+   -i 0 用于入口，或至 -i 1 用于出口）：
+   
 snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 0
 -s 0 -e 11表示从第0个stage到第11个stage的信息
 snap-ig-mode-set -h 0xff581 -m 1
@@ -122,6 +125,25 @@ bf-sde> snap-capture-get -h 0xff581 -p 3
 
 
 bf-sde> 
+```
+
+**出口**   
+
+```
+bf-sde> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 1
+Snapshot created with handle 0xff583 
+bf-sde> snap-ig-mode-set -h 0xff583 -m 1
+2024-08-02 14:39:58.188764 BF_PIPE ERROR - Tofino supports only "ingress" trigger mode
+Snapshot ingress trigger mode set to 1 
+```
+
+```
+bf-sde> snap-trig-add -h 0xff583 -n hdr_ethernet_ether_type -v 0x800   -m 0xffff
+
+2024-08-02 14:41:19.510515 BF_PIPE ERROR - Field name hdr_ethernet_ether_type does not exist or not all trigger fields exist in a stage 
+
+Trigger: Adding Field hdr_ethernet_ether_type, value 0x800, mask 0xffff
+Failed to add field hdr_ethernet_ether_type to trigger
 ```
 
 删除   
@@ -180,6 +202,26 @@ snap-trig-del -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87  -m 0x0
 snap-trig-add -h 0xff581 -n hdr_ipv6_dst_addr -v 0x0x20080000000000000000000000000005  -m 0x0
 ```
 
+
++ traffic_mgr   
+
+```
+bf-sde.pipe_mgr.pkt_path_counter> ..
+bf-sde.pipe_mgr> ..
+```
+
+```
+bf-sde.traffic_mgr.clr_counter> ..
+bf-sde.traffic_mgr> 
+
+bf-sde.pipe_mgr> pkt_path_counter 
+bf-sde.pipe_mgr.pkt_path_counter> ?
+```
+
+```
+eprsr  -d 0  -p 1 -m 168
+```
+
 ## pipe_mgr
 
 
@@ -194,4 +236,69 @@ Hdl 0xff581 --> dev 0, pipe 65535, start_stage 0, oper-start-stage 0, end_stage 
 bf-sde.pipe_mgr> 
 ```
 
+```
+bf-sde> pipe_mgr 
+
+bf-sde.pipe_mgr> tbl -d 0
+
+Match-Action Tables:
+
+-----------------------------------------------------------------------|----------|-----|--------|-----|----|---|---|---|---|----|----
+Name                                                                   |Handle    |Type |Entries |Keysz|Stgs|Adt|Sel|Sta|Met|Sful|Prof
+-----------------------------------------------------------------------|----------|-----|--------|-----|----|---|---|---|---|----|----
+SwitchIngressParser.$PORT_METADATA                                     |0x1000001 |exm  |288     |0    |0   |NA |NA |NA |NA |NA  |0   
+SwitchIngress.ipv4_lpm                                                 |0x1000002 |exm  |1024    |0    |1   |dir|NA |NA |NA |NA  |0   
+SwitchIngress.ipv6_lpm                                                 |0x1000003 |exm  |1024    |0    |1   |dir|NA |NA |NA |NA  |0   
+tbl_tofino_nat64l424                                                   |0x1000004 |term |0       |0    |1   |NA |NA |NA |NA |NA  |0   
+tbl_tofino_nat64l415                                                   |0x1000005 |term |0       |0    
+```
+* 对于精确匹配表 (exm)。采用 exm_tbl_mgr 上下文。   
+* 对于三元匹配表 (tcam)。使用 tcam_tbl 上下文。   
+
+tbl_info -d 0 -h 0x1000003    
+
+```
+
+bf-sde.pipe_mgr> exm_tbl_mgr
+bf-sde.pipe_mgr.exm_tbl_mgr> tbl_info -d 0 -h 0x1000003
+-------------------------------------------------
+Exact match table info for table 0x1000003 device 0
+-------------------------------------------------
+```
+entry_info -d 0 -h 0x1000003  -e 0x2    
+```
+bf-sde.pipe_mgr.exm_tbl_mgr> entry_info -d 0 -h 0x1000003  -e 0x2
+Info for entry handle 2 for exact match table 16777219
+        Match Spec :
+        -----------------
+        hdr_ipv6_dst_addr :
+                Value: 20  08  00  00  00  00  00  00  00  00  00  00  00  00  00  05  
+                Mask:  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  ff  
+```
+
 ![images](test3.png)  
+
+
+## 丢包
+
+
+```
+control Ingress(
+    /* User */
+    inout my_ingress_headers_t                       hdr,
+    inout my_ingress_metadata_t                      meta,
+    /* Intrinsic */
+    in    ingress_intrinsic_metadata_t               ig_intr_md,
+    in    ingress_intrinsic_metadata_from_parser_t   ig_prsr_md,
+    inout ingress_intrinsic_metadata_for_deparser_t  ig_dprsr_md,
+    inout ingress_intrinsic_metadata_for_tm_t        ig_tm_md)
+{
+    action send(PortId_t port) {
+        ig_tm_md.ucast_egress_port = port;
+    }
+
+    action drop() {
+        ig_dprsr_md.drop_ctl = 1;
+    }
+}
+```

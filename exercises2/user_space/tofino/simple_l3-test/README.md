@@ -278,6 +278,38 @@ Info for entry handle 2 for exact match table 16777219
 
 ![images](test3.png)  
 
++ pkt_path_counter
+```
+bf-sde> pkt_path_counter
+bf-sde.pipe_mgr.pkt_path_counter>  pipe_cnt -p 1
+idprsr-counter                                   Count                         Register Name       
+_________________________________________________________________________________
+IDPRSR: header too long                      0                             hdr_too_long_i                
+IDPRSR: Valid PHV into Deparser              124                           cnt_i_phv                     
+IDPRSR: Valid TPHV into Deparser             124                           cnt_i_tphv                    
+IDPRSR: Packets into Deparser                55                            cnt_i_read                    
+IDPRSR: Packets discarded                    69                            cnt_i_discard                 
+IDPRSR: Packets resubmitted                  0                             cnt_i_resubmit                
+IDPRSR: Learn Counter due to packets         0                             cnt_i_learn                   
+IDPRSR: Packets processed in output phase    55                            cnt_pkts   
+```
+
+
+```
+IDPRSR: Errored packets to TM                0                             i_egr_pkt_err                 
+IDPRSR: Errored packets from Ibuf to iCTM    0                             i_ctm_pkt_err                 
+IDPRSR: Packets sent to TM                   55                            i_fwd_pkts                    
+IDPRSR: Packets discarded at TM interface    0                             i_disc_pkts                   
+IDPRSR: Packets sent to Ingress mirror buffer0                             i_mirr_pkts
+```
+
+```
+EDPRSR: Errored packets from deprsr to Ebuf  0                             e_egr_pkt_err                 
+EDPRSR: Errored packets from Ebuf to eCTM    0                             e_ctm_pkt_err                 
+EDPRSR: Packets sent out of Egress Deparser  0                             e_fwd_pkts                    
+EDPRSR: Packets discarded                    10                            e_disc_pkts                   
+EDPRSR: Packets sent to Egress mirror buffer 0                             e_mirr_pkts 
+```
 
 ## 丢包
 
@@ -324,3 +356,10 @@ bf-sde.pm> show -p 2/3 -d
    FORCE_DISABLE : AN policy set
              ENB : Admin State
 ```
+
+![images](test4.png)  
+
+
+正常工作   
+
+![images](test5.png)  

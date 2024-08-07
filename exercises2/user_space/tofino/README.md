@@ -100,6 +100,14 @@ bf-sde.pm> an-set -/- 2
 bf-sde.pm> port-enb -/-
 ```
 
+```
+bf-sde.pm> port-add 5/-  40G NONE
+bf-sde.pm> port-add 7/-  40G NONE
+bf-sde.pm> an-set -/- 2
+bf-sde.pm> port-enb -/-
+bf-sde.pm>
+```
+
 ## docker 
 ```
 docker export -o  p4i-docker.tar 1f43ce1c21ba 
@@ -505,7 +513,22 @@ Example:
 ```python
 ipv4_ternary = Ternary(match=IPv4Address('192.168.0.1'), mask=IPv4Address('255.0.255.0'))
 ```
+# piplines
 
+```
+bf-sde> sku
+SKU : Tofino1 32D (B0)
+bf-sde> 
+```
+
+```
+bf-sde.pipe_mgr>  pipe -d 0
+Pipeline 0:
+    Logical pipe 0 maps to Physical pipe 1
+Pipeline 1:
+    Logical pipe 1 maps to Physical pipe 3
+bf-sde.pipe_mgr> 
+```
 
 # proj
 

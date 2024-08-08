@@ -530,6 +530,45 @@ Pipeline 1:
 bf-sde.pipe_mgr> 
 ```
 
+# run
+
+```
+ bf_switchd  --install-dir /sde/bf-sde-9.7.1/install --conf-file /sde/bf-sde-9.7.1/install/share/p4/targets/tofino/tofino_nat64.conf --init-mode=cold --status-port 7777
+```
+
+```
+# sudo ./${PROG} --install-dir $SDE_INSTALL --conf-file $SDE_INSTALL/share/p4/targets/tofino/$PROGNAME.conf
+
+# start the bf_switchd included with sde
+function start_switchd() {
+    if [ "$2" = "HW" ]; then
+        local CMD="sudo env SDE=$SDE SDE_INSTALL=$SDE_INSTALL PATH=$SDE_INSTALL/bin:$PATH LD_LIBRARY_PATH=/usr/local/lib:$SDE_INSTALL/lib:$LD_LIBRARY_PATH $SDE_INSTALL/bin/bf_switchd --background --status-port 7777 --install-dir $SDE_INSTALL --conf-file $1 --kernel-pkt"
+    else
+        local CMD="sudo env SDE=$SDE SDE_INSTALL=$SDE_INSTALL PATH=$SDE_INSTALL/bin:$PATH LD_LIBRARY_PATH=/usr/local/lib:$SDE_INSTALL/lib:$LD_LIBRARY_PATH $SDE_INSTALL/bin/bf_switchd --background --status-port 7777 --install-dir $SDE_INSTALL --conf-file $1"
+    fi
+
+    # local CMD="sudo env SDE=$SDE SDE_INSTALL=$SDE_INSTALL PATH=$SDE_INSTALL/bin:$PATH LD_LIBRARY_PATH=/usr/local/lib:$SDE_INSTALL/lib:$LD_LIBRARY_PATH $SDE_INSTALL/bin/bf_switchd --background --status-port 7777 --install-dir $SDE_INSTALL --conf-file $1 --kernel-pkt"
+    # local CMD="sudo $SDE_INSTALL/bin/bf_switchd --install-dir $SDE_INSTALL --conf-file $1"
+    local SIG="bf_switchd: server started - listening on port 9999"
+    echo "SWITCHD COMMAND: $CMD"
+    cd_launch_and_wait "$LOG_DIR" "$CMD" "$SIG" "SWITCHD_MGR"
+}
+```
+
+```
+netstat -pan | grep bf_switchd
+tcp        0      0 0.0.0.0:9999            0.0.0.0:*               LISTEN      6462/bf_switchd     
+tcp        0      0 0.0.0.0:7777            0.0.0.0:*               LISTEN      6462/bf_switchd     
+tcp        0      0 127.0.0.1:48232         127.0.0.1:9999          ESTABLISHED 6462/bf_switchd     
+```
+
++ 9.7.1 版本 用-r 代替--background       
+
+```
+ ./run_switchd.sh  -p  tofino_nat64 -r startup.log 
+```
+
+
 # proj
 
 [The Cheetah Load Balancer - NSLab @ KTH](https://github.com/cheetahlb)   

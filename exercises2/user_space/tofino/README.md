@@ -568,6 +568,43 @@ tcp        0      0 127.0.0.1:48232         127.0.0.1:9999          ESTABLISHED 
  ./run_switchd.sh  -p  tofino_nat64 -r startup.log 
 ```
 
+#  qsfp
+
+
+```
+bf-sde> bf_pltfm
+bf-sde.bf_pltfm> qsfp           
+bf-sde.bf_pltfm.qsfp> module-show 7
+Module memory dump, port 7
+Module type identifier         = QSFP+ (0x0d)
+Number of lanes                = 4
+
+Vendor name                    = Intel Corp      
+Vendor P/N                     = FTL410QE2C-IT   
+Vendor rev                     = A 
+Vendor S/N                     = X01A4W1         
+Date & lot code                = 180720  
+Vendor OUI                     = 00-1B-21
+
+Memory map format              = SFF-8636
+Memory map spec rev            = Not specified
+Flat/paged memory              = Paged
+
+Media type                     = ---
+Media side connector           = MPO 1x12
+Max supported OM2 fiber length = 30 m
+Max supported OM3 fiber length = 100 m
+
+
+## SUPPORTED SPECIFICATIONS
+-------------- Host interface --------------
+Standard supported                      Lns 
+XLPPI            4 X 10.3125Gbd NRZ     4   
+XLPPI            4 X 10.3125Gbd NRZ     1   
+
+bf-sde.bf_pltfm.qsfp>
+```
+
 
 # proj
 

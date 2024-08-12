@@ -99,20 +99,30 @@ pipe_mgr snap-delete -h 0x581
 ```
 
 ## ingress    
-
+```
+Usage: -d <dev_id> -p <pipe_id: all-pipes=0xFFFF> -s <start_stage> -e <end_stage> -i <direction 0:ingress 1:egress>
+```
 + 方法一  进入pipe_mgr  
 ```
+
+bfshell> ucli 
+Cannot read termcap database;
+using dumb terminal settings.
+bf-sde> pip
+bf-sde> pipe_mgr
 bf-sde.pipe_mgr> 
 bf-sde.pipe_mgr> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 0
 Snapshot created with handle 0xff581 
+bf-sde.pipe_mgr> snap-ig-mode-set -h 0xff581 -m 1
+Snapshot ingress trigger mode set to 1 
+
 bf-sde.pipe_mgr>  snap-trig-add -h 0xff581 -n hdr_ethernet_ether_type -v 0x800   -m 0xffff 
 
 Trigger: Adding Field hdr_ethernet_ether_type, value 0x800, mask 0xffff
 Success in adding field hdr_ethernet_ether_type to trigger 
 bf-sde.pipe_mgr> snap-state-set -h 0xff581 -e 1
 Snapshot state set to 1 
-bf-sde.pipe_mgr> snap-ig-mode-set -h 0xff581 -m 1
-Snapshot ingress trigger mode set to 1 
+bf-sde.pipe_mgr> 
 bf-sde.pipe_mgr> snap-capture-get -h 0xff581 -p 0
 
 Snapshot capture for handle 0xff581 
@@ -124,8 +134,24 @@ bf-sde.pipe_mgr>
 
 ```
 bf-sde.pipe_mgr> snap-trig-clr -h 0xff581    
-bf-sde.pipe_mgr> snap-trig-add -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87 -v 0x800   -m 0xffff
+bf-sde.pipe_mgr> snap-trig-add -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F86   -m 0x0
 ```
+![images](test6.png)  
+
+```
+bf-sde.pipe_mgr> snap-create -d 0 -p 0xFFFF -s 0 -e 1 -i 0 
+Snapshot created with handle 0xff081 
+bf-sde.pipe_mgr> snap-ig-mode-set -h 0xff081 -m 1
+Snapshot ingress trigger mode set to 1 
+bf-sde.pipe_mgr> snap-state-set -h 0xff081 -e 1
+Snapshot state set to 1 
+bf-sde.pipe_mgr> snap-capture-get -h 0xff081 -p 1  -s 0 
+```
+
+```
+snap-trig-add -h 0xff081 -n hdr_ipv6_dst_addr -v 0x20080000000000000000000000000005  -m 0x0
+```
+
 
 + 方法二  进入ucli   
 ```
@@ -219,7 +245,7 @@ snap-trig-del -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87  -m 0x0
 + ipv6   
 
 ```
-snap-trig-add -h 0xff581 -n hdr_ipv6_dst_addr -v 0x0x20080000000000000000000000000005  -m 0x0
+snap-trig-add -h 0xff581 -n hdr_ipv6_dst_addr -v 0x20080000000000000000000000000005  -m 0x0
 ```
 
 

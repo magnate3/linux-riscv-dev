@@ -98,7 +98,36 @@ snap-capture-get -h 0x581
 pipe_mgr snap-delete -h 0x581 
 ```
 
-+ 进入ucli   
+## ingress    
+
++ 方法一  进入pipe_mgr  
+```
+bf-sde.pipe_mgr> 
+bf-sde.pipe_mgr> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 0
+Snapshot created with handle 0xff581 
+bf-sde.pipe_mgr>  snap-trig-add -h 0xff581 -n hdr_ethernet_ether_type -v 0x800   -m 0xffff 
+
+Trigger: Adding Field hdr_ethernet_ether_type, value 0x800, mask 0xffff
+Success in adding field hdr_ethernet_ether_type to trigger 
+bf-sde.pipe_mgr> snap-state-set -h 0xff581 -e 1
+Snapshot state set to 1 
+bf-sde.pipe_mgr> snap-ig-mode-set -h 0xff581 -m 1
+Snapshot ingress trigger mode set to 1 
+bf-sde.pipe_mgr> snap-capture-get -h 0xff581 -p 0
+
+Snapshot capture for handle 0xff581 
+Dumping snapshot capture for dev 0, pipe 0, start-stage 0, end-stage 11, dir ingress 
+
+bf-sde.pipe_mgr> 
+```
+
+
+```
+bf-sde.pipe_mgr> snap-trig-clr -h 0xff581    
+bf-sde.pipe_mgr> snap-trig-add -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F87 -v 0x800   -m 0xffff
+```
+
++ 方法二  进入ucli   
 ```
 bf-sde> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 0
 Snapshot created with handle 0xff581 
@@ -127,46 +156,15 @@ bf-sde> snap-capture-get -h 0xff581 -p 3
 bf-sde> 
 ```
 
-**出口**   
+某个stage     
 
 ```
-bf-sde> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 1
-Snapshot created with handle 0xff583 
-bf-sde> snap-ig-mode-set -h 0xff583 -m 1
-2024-08-02 14:39:58.188764 BF_PIPE ERROR - Tofino supports only "ingress" trigger mode
-Snapshot ingress trigger mode set to 1 
+bf-sde>  snap-capture-get -h 0xff583 -p 1 -s 1
 ```
 
-```
-bf-sde> snap-trig-add -h 0xff583 -n hdr_ethernet_ether_type -v 0x800   -m 0xffff
 
-2024-08-02 14:41:19.510515 BF_PIPE ERROR - Field name hdr_ethernet_ether_type does not exist or not all trigger fields exist in a stage 
 
-Trigger: Adding Field hdr_ethernet_ether_type, value 0x800, mask 0xffff
-Failed to add field hdr_ethernet_ether_type to trigger
-```
 
-```
-bf-sde.pipe_mgr> snap-ig-mode-set -h 0xff583 -m 1
-2024-08-02 17:14:52.540391 BF_PIPE ERROR - Tofino supports only "ingress" trigger mode
-Snapshot ingress trigger mode set to 1 
-bf-sde.pipe_mgr> snap-state-set -h 0xff583 -e 1  
-Snapshot state set to 1 
-bf-sde.pipe_mgr> snap-capture-get -h 0xff583 -p 1 -s 2     
-
-Snapshot capture for handle 0xff583 
-Dumping snapshot capture for dev 0, pipe 1, start-stage 0, end-stage 11, dir egress 
-
-bf-sde.pipe_mgr> snap-capture-get -h 0xff583 -p 1 -s 2
-
-Snapshot capture for handle 0xff583 
-Dumping snapshot capture for dev 0, pipe 1, start-stage 0, end-stage 11, dir egress 
--------------- Snapshot Capture for stage 2, direction Egress ----------------
-Snapshot trigger type: 
-    Prev stage  : Yes 
-    Local stage : No 
-    Timer       : No 
-```
 
 删除   
 ```
@@ -242,6 +240,48 @@ bf-sde.pipe_mgr.pkt_path_counter> ?
 
 ```
 eprsr  -d 0  -p 1 -m 168
+```
+
+
+## egress  
+
+```
+bf-sde> snap-create -d 0 -p 0xFFFF -s 0 -e 11 -i 1
+Snapshot created with handle 0xff583 
+bf-sde> snap-ig-mode-set -h 0xff583 -m 1
+2024-08-02 14:39:58.188764 BF_PIPE ERROR - Tofino supports only "ingress" trigger mode
+Snapshot ingress trigger mode set to 1 
+```
+
+```
+bf-sde> snap-trig-add -h 0xff583 -n hdr_ethernet_ether_type -v 0x800   -m 0xffff
+
+2024-08-02 14:41:19.510515 BF_PIPE ERROR - Field name hdr_ethernet_ether_type does not exist or not all trigger fields exist in a stage 
+
+Trigger: Adding Field hdr_ethernet_ether_type, value 0x800, mask 0xffff
+Failed to add field hdr_ethernet_ether_type to trigger
+```
+
+```
+bf-sde.pipe_mgr> snap-ig-mode-set -h 0xff583 -m 1
+2024-08-02 17:14:52.540391 BF_PIPE ERROR - Tofino supports only "ingress" trigger mode
+Snapshot ingress trigger mode set to 1 
+bf-sde.pipe_mgr> snap-state-set -h 0xff583 -e 1  
+Snapshot state set to 1 
+bf-sde.pipe_mgr> snap-capture-get -h 0xff583 -p 1 -s 2     
+
+Snapshot capture for handle 0xff583 
+Dumping snapshot capture for dev 0, pipe 1, start-stage 0, end-stage 11, dir egress 
+
+bf-sde.pipe_mgr> snap-capture-get -h 0xff583 -p 1 -s 2
+
+Snapshot capture for handle 0xff583 
+Dumping snapshot capture for dev 0, pipe 1, start-stage 0, end-stage 11, dir egress 
+-------------- Snapshot Capture for stage 2, direction Egress ----------------
+Snapshot trigger type: 
+    Prev stage  : Yes 
+    Local stage : No 
+    Timer       : No 
 ```
 
 ## pipe_mgr

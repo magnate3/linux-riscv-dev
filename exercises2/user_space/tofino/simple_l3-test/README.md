@@ -133,8 +133,8 @@ bf-sde.pipe_mgr>
 
 
 ```
-bf-sde.pipe_mgr> snap-trig-clr -h 0xff581    
-bf-sde.pipe_mgr> snap-trig-add -h 0xff581 -n hdr_ipv4_dst_addr -v 0x0A0A0F86   -m 0x0
+bf-sde.pipe_mgr> snap-trig-clr -h 0xff081    
+bf-sde.pipe_mgr>  snap-trig-add -h 0xff081 -n hdr_ipv4_dst_addr -v 0x0A0A0F86   -m 0xffffffff
 ```
 ![images](test6.png)  
 

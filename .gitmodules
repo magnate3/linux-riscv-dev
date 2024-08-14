@@ -28,3 +28,6 @@
 [submodule "exercises2/user_space/tofino-example/tofino-example"]
 	path = exercises2/user_space/tofino-example/tofino-example
 	url = https://github.com/abhikbose/tofino-example.git
+[submodule "exercises2/user_space/tofino/sketch/dsketch"]
+	path = exercises2/user_space/tofino/sketch/dsketch
+	url = https://github.com/khooi8913/dsketch.git

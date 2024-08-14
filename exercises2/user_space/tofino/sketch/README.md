@@ -29,3 +29,102 @@ control IngressDeparser(packet_out pkt,
     }
 }
 ```
+
+
+```
+def digest_callback(dev_id, pipe_id, direction, parser_id, session, msg):
+	global p4, log, Digest
+	#smac = p4.Ingress.smac
+	log("Received message from data plane!")
+	for dig in msg:
+		print(dig)
+	
+	return 0
+
+def bindDigestCallback():
+	global digest_callback, log, p4
+	
+	try:
+		p4.SwitchIngressDeparser.debug_digest.callback_deregister()
+	except:
+		pass
+	finally:
+		log("Deregistering old callback function (if any)")
+
+	#Register as callback for digests (bind to DMA?)
+	log("Registering callback...")
+	p4.SwitchIngressDeparser.debug_digest.callback_register(digest_callback)
+
+	log("Bound callback to digest")
+```
+
+# cms
+
+./run_bfshell.sh  -b config-test/digest_cms.py -i    
+
+
+
+```
+./run_bfshell.sh  -b config-test/simple_cms.py 
+./run_bfshell.sh  -b config-test/digest_cms.py 
+```
+![images](test2.png)
+```
+bfrt.cms.pipe.Ingress.threshold
+```
+
+
+```
+2024-08-14 19:17:19.115422 BF_PIPE ERROR - pipe_mgr_lrn_notification_deregister:1685 Learn notify deregister called from a non-learning registered session 3. Learning session 0
+2024-08-14 19:17:19.115495 BF_PIPE ERROR - Table update fails "Invalid arguments" (3), session 3 at pipe_mgr_lrn_digest_notification_deregister:8200
+bf_rt cli exited normally.
+
+bfshell> 
+bfshell> 2024-08-14 19:17:32.809985 BF_BFRT ERROR - bfRtLearnPipeMgrInternalCb:142 Session was destroyed
+2024-08-14 19:17:32.810158 BF_PIPE ERROR - pipe_mgr_drv_learn_send_to_client:1054 Error calling the learn client's callback function dev 0 pipe_id 1 lrn_fld_lst_hdl 0x21000000 ret 0x8
+2024-08-14 19:17:32.810225 BF_PIPE ERROR - pipe_mgr_drv_learn_cb:1336 Error sending learn messaage to client dev 0, pipe 1 ret 0x8
+
+bfshell> 2024-08-14 19:17:41.294893 BF_BFRT ERROR - bfRtLearnPipeMgrInternalCb:142 Session was destroyed
+2024-08-14 19:17:41.295061 BF_PIPE ERROR - pipe_mgr_drv_learn_send_to_client:1054 Error calling the learn client's callback function dev 0 pipe_id 1 lrn_fld_lst_hdl 0x21000000 ret 0x8
+2024-08-14 19:17:41.295127 BF_PIPE ERROR - pipe_mgr_drv_learn_cb:1336 Error sending learn messaage to client dev 0, pipe 1 ret 0x8
+```
+
+![images](test1.png)
+
+```
+bfshell> bfrt_python config-test/digest_cms.py
+cwd : /sde/bf-sde-9.7.1
+
+Devices found :  [0]
+We've found 1 p4 programs for device 0:
+cms
+Creating tree for dev 0 and program cms
+
+/sde/bf-sde-9.7.1/install/lib/python3.8/site-packages/IPython/core/history.py:226: UserWarning: IPython History requires SQLite, your history will not be saved
+  warn("IPython History requires SQLite, your history will not be saved")
+Python 3.8.10 (default, Jul 12 2024, 16:34:23) 
+Type 'copyright', 'credits' or 'license' for more information
+IPython 7.18.1 -- An enhanced Interactive Python. Type '?' for help.
+Deregistering old callback function (if any)
+Registering callback...
+Bound callback to digest
+---------------------------------
+Received message from data plane!
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52520, 'dst_port': 9999}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52462, 'dst_port': 9999}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52494, 'dst_port': 9999}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52474, 'dst_port': 9999}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52528, 'dst_port': 9999}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52504, 'dst_port': 9999}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52528}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52520}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52494}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52474}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52504}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52506}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52462}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52490, 'dst_port': 9999}
+{'src_addr': 168431494, 'dst_addr': 168431495, 'protocol': 6, 'src_port': 52506, 'dst_port': 9999}
+{'src_addr': 168431495, 'dst_addr': 168431494, 'protocol': 6, 'src_port': 9999, 'dst_port': 52490}
+Deregistering old callback function (if any)
+```

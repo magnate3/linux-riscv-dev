@@ -58,7 +58,7 @@ def bindDigestCallback():
 	log("Bound callback to digest")
 ```
 
-# cms
+# cms-debug
 
 ./run_bfshell.sh  -b config-test/digest_cms.py -i    
 

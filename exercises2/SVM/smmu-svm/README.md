@@ -1,4 +1,10 @@
 
+
+
+
+
+
+
 The device, buses and the IOMMU must support the following features:
 * Multiple address spaces per device, for example using the PCI PASID (Process Address Space ID) extension. The IOMMU driver allocates a PASID and the device uses it in DMA transactions.
 * I/O Page Faults (IOPF), for example PCI PRI (Page Request Interface) or Arm SMMU stall. The core mm handles translation faults from the IOMMU.
@@ -218,6 +224,12 @@ handle_mm_fault  -->   remap_pfn_range  或者 struct vm_operations_struct fault
 
 
 ### devmm_svm_mmap
+
+![images](test1.png)
++ devmm_alloc_pages函数会在主机端申请物理页。在不使用大页或者巨页的情况下，每次缺页中断会申请一个页，devmm_alloc_pages最终会调用numa的page申请接口alloc_pages_node申请物理内存。   
++  devmm_page_fault_h2d_sync会将申请到的页信息发送到device，device会使用得到的页面信息做dma拷贝   
++  devmm_pages_remap会调用remap_pfn_range函数为申请到的物理地址建立页表并将vma插入自己的进程空间中。同时会调用get_page函数锁住这个页面    
+ 
 
 ```
 STATIC int devmm_svm_mmap(struct file *file, struct vm_area_struct *vma)

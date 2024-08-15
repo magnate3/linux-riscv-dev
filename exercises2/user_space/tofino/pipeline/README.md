@@ -1,4 +1,59 @@
 
+# @stage
+
+
+```
+ apply {
+		@stage(0){
+			//first check blocklist
+			check_blocklist.apply();
+			//get time windows
+			global_time1 = ig_prsr_md.global_tstamp[33:33];  //about 4 seconds
+			global_time2 = ig_prsr_md.global_tstamp[36:36];  //about 32 seconds
+			//check packet types
+			check_udp_table.apply();
+			check_coremelt_table.apply();
+			check_dnsq_table.apply();
+			check_dnsr_table.apply();
+			//set update value and flowkey
+			reg_c2_toupdate_value[15:0] = hdr.ipv4.total_len;
+			reg_c_dyn_table.apply(); //stage 1
+			//set_timer_mask.apply(); //stage 1  last 2 bit --> 00, 01, 10, 11 --> 6+timer, 4+timer+2, 2+timer+4, timer+6 
+			reg_c2_time_key[16:0]= hash0.get({hdr.ipv4.src_addr, hdr.ipv4.dst_addr})[16:0];
+			if (hdr.udp.isValid()) {
+				reg_c5_key[16:0]= hash1.get({hdr.ipv4.src_addr, hdr.ipv4.dst_addr, hdr.udp.src_port, hdr.udp.dst_port})[16:0];
+			}
+			//if flow is not blocked, apply tables
+			if(is_blocked == 0){
+				//elephant flow detection
+				//update timer
+				set_flowkey.apply(); 
+				reg_c_timer1_table.apply(); 
+				reg_c_timer2_table.apply(); 
+				//update register
+				reg_c2_w1_table.apply(); 	
+				reg_c2_w2_table.apply(); 	
+				reg_c5_table.apply(); 	
+				//get result from merged register return value
+				reg_c2_slicing_table.apply();
+				//according to result, set flags
+				udp_classification_table.apply();	
+				coremelt_classification_table.apply();	
+				dnsa_classification_table.apply();
+				ig_tm_md.ucast_egress_port = 1;	
+				//upload special packet (malicious or overflow) to control plane 
+				upload_table.apply();	
+				//if overflow, resubmit
+				resubmit_table.apply();
+			}
+			//skip egress pipeline
+			ig_tm_md.bypass_egress = 1w1;
+		}
+    }
+}
+
+```
+
 # ChaCha-Tofino   
 
 ##  12 stages + 12 stages 

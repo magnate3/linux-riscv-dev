@@ -421,3 +421,10 @@ host_page_fault_dma_free:
     return ret;
 }
 ```
+
+### cpu 解除page 
+
+主机端接收到pcie消息后会通过以下调用函数调用路径来处理。    
+
+
+![images](test2.png)

@@ -27,3 +27,48 @@ control IngressDeparser(packet_out pkt,
     }
 }
 ```
+
+# fcm
+
+```
+ ./run_bfshell.sh  -b  config-test/simple_fcm.py 
+```
+
+
+```
+./run_bfshell.sh  -b  config-test/digest_fcm.py 
+Using SDE /sde/bf-sde-9.7.1
+Using SDE_INSTALL /sde/bf-sde-9.7.1/install
+Connecting to localhost port 7777 to check status on these devices: [0]
+Waiting for device 0 to be ready
+/sde/bf-sde-9.7.1/install/bin/bfshell config-test/digest_fcm.py
+bfrt_python config-test/digest_fcm.py
+exit
+
+        ********************************************
+        *      WARNING: Authorised Access Only     *
+        ********************************************
+    
+
+bfshell> bfrt_python config-test/digest_fcm.py
+cwd : /sde/bf-sde-9.7.1
+
+Devices found :  [0]
+We've found 1 p4 programs for device 0:
+fcm
+Creating tree for dev 0 and program fcm
+
+/sde/bf-sde-9.7.1/install/lib/python3.8/site-packages/IPython/core/history.py:226: UserWarning: IPython History requires SQLite, your history will not be saved
+  warn("IPython History requires SQLite, your history will not be saved")
+Python 3.8.10 (default, Jul 12 2024, 16:34:23) 
+Type 'copyright', 'credits' or 'license' for more information
+IPython 7.18.1 -- An enhanced Interactive Python. Type '?' for help.
+Deregistering old callback function (if any)
+Registering callback...
+Bound callback to digest
+---------------------------------
+Received message from data plane!
+{'src_addr': 0, 'dst_addr': 4294967295, 'protocol': 17, 'src_port': 68, 'dst_port': 67}
+Deregistering old callback function (if any)
+bfshell> exit
+```

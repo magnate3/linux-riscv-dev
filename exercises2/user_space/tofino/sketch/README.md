@@ -1,5 +1,24 @@
 
+# sketch 评估   
++  关键指标   
+sketch的关键指标有3个：准确性(accuracy)、速度(speed)和内存使用(memory usage)    
 
+准确性(accuracy): ARE AAE   
+
++ 问题  
+  + counter 溢出   
+
+[Pyramid Sketch a Sketch Framework for Frequency Estimation of Data Streams](https://zhuanlan.zhihu.com/p/640556976)    
+
+[论文阅读笔记-BitSense Universal and Nearly Zero-Error Optimization for Sketch Counters with Compressive](https://blog.csdn.net/m0_54947284/article/details/132946178)   
+
+
+[Cold Filter: A Meta-Framework for Faster and More Accurate Stream Processing](https://nan01ab.github.io/2019/04/Sketchs.html)  
+
+
+##  BitSense   
+
+[BitSense原型的源代码]https://github.com/N2-Sys/BitSense
 
 #  digest    
 ```

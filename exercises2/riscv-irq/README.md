@@ -130,6 +130,120 @@ static struct irq_chip plic_chip = {
                           IRQCHIP_AFFINITY_PRE_STARTUP,
 };
 ```
+## generic_handle_domain_irq  
+
+generic_handle_domain_irq的chip是  
+
+
+
+```
+
+                interrupt-controller@c000000 {
+                        #interrupt-cells = <0x1>;
+                        compatible = "riscv,plic0";
+                        interrupt-controller;
+                        interrupts-extended = <0x3 0xb 0x4 0xb 0x4 0x9 0x5 0xb 0x5 0x9 0x6 0xb 0x6 0x9 0x7 0xb 0x7 0x9>;
+                        reg = <0x0 0xc000000 0x0 0x4000000>;
+                        riscv,max-priority = <0x7>;
+                        riscv,ndev = <0x35>;
+                        phandle = <0x2>;
+                };
+```
+domain->fwnode->dev->full_name: interrupt-controller@c000000   
+
+```
+int generic_handle_domain_irq(struct irq_domain *domain, unsigned int hwirq)
+{
+#if 1
+        struct irq_desc *my= irq_resolve_mapping(domain, hwirq);
+        struct irq_chip *chip = irq_desc_get_chip(my);
+#if 0
+        struct fwnode_handle *fwnode = domain->fwnode;
+        struct device *dev =NULL;
+        struct device_node      *of_node = NULL;
+        if(NULL != fwnode)
+            dev = fwnode->dev;
+        if(NULL != dev)
+            of_node = dev ->of_node;
+        if(NULL != of_node && NULL != of_node->full_name)
+             printk("%s plic name %s, full_name %s \n",__func__, of_node->name, of_node->full_name);    
+#endif
+        if(0x3d == hwirq)
+        {
+                //dump_stack();
+                printk("[nfk test]hwirq=%u\n",hwirq);
+                printk("[nfk test] irq =%d,hwirq=%d",my->irq_data.irq,my->irq_data.hwirq);
+                printk("[nfk test] name =%s",my->name);
+                //printk("[nfk test] name =%s",my->dev_name);
+        }
+        if(0 == strncmp(chip->name, "SiFive PLIC", strlen("SiFive PLIC")))
+        {
+                    //struct plic_handler *handler = this_cpu_ptr(&plic_handlers);
+                    printk("sifive plic controller \n");
+                    //desc->fake_handle_irq(desc);
+        }               
+#endif
+        return handle_irq_desc(irq_resolve_mapping(domain, hwirq));
+}
+```
+
+## handle_domain_irq
+handle_domain_irq中的desc的chip如下：
+
+```
+                        interrupt-controller {
+                                #interrupt-cells = <0x1>;
+                                compatible = "riscv,cpu-intc";
+                                interrupt-controller;
+                                phandle = <0x5>;
+                        };
+```
+
+```
+int handle_domain_irq(struct irq_domain *domain,
+                      unsigned int hwirq, struct pt_regs *regs)
+{
+        struct pt_regs *old_regs = set_irq_regs(regs);
+        struct irq_desc *desc;
+        int ret = 0;
+
+        irq_enter();
+
+        /* The irqdomain code provides boundary checks */
+        desc = irq_resolve_mapping(domain, hwirq);
+        if (likely(desc))
+        {
+                struct irq_chip *chip = irq_desc_get_chip(desc);
+
+                struct fwnode_handle *fwnode = domain->fwnode;
+                struct device *dev =NULL;
+                struct device_node      *of_node = NULL;
+                if(NULL != fwnode)
+                    dev = fwnode->dev;
+                if(NULL != dev)
+                    of_node = dev ->of_node;
+                if(NULL != of_node && NULL != of_node->full_name)
+                     printk("plic name %s, full_name %s \n", of_node->name, of_node->full_name);
+                //if(NULL != of_node && NULL != of_node->full_name && 0 == strncmp(of_node->full_name, "interrupt-controller@c000000", strlen("interrupt-controller@c000000")))
+                if(NULL != desc->fake_handle_irq)
+                {
+                    if(0 == strncmp(chip->name, "RISC-V INTC", strlen("RISC-V INTC")))
+                    {
+                        printk("riscv intc controller process plic interrupt \n");
+                    }
+                }
+                handle_irq_desc(desc);
+        }
+        else
+                ret = -EINVAL;
+
+        irq_exit();
+        set_irq_regs(old_regs);
+        return ret;
+}
+```
+
+
 
 # irq_of_parse_and_map
 该函数的功能是从设备树中获取某一个中断，并且将中断ID转化为linux内核虚拟IRQ number。 IRQ number用于区别中断ID。

@@ -205,6 +205,16 @@ EXPORT_SYMBOL_GPL(sys_call_softirq);
 
 ## successful test
 
++ os   (SMP PREEMPT)
+```
+# uname -a
+Linux buildroot 5.14.12 #26 SMP PREEMPT Wed Sep 4 14:28:45 HKT 2024 riscv64 GNU/Linux
+# 
+```
+
+
+
+
 ```
 void sys_call_softirq(void)
 {
@@ -247,6 +257,43 @@ VALUE - answer: [  105.623529][ T1101] ioctl_example close was called
 GREETER
 succeed to open
 # 
+```
+
+# test2    
+
+软中断判断   
+```
+pending = local_softirq_pending();
+```
+
+软中断reset   
+```
+        /* Reset the pending bitmask before enabling irqs */
+        set_softirq_pending(0);
+```
+
+```
+#ifndef local_softirq_pending
+
+#ifndef local_softirq_pending_ref
+#define local_softirq_pending_ref irq_stat.__softirq_pending
+#endif
+
+#define local_softirq_pending() (__this_cpu_read(local_softirq_pending_ref))
+#define set_softirq_pending(x)  (__this_cpu_write(local_softirq_pending_ref, (x)))
+#define or_softirq_pending(x)   (__this_cpu_or(local_softirq_pending_ref, (x)))
+```
+
+
+```
+ while ((softirq_bit = ffs(pending))) {
+                unsigned int vec_nr;
+                int prev_count;
+                if(NET_RX_SOFTIRQ == softirq_bit)
+                {
+                    pr_info("NET_RX_SOFTIRQ action trigger , pending %x, %x \n", pending, pending & ~(1 << (softirq_bit - 1)));
+                }
+                h += softirq_bit - 1;
 ```
 
 

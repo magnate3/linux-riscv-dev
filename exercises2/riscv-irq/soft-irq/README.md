@@ -38,12 +38,44 @@ static inline void __irq_exit_rcu(void)
 ```
 在irq_exit()的第一步就是一个local_irq_disable()，也就是说禁止了中断，不再响应中断。因为下面要处理所有标记为要处理的软中断，关中断是因为后面要清除这些软中断，将CPU软中断的位图中置位的位清零，这需要关中断，防止其它进程对位图的修改造成干扰。      
 
-然后preempt_count_sub(HARDIRQ_OFFSET)，硬中断的计数减1，表示当前的硬中断到这里就结束了。但是如果当前的中断是嵌套在其它中断里的话，这次减1后不会计数清0，如果当前只有这一个中断的话，这次减1后计数会清0。注意这很重要。     
+然后preempt_count_sub(HARDIRQ_OFFSET)，硬中断的计数减1，表示当前的硬中断到这里就结束了。但是如果当前的中断是嵌套在其它中断里的话，这次减1后不会计数清0，如果当前只有这一个中断的话，这次减1后计数会清0。注意这很重要。           
 
-因为接下来一步判断!in_interrupt() && local_softirq_pending()，第一个!in_interrupt()就是通过计数来判断当前是否还处于中断上下文中，如果当前还有为完成的中断，则直接退出当前中断。后半部的执行在后续适当的时机再进行，这个“适当的时机”比如ksoftirqd守护进程的调度，或者下次中断到此正好不在中断上下文的时候等情况。
+因为接下来一步判断!in_interrupt() && local_softirq_pending()，第一个!in_interrupt()就是通过计数来判断当前是否还处于中断上下文中，如果当前还有为完成的中断，则直接退出当前中断。后半部的执行在后续适当的时机再进行，这个“适当的时机”比如ksoftirqd守护进程的调度，或者下次中断到此正好不在中断上下文的时候等情况。      
 
 我们现在假设当前中断结束后没有其它中断了，也就是不在中断上下文了，且当前CPU有等待处理的软中断，即local_softirq_pending()也为真。那么执行invoke_softirq()。   
 
+```
+static inline void invoke_softirq(void)
+{
+        if (ksoftirqd_running(local_softirq_pending()))
+                return;
+
+        if (!force_irqthreads) {
+#ifdef CONFIG_HAVE_IRQ_EXIT_ON_IRQ_STACK
+                /*                                                                                                                                                                             
+                 * We can safely execute softirq on the current stack if                                                                                                                       
+                 * it is the irq stack, because it should be near empty                                                                                                                        
+                 * at this stage.                                                                                                                                                              
+                 */
+                __do_softirq();
+#else
+                /*                                                                                                                                                                             
+                 * Otherwise, irq_exit() is called on the task stack that can                                                                                                                  
+                 * be potentially deep already. So call softirq in its own stack                                                                                                               
+                 * to prevent from any overrun.                                                                                                                                                
+                 */
+                do_softirq_own_stack();
+#endif
+        } else {
+                wakeup_softirqd();
+        }
+}
+```
+这个函数的逻辑很简单，首先如果ksoftirqd正在被执行，那么我们不想处理被pending的软中断，交给ksoftirqd线程来处理，这里直接退出。   
+
+如果ksoftirqd没有正在运行，那么判断force_irqthreads，也就是判断是否配置了CONFIG_IRQ_FORCED_THREADING，是否要求强制将软中断处理都交给ksoftirqd线程。因为这里明显要在中断处理退出的最后阶段处理软中断，但是也可以让ksoftirqd来后续处理。如果设置了force_irqthreads，则不再执行__do_softirq()，转而执行wakeup_softirqd()来唤醒ksoftirqd线程，将其加入可运行队列，然后退出。      
+
+如果没有设置force_irqthreads，那么就执行__do_softirq():    
 ```
 asmlinkage __visible void __softirq_entry __do_softirq(void)
 {

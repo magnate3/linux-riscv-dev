@@ -1,7 +1,7 @@
 
 
-# 网卡优化 
-
+# 网卡优化（采用中断方式） 
+不需要linux内核协议栈的软中断处理、中断线程化       
 ![images](./pic/irq.png)   
 
 
@@ -12,7 +12,7 @@
 ![images](./pic/poll.png)
 
 
-### ecat 1us 测试
+### ecat 1000us 测试（采用poll方式）
 
 ![images](./pic/ecat.png)
 max= 1.018240 min = 0.982960, max -min=0.035280   

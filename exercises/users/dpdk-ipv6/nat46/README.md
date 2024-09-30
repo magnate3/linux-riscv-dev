@@ -1,3 +1,52 @@
+# ipv6  
+
+```
+#define DPAA_IPv6_DEFAULT_VTC_FLOW	0x60000000
+```
+
+```
+* Fill up the outer IP header. */
+		outer_ip6hdr->vtc_flow = rte_cpu_to_be_32(
+			IPv6_DEFAULT_VTC_FLOW | (priority << 22));
+		outer_ip6hdr->proto = IPPROTO_IPIP; 
+		outer_ip6hdr->hop_limits = IPv6_DEFAULT_HOP_LIMITS;
+
+		rte_memcpy(outer_ip6hdr->src_addr, info->flow.f.v6.src,
+			sizeof(info->flow.f.v6.src));
+		rte_memcpy(outer_ip6hdr->dst_addr, info->flow.f.v6.dst,
+			sizeof(info->flow.f.v6.dst));
+
+		outer_ip6hdr->payload_len = rte_cpu_to_be_16(pkt->data_len
+			- sizeof(struct ether_hdr) - sizeof(struct ipv6_hdr));
+
+```
+
+# ip4
+
+
+```
+#define DPVS_TCP_DEFAULT_TIME    90
+#define DPVS_IPV4_HDR_DF_FLAG 0x4000
+#define DPVS_IPV4_DEFAULT_TTL    60
+#define DPVS_IPV4_DEFAULT_VERSION_IHL    0x45
+#define DPVS_IPV6_DEFAULT_VTC_FLOW		0x60000000
+#define DPVS_IPV6_DEFAULT_HOT_LIMIT		60
+```
+RTE_IPV4_HDR_DF_FLAG 也就是 #define DPVS_IPV4_HDR_DF_FLAG 0x4000
+```
+     ip4h->version_ihl     = ((4 << 4) | 5);
+    ip4h->type_of_service = 0;
+    ip4h->total_length    = htons(mbuf_nat6to4_len(mbuf));
+    ip4h->fragment_offset = htons(RTE_IPV4_HDR_DF_FLAG);
+    ip4h->time_to_live    = ttl;
+    ip4h->next_proto_id   = next_prot;
+    ip4h->hdr_checksum    = 0;
+    ip4h->src_addr        = saddr->s_addr;
+    ip4h->dst_addr        = daddr->s_addr;
+    ip4h->packet_id       = 0; // NO FRAG, so 0 is OK?
+```
+
+
 # mem pool
 
 ```

@@ -17,6 +17,10 @@
 ![images](./pic/ecat.png)
 max= 1.018240 min = 0.982960, max -min=0.035280   
 
+### ecat 500us 测试（采用poll方式）
+
+![images](./pic/ecat5.png)
+max= 0.514720 min = 0.484960  max -min=0.029760   
 
 #  进程调度API之preempt_count_add/preempt_count_sub
 

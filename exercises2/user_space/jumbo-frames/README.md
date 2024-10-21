@@ -102,6 +102,21 @@ root@p4gen:~# sysctl -a | grep 'net.ipv4.tcp_base_mss'
 net.ipv4.tcp_base_mss = 1024
 root@p4gen:~# 
 ```
+即使net.ipv4.tcp_base_mss = 1024也会***传输ip playload length = 1480的tcp***报文    
+![images](jf3.png)
+
+# 巨帧特性
+ Jumbo frame 一般指的是二层封装三层IP报文的值大于9000bytes的报文    
+```
+ifconfig enp59s0f0 mtu 10220
+SIOCSIFMTU: Invalid argument
+```
+
+配置成9000 ok    
+```
+ifconfig enp59s0f0 mtu 9000
+```
+
 
 # 关闭 发送/接收 巨帧特性
  
@@ -113,3 +128,5 @@ root@p4gen:~#
 [root@localhost ~]# ethtool -K  enp1s0f1 tso off
 [root@localhost ~]# ethtool -K  enp1s0f1 lro off
 ```
+
+![images](jf4.png)

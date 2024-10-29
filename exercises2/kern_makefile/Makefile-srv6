@@ -1,0 +1,21 @@
+MODULE_NAME2 := srv6_hwmac
+CONFIG_IPV6_SEG6_HMAC=y
+CONFIG_IPV6_SEG6_LWTUNNEL=y
+obj-m += srv6_tun.o
+obj-m += $(MODULE_NAME2).o
+srv6_tun-objs := seg6.o seg6_iptunnel.o seg6_local.o 
+$(MODULE_NAME2)-objs :=   seg6_hmac.o 
+
+#ccflags-y := -O2
+#ccflags-y                               += -I$(src)
+KDIR ?= /lib/modules/$(shell uname -r)/build
+
+
+all: $(MKFS)
+	make -C $(KDIR) M=$(PWD) modules
+
+
+clean:
+	make -C $(KDIR) M=$(PWD) clean
+
+.PHONY: all clean

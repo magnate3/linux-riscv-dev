@@ -139,6 +139,8 @@ veth1-->vtap1-->vtap3 --> veth2 -->veth4 -->vtap4
 ![images](test12.png)
 ![images](test11.png)
 
+
+以下操作不需要配置
 ```
 root@ubuntux86:# ip netns exec host4 ip -6 route add fd01::ff encap seg6local action End dev vtap4
 root@ubuntux86:# ip netns exec host4 ip -6 route add fdff::4 encap seg6local action End dev vtap4

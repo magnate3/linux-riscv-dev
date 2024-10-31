@@ -106,24 +106,145 @@ simple_switch_CLI  < srv6.txt
 
 # 测试2
 
++ 交换机启动    
 
 ```
 simple_switch p4srv6.json -i 0@vethA1 -i 1@vethAB --log-console -L debug -- nanolog ipc:///tmp/bm-0-log.ipc --notifications-addr ipc:///tmp/bmv2-0-notifications.ipc
 ```
 
++ 邻居表    
+
+lladdr 26:bb:7e:03:c0:62 是vethA1的mac     
 ```
 root@ubuntux86:# ip netns exec host1 ip n del fc00:a::a dev veth1 
 root@ubuntux86:# ip netns exec host1 ip -6 neigh add  fc00:a::a  lladdr 26:bb:7e:03:c0:62 nud permanent dev veth1
-root@ubuntux86:# ip netns exec host1 ping fc00:000b::10
 ```
 
+
+
++ vethAB配置ip    
 
 ```
 root@ubuntux86:# ip a add fc00:00ab::a/64 dev vethAB
 ```
 
++ rule    
+32:90:78:99:c1:32是vethBA（routerB）的mac    
+1e:43:58:05:4d:e5是veth1（host1）的mac     
 ```
-table_add fwd forward 0 => 1
-table_add fwd forward 1 => 0
-table_add srv6_localsid  srv6_T_Encaps1 fc00:000b::10 => fc00:00ab::a  fc00:00ab::b
+root@ubuntux86:# cat srv6.txt5
+table_add fwd forward 0 => 1  0x32907899c132
+table_add fwd forward 1 => 0  0x1e4358054de5
+table_add srv6_localsid  srv6_T_Encaps1 fc00:000b::10 => fc00:000a::a  fc00:00ab::b
+table_add srv6_localsid  srv6_End_DT6  fc00:00ab::a => 
+root@ubuntux86:# 
 ```
+
+## ping
++ 1
+```
+root@ubuntux86:# ./p4-srv6.sh  -c
+ip netns add host1
+ip netns add routerA
+ip netns add routerB
+ip netns add host2
+ip link add name veth1 type veth peer name vethA1
+ip link set veth1 netns host1
+ip link add name vethAB type veth peer name vethBA
+ip link set vethBA netns routerB
+ip link add name veth2 type veth peer name vethB2
+ip link set veth2 netns host2
+ip link set vethB2 netns routerB
+ip netns exec host1 ip link set lo up
+ip netns exec host1 ip ad add fc00:000a::10/64 dev veth1
+ip netns exec host1 ifconfig veth1 hw ether 1e:43:58:05:4d:e5
+ip netns exec host1 ip -6 neigh add fc00:a::a lladdr 26:bb:7e:03:c0:62 nud permanent dev veth1
+ip netns exec host1 ip link set veth1 up
+ip netns exec host1 ip -6 route add fc00::/16 via fc00:000a::a
+ip netns exec routerA ip link set lo up
+ip netns exec routerA sysctl net.ipv6.conf.all.forwarding=1
+net.ipv6.conf.all.forwarding = 1
+ip netns exec routerA sysctl net.ipv6.conf.all.seg6_enabled=1
+net.ipv6.conf.all.seg6_enabled = 1
+sysctl net.ipv6.conf.vethA1.seg6_enabled=1
+net.ipv6.conf.vethA1.seg6_enabled = 1
+ifconfig vethA1 hw ether 26:bb:7e:03:c0:62
+ip link set vethA1 up
+sysctl net.ipv6.conf.vethAB.seg6_enabled=1
+net.ipv6.conf.vethAB.seg6_enabled = 1
+ip a add fc00:00ab::a/64 dev vethAB
+ip link set vethAB up
+ip netns exec routerB ip link set lo up
+ip netns exec routerB sysctl net.ipv6.conf.all.forwarding=1
+net.ipv6.conf.all.forwarding = 1
+ip netns exec routerB sysctl net.ipv6.conf.all.seg6_enabled=1
+net.ipv6.conf.all.seg6_enabled = 1
+ip netns exec routerB sysctl net.ipv6.conf.vethB2.seg6_enabled=1
+net.ipv6.conf.vethB2.seg6_enabled = 1
+ip netns exec routerB ip ad add fc00:000b::b/64 dev vethB2
+ip netns exec routerB ip link set vethB2 up
+ip netns exec routerB sysctl net.ipv6.conf.vethBA.seg6_enabled=1
+net.ipv6.conf.vethBA.seg6_enabled = 1
+ip netns exec routerB ip ad add fc00:00ab::b/64 dev vethBA
+ip netns exec routerB ifconfig vethBA hw ether 32:90:78:99:c1:32
+ip netns exec routerB ip link set vethBA up
+ip netns exec routerB ip -6 route add fc00:000a::/64 encap seg6 mode encap segs fc00:00ab::a dev vethB2
+ip netns exec host2 ip link set lo up
+ip netns exec host2 ip ad add fc00:000b::10/64 dev veth2
+ip netns exec host2 ifconfig veth2 hw ether 16:b5:08:6b:96:25
+ip netns exec host2 ip link set veth2 up
+ip netns exec host2 ip -6 route add fc00::/16 via fc00:000b::b
+root@ubuntux86:# 
+```
++ 2
+```
+root@ubuntux86:# simple_switch p4srv6.json -i 0@vethA1 -i 1@vethAB --log-console -L debug -- nanolog ipc:///tmp/bm-0-log.ipc --notifications-addr ipc:///tmp/bmv2-0-notifications.ipc
+Calling target program-options parser
+```
++ 3
+```
+root@ubuntux86:# simple_switch_CLI  < srv6.txt5
+Obtaining JSON from switch...
+Done
+Control utility for runtime P4 table manipulation
+RuntimeCmd: Adding entry to exact match table fwd
+match key:           EXACT-00:00
+action:              forward
+runtime data:        00:01      32:90:78:99:c1:32
+Entry has been added with handle 0
+RuntimeCmd: Adding entry to exact match table fwd
+match key:           EXACT-00:01
+action:              forward
+runtime data:        00:00      1e:43:58:05:4d:e5
+Entry has been added with handle 1
+RuntimeCmd: Adding entry to exact match table srv6_localsid
+match key:           EXACT-fc:00:00:0b:00:00:00:00:00:00:00:00:00:00:00:10
+action:              srv6_T_Encaps1
+runtime data:        fc:00:00:0a:00:00:00:00:00:00:00:00:00:00:00:0a    fc:00:00:ab:00:00:00:00:00:00:00:00:00:00:00:0b
+Entry has been added with handle 0
+RuntimeCmd: Adding entry to exact match table srv6_localsid
+match key:           EXACT-fc:00:00:ab:00:00:00:00:00:00:00:00:00:00:00:0a
+action:              srv6_End_DT6
+runtime data:        
+Entry has been added with handle 1
+RuntimeCmd: 
+root@ubuntux86:#
+```
+ 
+```
+root@ubuntux86:# ip netns exec host1 ping fc00:000b::10
+PING fc00:000b::10(fc00:b::10) 56 data bytes
+64 bytes from fc00:b::10: icmp_seq=1 ttl=64 time=1.58 ms
+64 bytes from fc00:b::10: icmp_seq=2 ttl=64 time=2.82 ms
+64 bytes from fc00:b::10: icmp_seq=3 ttl=64 time=2.62 ms
+64 bytes from fc00:b::10: icmp_seq=4 ttl=64 time=2.44 ms
+^C
+--- fc00:000b::10 ping statistics ---
+5 packets transmitted, 5 received, 0% packet loss, time 4008ms
+rtt min/avg/max/mdev = 1.583/2.443/2.820/0.448 ms
+root@ubuntux86:# 
+```
+
+# 代码
+
+IP_PROTOCOLS_SRV6 : parse_srh  

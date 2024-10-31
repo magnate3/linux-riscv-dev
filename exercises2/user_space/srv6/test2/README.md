@@ -23,7 +23,10 @@ PING fc00:000b::10(fc00:b::10) 56 data bytes
 rtt min/avg/max/mdev = 0.126/0.180/0.280/0.070 ms
 ```
 
-![images](test3.png)
+![images](test3.png)  
+
+![images](test4.png)
+
 
 # 退出
 
@@ -51,7 +54,7 @@ Cannot open network namespace "host1": No such file or directory
 # srv6-AB
 [基于Openwrt（Linux）系统实现SRv6数据包的传输](https://blog.csdn.net/weixin_46466722/article/details/119580276)   
 [思科SRv6 实现 VPN+流量工程测试](https://www.ctyun.cn/developer/article/561546223239237)   
-[Linux SRv6实现VPN+流量工程](https://github.com/nokia-t1zhou/segment-routing-step-by-step/blob/337fdcdaf00ee57e6f9a4cdfa7cad34f20b0b7d9/SRv6%20VPN/VPN.md)
+[Linux SRv6实现VPN+流量工程](https://github.com/nokia-t1zhou/segment-routing-step-by-step/blob/337fdcdaf00ee57e6f9a4cdfa7cad34f20b0b7d9/SRv6%20VPN/VPN.md)     
 将去往10.0.2.0/24的数据包，封装入SRv6， 并配置SRH 包含的Segment列表为R4::bb,R3::bb(逆序排列):   
 ip route add 10.0.2.0/24 encap seg6 mode encap segs fc00:3::bb,fc00:4::bb dev r1-eth1  
  

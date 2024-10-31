@@ -106,6 +106,14 @@ simple_switch_CLI  < srv6.txt
 
 # 测试2
 
+##  Network Topology
+ 
+                    +--------------+          +-------------+
+                    |   p4 switch  |          |   routerB   |
+   host1 veth1 -- vethA1        vethAB  --  vethBA       vethB2 -- veth2 host2
+                    |              |          |             |
+                    +--------------+          +-------------+
+
 + 交换机启动    
 
 ```

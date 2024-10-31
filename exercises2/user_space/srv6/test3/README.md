@@ -245,6 +245,19 @@ rtt min/avg/max/mdev = 1.583/2.443/2.820/0.448 ms
 root@ubuntux86:# 
 ```
 
+```
+root@ubuntux86:# ip netns exec host2 ping fc00:000a::10
+PING fc00:000a::10(fc00:a::10) 56 data bytes
+64 bytes from fc00:a::10: icmp_seq=1 ttl=63 time=1.12 ms
+64 bytes from fc00:a::10: icmp_seq=2 ttl=63 time=2.01 ms
+64 bytes from fc00:a::10: icmp_seq=3 ttl=63 time=2.03 ms
+^C
+--- fc00:000a::10 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 1.121/1.722/2.034/0.425 ms
+root@ubuntux86:# 
+```
+
 # 代码
 
 IP_PROTOCOLS_SRV6 : parse_srh  

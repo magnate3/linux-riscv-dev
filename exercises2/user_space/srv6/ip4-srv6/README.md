@@ -63,7 +63,7 @@ root@ubuntux86:#
 
 + host-a ping4 request 在router1封装成srv6 packet1  
 
-![images](dev-r1-r2.png）   
+![images](dev-r1-r2.png)   
 
 ```
 ip netns exec r1 ip route add 10.0.2.0/24 encap seg6 mode encap segs fc00:3::bb,fc00:4::bb dev dev-r1-r2
@@ -135,7 +135,7 @@ root@ubuntux86:#
 ```
 
 
-![images](dev-r3-r4.png） 
+![images](dev-r3-r4.png) 
 
 + router4 收到srv6 packet1 根据如下路由转发,向做srv6 End.DX4 nh4，然后做ip4转发      
 
@@ -144,7 +144,7 @@ root@ubuntux86:#
 fc00:4::bb  encap seg6local action End.DX4 nh4 10.0.2.1 dev dev-r4-b metric 1024 pref medium
 default via 10.0.2.1 dev dev-r4-b 
 ```
- ![images](dev-r4-b.png）  
+ ![images](dev-r4-b.png)  
  
  
 ```
@@ -170,7 +170,7 @@ root@ubuntux86:#
 
 # host-b ping4 reply
 
- ![images](reply.png）  
+ ![images](reply.png)  
  
  
  ```
@@ -185,4 +185,4 @@ root@ubuntux86:#
  10.0.0.0/24  encap seg6 mode encap segs 1 [ fc00:1::bb ] dev dev-r4-r1 scope link 
  ```
  
-  ![images](dev-r4-r1.png）  
+  ![images](dev-r4-r1.png)  

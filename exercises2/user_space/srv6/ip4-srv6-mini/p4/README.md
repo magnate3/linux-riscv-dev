@@ -113,7 +113,7 @@ dst ipv6 = fc00:4::bb设置成功后，dev-r4-b上还是抓不到报文，原因
     inet6 fe80::2430:f2ff:fefe:ddc1/64 scope link 
        valid_lft forever preferred_lft forever
 ```
-![images](test1.png
+![images](test1.png)
 
 
 ```

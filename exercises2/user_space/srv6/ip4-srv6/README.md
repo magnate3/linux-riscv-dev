@@ -64,6 +64,7 @@ root@ubuntux86:#
 + host-a ping4 request 在router1封装成srv6 packet1  
 
 ![images](dev-r1-r2.png）   
+
 ```
 ip netns exec r1 ip route add 10.0.2.0/24 encap seg6 mode encap segs fc00:3::bb,fc00:4::bb dev dev-r1-r2
 ```

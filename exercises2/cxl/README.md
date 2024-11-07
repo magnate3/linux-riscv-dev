@@ -424,13 +424,9 @@ ERROR: meson setup failed
 
 ```
 [root@fedora ~]# ls -1 /dev/cxl
-mem0
-mem1
 [root@fedora ~]# ls /sys/bus/cxl/devices/
-mem0  mem1  pmem0  pmem1
-[root@fedora ~]# 
 ```
-
+![images](test1.png)
 
 ```
  [root@fedora ~]# ls -1 /dev/cxl

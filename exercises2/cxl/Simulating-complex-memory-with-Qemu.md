@@ -1,3 +1,198 @@
+# Soft-Reserved Memory
+
+EFI attributes may be used to mark some memory ranges as "soft-reserved" instead of normal RAM so that the kernel doesn't use them by default. This is useful for memory with different performance that should be reserved to specific uses/applications. They are exposed as DAX by default and possibly as NUMA node later.
+
+### Prerequisites
+
+This requires to boot in UEFI (instead of legacy BIOS), see the Qemu command-line below.
+For passing something like efi_fake_mem=1G@4G:0x40000(to mark 4-5GB range as soft-reserved), the kernel must have CONFIG_EFI_FAKE_MEMMAP=y (not enabled in Debian kernels by default).
+
+### Choosing which memory range
+
+The 0-4GB physical memory range is quite complicated when booting Qemu since it contains lots of reserved ranges, including 3-4GB reserved for PCI stuff. It's better to use ranges after 4GB to find large ranges of normal memory. So make the first NUMA node 3GB and use other nodes, they will be mapped after the PCI stuff, after 4GB.
+
+If a single memory range is marked as soft-reserved but covers multiple nodes, strange things happen, the kernel creates a DAX covering both (with locality of the first) but fails to entirely register it, and then creates separated DAX as expected. To avoid issues, it's better to specify two ranges even if they are consecutive.
+
+### Configuring Qemu with 2 NUMAs + 2 CPU-less NUMA
+
+```
+kvm \
+ -drive if=pflash,format=raw,file=./OVMF.fd \
+ -drive media=disk,format=qcow2,file=efi.qcow2 \
+ -smp 4 -m 6G \
+ -object memory-backend-ram,size=3G,id=m0 \
+ -object memory-backend-ram,size=1G,id=m1 \
+ -object memory-backend-ram,size=1G,id=m2 \
+ -object memory-backend-ram,size=1G,id=m3 \
+ -numa node,nodeid=0,memdev=m0,cpus=0-1 \
+ -numa node,nodeid=1,memdev=m1,cpus=2-3 \
+ -numa node,nodeid=2,memdev=m2 \
+ -numa node,nodeid=3,memdev=m3
+```
+
+OVMF is required for booting in UEFI mode (during both VM install and later).
+
+### Marking NUMA nodes as soft-reserved and getting hmem DAX device
+
+On the kernel boot command-line, pass `efi_fake_mem=1G@4G:0x40000,1G@6G:0x40000` to make NUMA node#1 (one with CPUs) and #3 (CPU-less) as soft-reserved. Their memory disappears, and a DAX device appears.
+
+```
+% cat /proc/iomem
+100000000-13fffffff : hmem.0              <- node #1 is soft-reserved
+  100000000-13fffffff : Soft Reserved
+    100000000-13fffffff : dax0.0
+140000000-17fffffff : System RAM          <- node #2 is normal memory
+180000000-1bfffffff : hmem.1              <- node #3 is soft-reserved
+  180000000-1bfffffff : Soft Reserved
+    180000000-1bfffffff : dax1.0
+```
+
+Those DAX devices under /sys/bus/dax/devices point to platform hmem devices but there isn't much useless in there.
+```
+dax0.0 -> ../../../devices/platform/hmem.0/dax0.0
+dax1.0 -> ../../../devices/platform/hmem.1/dax1.0
+```
+
+dax0.0 has `target_node=numa_node=1` in its sysfs attributes because node1 is online thanks to existing CPUs.
+
+dax1.0 is offline since it contains neither CPUs nor RAM. It has `target_node=3` as expected, but `numa_node=0` since this must be a online node during boot. node#0 was chosen because it's close (we didn't specify any distance matrix on the Qemu command-line, the default 10=local, 20=remote is used, hence 20 is the minimal distance from node#3 to online nodes, and node#0 is the first one of those).
+
+### Making NUMA nodes out of soft-reserved memory
+
+```
+% daxctl reconfigure-device --mode=system-ram all
+% cat /proc/iomem
+[...]
+100000000-13fffffff : hmem.0
+  100000000-13fffffff : Soft Reserved
+    100000000-13fffffff : dax0.0
+      100000000-13fffffff : System RAM (kmem) <- node#1 is back as a NUMA node
+140000000-17fffffff : System RAM
+180000000-1bfffffff : hmem.1
+  180000000-1bfffffff : Soft Reserved
+    180000000-1bfffffff : dax1.0
+      180000000-1bfffffff : System RAM (kmem) <- node#3 is back as a NUMA node
+```
+
+# NVDIMMs
+
+### NVDIMMs in Qemu
+
+Add `-machine pc,nvdimm=on` to qemu to enable nvdimms, then make `maxmem` in `-m` equal to RAM+NVDIMM size, and `slots` in `-m` equal to number of NVDIMMs. Then create the object and device, for instance:
+
+```
+kvm \
+ -machine pc,nvdimm=on \
+ -drive if=pflash,format=raw,file=./OVMF.fd \
+ -drive media=disk,format=qcow2,file=efi.qcow2 \
+ -smp 4 \
+ -m 6G,slots=1,maxmem=7G \
+ -object memory-backend-ram,size=3G,id=ram0 \
+ -object memory-backend-ram,size=1G,id=ram1 \
+ -object memory-backend-ram,size=1G,id=ram2 \
+ -object memory-backend-ram,size=1G,id=ram3 \
+ -numa node,nodeid=0,memdev=ram0,cpus=0-1 \
+ -numa node,nodeid=1,memdev=ram1,cpus=2-3 \
+ -numa node,nodeid=2,memdev=ram2 \
+ -numa node,nodeid=3,memdev=ram3 \
+ -numa node,nodeid=4 \
+ -object memory-backend-file,id=nvdimm1,share=on,mem-path=nvdimm.img,size=1G \
+ -device nvdimm,id=nvdimm1,memdev=nvdimm1,unarmed=off,node=4
+```
+
+### DAX and NUMA node in Linux
+
+You'll get a `pmem0` in Linux, from namespace2.0 (likely not 0.0 because dax0.0 and dax1.0 are used for soft-reserved memory in this config):
+```
+% ndctl list
+[
+  {
+    "dev":"namespace2.0",
+    "mode":"fsdax",
+    "map":"dev",
+    "size":1054867456,
+    "uuid":"937b5655-a581-4961-bbbc-f6a567a86b0f",
+    "sector_size":512,
+    "align":2097152,
+    "blockdev":"pmem2"
+  }
+]
+```
+
+Convert it to DAX with
+```
+% ndctl create-namespace -f -e namespace2.0 -p pmem -t devdax
+```
+
+That DAX points to ndctl region device now:
+```
+/sys/bus/dax/devices/dax2.0 -> ../../../devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0012:00/ndbus0/region2/dax2.0/dax2.0
+```
+That region contains a single mapping since there's only one NVDIMM here, and its type is `nvdimm`:
+```
+% cat /sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0012:00/ndbus0/region2/mappings
+1
+% cat /sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0012:00/ndbus0/region2/mapping0
+nmem0,0,1073741824,0
+% cat /sys/devices/LNXSYSTM:00/LNXSYBUS:00/ACPI0012:00/ndbus0/nmem0/devtype
+nvdimm
+```
+
+As usual, that DAX can be made a NUMA node:
+```
+% daxctl reconfigure-device --mode=system-ram dax2.0
+```
+
+# NUMA topology and memory performance
+
+See also https://futurewei-cloud.github.io/ARM-Datacenter/qemu/how-to-configure-qemu-numa-nodes/
+
+### SLIT distances
+
+All values must be given individually. To make node#2 (HBM) and node#4 (NVDIMM) close to node#0, and node#3 (HBM) close to node#1:
+```
+ -numa dist,src=0,dst=0,val=10 -numa dist,src=0,dst=1,val=20 -numa dist,src=0,dst=2,val=12 -numa dist,src=0,dst=3,val=22 -numa dist,src=0,dst=4,val=15 \
+-numa dist,src=1,dst=0,val=20 -numa dist,src=1,dst=1,val=10 -numa dist,src=1,dst=2,val=22 -numa dist,src=1,dst=3,val=12 -numa dist,src=1,dst=4,val=25 \
+-numa dist,src=2,dst=0,val=12 -numa dist,src=2,dst=1,val=22 -numa dist,src=2,dst=2,val=10 -numa dist,src=2,dst=3,val=25 -numa dist,src=2,dst=4,val=30 \
+-numa dist,src=3,dst=0,val=22 -numa dist,src=3,dst=1,val=12 -numa dist,src=3,dst=2,val=25 -numa dist,src=3,dst=3,val=10 -numa dist,src=3,dst=4,val=30 \
+-numa dist,src=4,dst=0,val=15 -numa dist,src=4,dst=1,val=25 -numa dist,src=4,dst=2,val=30 -numa dist,src=4,dst=3,val=30 -numa dist,src=4,dst=4,val=10
+```
+
+### HMAT initiators
+
+Before Qemu 7.2, `-machine hmat=on` required an `initiator=X` attribute for each NUMA node, which means latency/bandwidth aren't used by Linux to define best initiators. Fixed in 7.2, initiator=X is now optional, so that we can have a memory with 2 best initiators.
+
+### HMAT performance attributes
+
+HMAT latency/bandwidth example for 2 CPU+memory nodes, and a third node with same (slow) performance to both CPUs:
+```
+qemu-system-x86_64 -accel kvm \
+ -machine pc,hmat=on \
+ -drive if=pflash,format=raw,file=./OVMF.fd \
+ -drive media=disk,format=qcow2,file=efi.qcow2 \
+ -smp 4 \
+ -m 3G \
+ -object memory-backend-ram,size=1G,id=ram0 \
+ -object memory-backend-ram,size=1G,id=ram1 \
+ -object memory-backend-ram,size=1G,id=ram2 \
+ -numa node,nodeid=0,memdev=ram0,cpus=0-1 \
+ -numa node,nodeid=1,memdev=ram1,cpus=2-3 \
+ -numa node,nodeid=2,memdev=ram2 \
+ -numa hmat-lb,initiator=0,target=0,hierarchy=memory,data-type=access-latency,latency=10 \
+ -numa hmat-lb,initiator=0,target=0,hierarchy=memory,data-type=access-bandwidth,bandwidth=10485760 \
+ -numa hmat-lb,initiator=0,target=1,hierarchy=memory,data-type=access-latency,latency=20 \
+ -numa hmat-lb,initiator=0,target=1,hierarchy=memory,data-type=access-bandwidth,bandwidth=5242880 \
+ -numa hmat-lb,initiator=0,target=2,hierarchy=memory,data-type=access-latency,latency=30 \
+ -numa hmat-lb,initiator=0,target=2,hierarchy=memory,data-type=access-bandwidth,bandwidth=1048576 \
+ -numa hmat-lb,initiator=1,target=0,hierarchy=memory,data-type=access-latency,latency=20 \
+ -numa hmat-lb,initiator=1,target=0,hierarchy=memory,data-type=access-bandwidth,bandwidth=5242880 \
+ -numa hmat-lb,initiator=1,target=1,hierarchy=memory,data-type=access-latency,latency=10 \
+ -numa hmat-lb,initiator=1,target=1,hierarchy=memory,data-type=access-bandwidth,bandwidth=10485760 \
+ -numa hmat-lb,initiator=1,target=2,hierarchy=memory,data-type=access-latency,latency=30 \
+ -numa hmat-lb,initiator=1,target=2,hierarchy=memory,data-type=access-bandwidth,bandwidth=1048576
+```
+Before the Qemu patch, `memdev=ram2` must be followed by `initiator=0` or `initiator=1`.
+
 # CXL
 
 Linux 6.3 will most of the required patches for PMEM and RAM regions. Qemu branch cxl-2023-01-26 from https://gitlab.com/jic23/qemu works.
@@ -252,230 +447,3 @@ PMEM regions need a namespace before they are usable:
 $ ndctl create-namespace -t pmem -m devdax -r region0 -f
 ```
 This will create DAX device such as dax0.0, which is not converted to NUMA node automatically. Use `daxctl reconfigure-device --mode=devdax dax0.0` to do so.
-
-
-# my test
-
-
-## images
-```
-wget https://fedora-mirror02.rbc.ru/pub/fedora-archive/fedora/linux/releases/35/Cloud/x86_64/images/Fedora-Cloud-Base-35-1.2.x86_64.qcow2  -O Fedora-Cloud-Base-35-1.2.x86_64.qcow2
-```
-
-```
-root@ubuntux86:# mv Fedora-Cloud-Base-35-1.2.x86_64.qcow2  CXL-Test.qcow2
-root@ubuntux86:# qemu-img resize  CXL-Test.qcow2 +15G
-Image resized.
-root@ubuntux86:# qemu-img info CXL-Test.qcow2
-image: CXL-Test.qcow2
-file format: qcow2
-virtual size: 20 GiB (21474836480 bytes)
-disk size: 359 MiB
-cluster_size: 65536
-Format specific information:
-    compat: 0.10
-    compression type: zlib
-    refcount bits: 16
-root@ubuntux86:# 
-```
-更改密码   
-```
-virt-sysprep --root-password password:123456 -a CXL-Test.qcow2 
-```
-
-```
-
-[root@fedora ~]# uname -a
-Linux fedora 5.14.10-300.fc35.x86_64 #1 SMP Thu Oct 7 20:48:44 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
-```
-+ 配置ip   
-```
-ip a add 192.168.11.22/24 dev eth0
-ip r add default  via 192.168.11.33
-[root@fedora ~]# ping www.baidu.com
-PING www.a.shifen.com (183.2.172.42) 56(84) bytes of data.
-64 bytes from 183.2.172.42 (183.2.172.42): icmp_seq=1 ttl=48 time=44.0 ms
-64 bytes from 183.2.172.42 (183.2.172.42): icmp_seq=2 ttl=48 time=43.0 ms
-
---- www.a.shifen.com ping statistics ---
-2 packets transmitted, 2 received, 0% packet loss, time 1001ms
-rtt min/avg/max/mdev = 42.972/43.490/44.008/0.518 ms
-[root@fedora ~]# 
-
-
-```
-
-+ 内核更新
-
-更新前  
-```
-[root@fedora boot]# cat config-5.14.10-300.fc35.x86_64  | grep CONFIG_CXL
-CONFIG_CXL_BUS=y
-CONFIG_CXL_MEM=m
-# CONFIG_CXL_MEM_RAW_COMMANDS is not set
-CONFIG_CXL_ACPI=y
-CONFIG_CXL_PMEM=m
-[root@fedora boot]# 
-```
-
-
-```
-dnf --enablerepo=fedora-kernel-vanilla-stable update
-```
-
-```
-[root@fedora ~]# uname -a
-Linux fedora 6.0.12-100.fc35.x86_64 #1 SMP PREEMPT_DYNAMIC Thu Dec 8 16:53:55 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
-[root@fedora ~]# 
-[root@fedora boot]# cat config-6.0.12-100.fc35.x86_64  | grep CONFIG_CXL
-CONFIG_CXL_BUS=y
-CONFIG_CXL_PCI=y
-# CONFIG_CXL_MEM_RAW_COMMANDS is not set
-CONFIG_CXL_ACPI=y
-CONFIG_CXL_PMEM=m
-CONFIG_CXL_MEM=m
-CONFIG_CXL_PORT=y
-CONFIG_CXL_SUSPEND=y
-CONFIG_CXL_REGION=y
-
-```
-
-+  ndctl 
-
-```
-[root@fedora boot]# ndctl --version
-74
-[root@fedora boot]# 
-```
-
-+ cxl   
-```
-1) Query the repository to confirm if the cxl-cli package is available:
-
-Copy
-dnf search cxl-cli 
-2) Install the cxl-cli package
-
-Copy
-dnf install cxl-cli
-```
-
-## qemu
-
-
- 
-
-```
-git clone https://gitlab.com/jic23/qemu.git
-
-cd qemu
-
-git checkout cxl-2023-05-25
-root@ubuntux86:# mkdir build
-root@ubuntux86:# cd build
-root@ubuntux86:# ../configure --prefix=/opt/qemu-jic23 --target-list=i386-softmmu,x86_64-softmmu --enable-libpmem --enable-slirp
-make -j all
-make install
-```
-
- 
- + bug1
-
-```
-Looking for a fallback subproject for the dependency slirp
-
-../meson.build:964:10: ERROR: Automatic wrap-based subproject downloading is disabled
-
-A full log can be found at /work/cxl/cxl-qemu/qemu/build/meson-logs/meson-log.txt
-
-ERROR: meson setup failed
-```
-安装依赖  
-```
- apt-get -y install libslirp-dev
- apt-get -y install libpmem-dev
-```
-
-## test
-
-```
-/opt/qemu-jic23/bin/qemu-system-x86_64 -drive file=CXL-Test.qcow2,format=qcow2,index=0,media=disk,id=hd \
-        -m 4G,slots=8,maxmem=8G \
-        -smp 4 \
-        -machine type=q35,accel=kvm,nvdimm=on,cxl=on \
-        -enable-kvm \
-        -netdev tap,id=tap0,ifname=tap0,script=no,downscript=no,vhost=on  -device virtio-net-pci,netdev=tap0,mac=52:55:00:d1:55:01 \
-        -nographic \
-        -m 2G,slots=8,maxmem=6G \
-          -smp cpus=4,cores=2,sockets=2 \
-        -object memory-backend-ram,size=1G,id=mem0 \
-          -numa node,nodeid=0,cpus=0-1,memdev=mem0 \
-            -object memory-backend-ram,size=1G,id=mem1 \
-              -numa node,nodeid=1,cpus=2-3,memdev=mem1 \
-                -object memory-backend-ram,id=vmem0,share=on,size=256M \
-                  -object memory-backend-ram,id=vmem1,share=on,size=256M \
-                    -device pxb-cxl,numa_node=0,bus_nr=12,bus=pcie.0,id=cxl.1 \
-                      -device cxl-rp,port=0,bus=cxl.1,id=root_port13,chassis=0,slot=2 \
-                        -device cxl-type3,bus=root_port13,volatile-memdev=vmem0,id=cxl-vmem0 \
-                          -device cxl-rp,port=0,bus=cxl.1,id=root_port14,chassis=1,slot=2 \
-                            -device cxl-type3,bus=root_port14,volatile-memdev=vmem1,id=cxl-vmem1 \
-                              -M cxl-fmw.0.targets.0=cxl.1,cxl-fmw.0.size=4G
-```
-
-```
-[root@fedora ~]# ls -1 /dev/cxl
-mem0
-mem1
-[root@fedora ~]# ls /sys/bus/cxl/devices/
-mem0  mem1  pmem0  pmem1
-[root@fedora ~]# 
-```
-
-
-```
- [root@fedora ~]# ls -1 /dev/cxl
-mem0
-mem1
-[root@fedora ~]# cxl list -v
-[
-  {
-    "bus":"root0",
-    "provider":"ACPI.CXL",
-    "nr_dports":1,
-    "dports":[
-      {
-        "dport":"ACPI0016:00",
-        "alias":"pci0000:0c",
-        "id":12
-      }
-    ],
-    "decoders:root0":[
-      {
-        "decoder":"decoder0.0",
-        "resource":17448304640,
-        "size":4294967296,
-        "interleave_ways":1,
-        "max_available_extent":4294967296,
-        "pmem_capable":true,
-        "volatile_capable":true,
-        "accelmem_capable":true,
-        "nr_targets":1,
-        "targets":[
-          {
-            "target":"ACPI0016:00",
-            "alias":"pci0000:0c",
-            "position":0,
-            "id":12
-          }
-        ]
-      }
-    ]
-  }
-]
-```
-
-
-
-# References
-* Related kernel patch:https://patchwork.kernel.org/project/linux-nvdimm/patch/20190225185740.8660866F@viggo.jf.intel.com/#22501531
-* Using instructions from here: https://stevescargall.com/2019/07/09/how-to-extend-volatile-system-memory-ram-using-persistent-memory-on-linux/

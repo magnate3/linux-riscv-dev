@@ -138,6 +138,11 @@ bf-sde.pipe_mgr>  snap-trig-add -h 0xff081 -n hdr_ipv4_dst_addr -v 0x0A0A0F86   
 ```
 ![images](test6.png)  
 
+
+```
+snap-trig-add -h 0xff581 -n  hdr_tcp_ipv4_checksum_valid -v 0x1   -m 0x1
+```
+
 ```
 bf-sde.pipe_mgr> snap-create -d 0 -p 0xFFFF -s 0 -e 1 -i 0 
 Snapshot created with handle 0xff081 

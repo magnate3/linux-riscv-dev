@@ -362,8 +362,8 @@ dnf install cxl-cli
 
 ## qemu
 
-
- 
+退出快捷键:Ctrl + a,然后按 x 键(不要Ctrl)      
+ Press Ctrl+a and c to exit kernel and then press q to exit Qemu.   
 
 ```
 git clone https://gitlab.com/jic23/qemu.git
@@ -466,6 +466,36 @@ mem1
         ]
       }
     ]
+  }
+]
+```
+
+## 
+
+
+```
+[root@fedora ~]#  cxl list -D
+[
+  {
+    "decoder":"decoder0.0",
+    "resource":19595788288,
+    "size":4294967296,
+    "interleave_ways":1,
+    "max_available_extent":4294967296,
+    "pmem_capable":true,
+    "volatile_capable":true,
+    "accelmem_capable":true,
+    "nr_targets":1
+  }
+]
+[root@fedora ~]# cxl list -M
+[
+  {
+    "memdev":"mem0",
+    "pmem_size":268435456,
+    "ram_size":0,
+    "serial":0,
+    "host":"0000:0d:00.0"
   }
 ]
 ```

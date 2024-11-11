@@ -147,6 +147,11 @@ tty1 console=ttyS0,115200n8" \
 /dev/zram0: LABEL="zram0" UUID="525a609f-ac21-4771-8e06-a95e42ae5a3f" TYPE="swap"
 [root@fedora ~]# 
 ```
+
+##  fedora     merge   /root and /home
+
+
+
 # ext4
 
 ![images](test2.png)  
@@ -169,7 +174,7 @@ disk size: 287 MiB
 root@ubuntux86:# 
 ```
 
-
+modprobe nbd max_part=8     
 ```
 root@ubuntux86:#  qemu-nbd --connect=/dev/nbd0 CXL-Test.qcow2 
 qemu-nbd: Failed to open /dev/nbd0: No such file or directory
@@ -218,9 +223,82 @@ root@ubuntux86:#
 
 ```
 
+
+```
+root@ubuntux86:# qemu-nbd --connect=/dev/nbd0 CXL-Test.qcow2 
+root@ubuntux86:# fdisk /dev/nbd0
+
+Welcome to fdisk (util-linux 2.34).
+Changes will remain in memory only, until you decide to write them.
+Be careful before using the write command.
+
+
+Command (m for help): p
+Disk /dev/nbd0: 20 GiB, 21474836480 bytes, 41943040 sectors
+Units: sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disklabel type: gpt
+Disk identifier: 51F3FEFD-F6F9-4C88-9423-96DCD26FD5E9
+
+Device        Start      End  Sectors  Size Type
+/dev/nbd0p1    2048     4095     2048    1M BIOS boot
+/dev/nbd0p2    4096  1028095  1024000  500M Linux filesystem
+/dev/nbd0p3 1028096  1232895   204800  100M EFI System
+/dev/nbd0p4 1232896  1241087     8192    4M PowerPC PReP boot
+/dev/nbd0p5 1241088 41943006 40701919 19.4G Linux filesystem
+
+Command (m for help): q
+
+root@ubuntux86:# btrfstune -u  /dev/nbd0p5 
+WARNING: it's recommended to run 'btrfs check --readonly' before this operation.
+        The whole operation must finish before the filesystem can be mounted again.
+        If cancelled or interrupted, run 'btrfstune -u' to restart.
+We are going to change UUID, are your sure? [y/N]: y
+Current fsid: 437a4991-d1ba-4577-b624-48a51910a100
+New fsid: c509528d-69cc-4c73-ac5b-17ba0d168ff0
+Set superblock flag CHANGING_FSID
+Change fsid in extents
+Change fsid on devices
+Clear superblock flag CHANGING_FSID
+Fsid change finished
+root@ubuntux86:# 
+```
+
+```
+root@ubuntux86:# mount  /dev/nbd0p2  /work/data_mnt
+root@ubuntux86:# ls /work/data_mnt/
+config-5.14.10-300.fc35.x86_64  efi       initramfs-5.14.10-300.fc35.x86_64.img  symvers-5.14.10-300.fc35.x86_64.gz  System.map-6.3.9.old
+config-6.3.9                    extlinux  loader                                 System.map-5.14.10-300.fc35.x86_64  vmlinuz-5.14.10-300.fc35.x86_64
+config-6.3.9.old                grub2     lost+found                             System.map-6.3.9                    vmlinuz-6.3.9
+root@ubuntux86:# 
+```
+
 # raw and qcow2
 
 ```
 qemu-img convert -O raw image-converted.qcow image-converted-from-qcow2.raw
 qemu-img convert -O qcow2 original-image.raw image-converted.qcow
+```
+
+# xfs and ext4
+
+
+```
+root@ubuntux86:#  apt-get install jq    
+./convert-qcow-image-from-xfs-to-ext4.sh  CentOS-8-4.qcow2 
+```
+
+# centos8
+
+```
+[root@localhost yum.repos.d]# cat /etc/redhat-release 
+CentOS Linux release 8.4.2105
+[root@localhost yum.repos.d]# 
+
+```
+
+```
+sed -i -e 's|^mirrorlist|#mirrorlist|g' /etc/yum.repos.d/CentOS-*repo \
+sed -i -e 's|^#baseurl=http://mirror|baseurl=http://vault|g' /etc/yum.repos.d/CentOS-*repo \
 ```

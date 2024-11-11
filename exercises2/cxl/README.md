@@ -360,6 +360,33 @@ Copy
 dnf install cxl-cli
 ```
 
+
+## ubuntu    
+```
+ apt-get install libndctl-dev
+```
+
+```
+apt-get install -y libkmod-dev
+apt-get install xmlto
+```
+升级cmake
+```
+apt-get -y install cmake
+```
+
+```
+python3 -m pip install asciidoc
+```
+
+
+```
+git clone -b ndctl-58.y  https://github.com/pmem/ndctl.git
+./autogen.sh
+./configure CFLAGS='-g -O2' --prefix=/usr/local --sysconfdir=/etc --libdir=/usr/local/lib64
+make
+```
+
 ## qemu
 
 退出快捷键:Ctrl + a,然后按 x 键(不要Ctrl)      
@@ -499,6 +526,7 @@ mem1
   }
 ]
 ```
+
 
 
 

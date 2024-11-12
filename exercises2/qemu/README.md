@@ -148,6 +148,99 @@ tty1 console=ttyS0,115200n8" \
 [root@fedora ~]# 
 ```
 
+## 问题解决
+
+添加-initrd  选项    
+```
+ -initrd initrd-test/initramfs-4.18.0-305.3.1.el8.x86_64.img
+```
+
+## Failed to mount /boot/efi
+
+
+```
+[    4.879307] EXT4-fs (sda2): mounted filesystem 0402734e-2d6a-4735-9faa-d71adfba9798 with ordered data mode. Quota mode: none.
+[    4.963072] ext4 filesystem being mounted at /boot supports timestamps until 2038 (0x7fffffff)
+[  OK  ] Mounted /boot.
+         Mounting /boot/efi...
+[FAILED] Failed to mount /boot/efi.
+```
+
+```
+[root@fedora ~]# blkid
+/dev/sda4: PARTUUID="3b9d8d53-f993-427b-bb86-f40ca3f66d4b"
+/dev/sda2: LABEL="boot" UUID="0402734e-2d6a-4735-9faa-d71adfba9798" BLOCK_SIZE="1024" TYPE="ext4" PARTUUID="dd4d58c1-740a-4c89-819c-13f23277f37a"
+/dev/sda5: LABEL="fedora" UUID="437a4991-d1ba-4577-b624-48a51910a100" UUID_SUB="3fc1b71a-bcbc-4f6b-b8bf-1fda1d774e06" BLOCK_SIZE="4096" TYPE="btrfs" PARTUUID="7baeb930-996f-4304-b870-b33de7817"
+/dev/sda3: SEC_TYPE="msdos" UUID="4524-5C35" BLOCK_SIZE="512" TYPE="vfat" PARTUUID="cd5d3eee-7ae6-410c-8836-7c2432e3d196"
+/dev/sda1: PARTUUID="58cb0520-37f0-489d-a90b-3e6d8cc2a360"
+/dev/zram0: LABEL="zram0" UUID="f7d8dab2-e68a-458c-b560-a0e06469fad6" TYPE="swap"
+[root@fedora ~]# 
+```
+内核内置vfat模块，成功解决   
+
+![images](test6.png)  
+
+## A start job is running for /dev/zram0 (1min 5s / 1min 30s)
+
+
+A start job is running for /dev/zram0 (1min 5s / 1min 30s) 这是因为，内核模块无法正常使用，出现了modprobe: FATAL: Module vfio.ko not found        
+
+
+## modprobe: FATAL: Module vfio.ko not found（实际存在）
+
+通过在内核配置中启用CONFIG_MODULE_COMPRESS选项，并选择CONFIG_MODULE_COMPRESS_XZ，然后执行make modules_install步骤，实现模块的xz压缩。
+```
+[root@localhost 6.3.9]# modprobe vfio.ko 
+modprobe: FATAL: Module vfio.ko not found in directory /lib/modules/6.3.9
+[root@localhost 6.3.9]# find "/lib/modules/$(uname -r)" -name  vfio.ko 
+/lib/modules/6.3.9/kernel/drivers/vfio/vfio.ko
+[root@localhost 6.3.9]# 
+```
+  
+```
+[root@localhost modules]# find ./ -name modules.dep
+./5.14.10-300.fc35.x86_64/modules.dep
+./6.3.9/modules.dep
+[root@localhost modules]# 
+```
+
+原因是modules没有开启“Module versioning support ”  
+
+![images](test7.png)  
+
+```
+[root@localhost ~]# find "/lib/modules/$(uname -r)" -name  vfio.ko.xz
+/lib/modules/6.3.9/kernel/drivers/vfio/vfio.ko.xz
+[root@localhost ~]# modprobe vfio
+[  472.191648] VFIO - User Level meta-driver version: 0.3
+[root@localhost ~]# lsmod | grep vfio
+vfio_iommu_type1       53248  0
+vfio                   57344  1 vfio_iommu_type1
+[root@localhost ~]# 
+```
+
+```
+/opt/qemu-jic23/bin/qemu-system-x86_64  -kernel vmlinuz-6.3.9\
+        -drive file=CXL-Test.qcow2,format=qcow2,index=0,media=disk,id=hd \
+        -append "root=UUID=437a4991-d1ba-4577-b624-48a51910a100 ro rootfstype=btrfs rootflags=subvol=root no_timer_check net.ifnames=0 console=tty1 console=ttyS0,115200n8 " \
+        -initrd  initrd-test/initramfs-4.18.0-305.3.1.el8.x86_64.img \
+        -m 4G,slots=8,maxmem=8G \
+        -smp 4 \
+        -machine type=q35,accel=kvm,nvdimm=on,cxl=on \
+        -enable-kvm \
+        -netdev tap,id=tap0,ifname=tap0,script=no,downscript=no,vhost=on  -device virtio-net-pci,netdev=tap0,mac=52:55:00:d1:55:01 \
+        -nographic \
+        -object memory-backend-ram,size=4G,id=mem0 \
+        -numa node,nodeid=0,cpus=0-3,memdev=mem0 \
+        -object memory-backend-file,id=pmem0,share=on,mem-path=/tmp/cxltest.raw,size=256M \
+        -object memory-backend-file,id=cxl-lsa0,share=on,mem-path=/tmp/lsa.raw,size=256M \
+        -device pxb-cxl,bus_nr=12,bus=pcie.0,id=cxl.1 \
+        -device cxl-rp,port=0,bus=cxl.1,id=root_port13,chassis=0,slot=2 \
+        -device cxl-type3,bus=root_port13,persistent-memdev=pmem0,lsa=cxl-lsa0,id=cxl-pmem0 \
+        -M cxl-fmw.0.targets.0=cxl.1,cxl-fmw.0.size=4G
+```
+
+
 ##  fedora     merge   /root and /home
 
 

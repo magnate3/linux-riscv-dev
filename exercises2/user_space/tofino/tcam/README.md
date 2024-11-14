@@ -69,6 +69,7 @@ bfrt.simple_router_l3.pipe.RouterIngress.tbl_l3_routes.add_with_l3_routes_act("1
 ```
 # Rules for ternary matching
  (Match, Mask, Priority, argument)    
+```
 bfrt.simple_router_l3.pipe.RouterIngress.tbl_l3_routes.add_with_l3_routes_act('10.10.0.1', 0x0000FFFF, 0, 64)   
 bfrt.simple_router_l3.pipe.RouterIngress.tbl_l3_routes.add_with_l3_routes_act("10.10.0.2", 0x0000FFFF, 0, 65)   
 ```

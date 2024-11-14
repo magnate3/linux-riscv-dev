@@ -72,3 +72,20 @@ bfrt.simple_router_l3.pipe.RouterIngress.tbl_l3_routes.add_with_l3_routes_act("1
 bfrt.simple_router_l3.pipe.RouterIngress.tbl_l3_routes.add_with_l3_routes_act('10.10.0.1', 0x0000FFFF, 0, 64)   
 bfrt.simple_router_l3.pipe.RouterIngress.tbl_l3_routes.add_with_l3_routes_act("10.10.0.2", 0x0000FFFF, 0, 65)   
 ```
+
+
+```
+ipv4_table2.get(0x0A0A0F86,0xFFFFFFFF,65, from_hw=True)
+bfrt.tofino_nat64.pipe> SwitchIngress.ipv4_lpm2.get(0x0A0A0F86,0xFFFFFFFF,65, from_hw=True)
+Entry 0:
+Entry key:
+    hdr.ipv4.dst_addr              : ('0x0A0A0F86', '0xFFFFFFFF')
+    $MATCH_PRIORITY                : 65
+Entry data (action : SwitchIngress.ipv4_translate):
+    ipv6dstAddr                    : 0x20080000000000000000000000000004
+    port                           : 0xA8
+
+Out[5]: Entry for pipe.SwitchIngress.ipv4_lpm2 table.
+
+bfrt.tofino_nat64.pipe> 
+```

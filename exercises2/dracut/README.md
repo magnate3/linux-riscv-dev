@@ -26,3 +26,25 @@ bin  dev  etc  init  initrd  lib  lib32  lib64  libx32  proc  root  run  sbin  s
 root@ubuntux86:# 
 root@ubuntux86:#  find ./* | cpio -o -H newc | gzip > ../initramfs.cpio.gz
 ```
+
+#  ASCII cpio archive (SVR4 with no CRC)
+
+```
+root@ubuntux86:# file initramfs-4.18.0-305.3.1.el8.x86_64.img 
+initramfs-4.18.0-305.3.1.el8.x86_64.img: ASCII cpio archive (SVR4 with no CRC)
+```
+
+```
+root@ubuntux86:# ls
+initramfs-4.18.0-305.3.1.el8.x86_64.img  initramfs-5.14.10-300.fc35.x86_64.img
+root@ubuntux86:# 
+root@ubuntux86:# cpio -ivmd < initramfs-4.18.0-305.3.1.el8.x86_64.img 
+.
+early_cpio
+kernel
+kernel/x86
+kernel/x86/microcode
+kernel/x86/microcode/AuthenticAMD.bin
+kernel/x86/microcode/GenuineIntel.bin
+9092 blocks
+```

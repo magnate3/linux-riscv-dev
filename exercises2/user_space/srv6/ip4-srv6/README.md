@@ -6,6 +6,7 @@
 
 
 ```
+ip netns exec host-a ping 10.0.2.1
 PING 10.0.2.1 (10.0.2.1) 56(84) bytes of data.
 64 bytes from 10.0.2.1: icmp_seq=1 ttl=63 time=0.145 ms
 64 bytes from 10.0.2.1: icmp_seq=2 ttl=63 time=0.149 ms

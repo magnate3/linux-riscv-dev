@@ -526,6 +526,15 @@ mem1
   }
 ]
 ```
+# cxl create-region   
+
+```
+[root@localhost ~]# cxl create-region -d decoder0.0 -t pmem -m mem0
+[ 1082.012739] cxl_region region0: Failed to synchronize CPU cache state
+libcxl: cxl_region_enable: region0: failed to enable
+cxl region: create_region: region0: failed to enable: No such device or address
+cxl region: cmd_create_region: created 0 regions
+```
 
 
 

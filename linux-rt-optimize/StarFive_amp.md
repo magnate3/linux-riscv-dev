@@ -2,7 +2,7 @@
 
 # amp
 
-[amp](https://doc.rvspace.org/VisionFive2/Application_Notes/RT-Thread/])     
+[昉·惊鸿-7110上运行异构AMP双系统](https://doc.rvspace.org/VisionFive2/Application_Notes/RT-Thread/])     
 
 
 ## 编译步骤

@@ -1,5 +1,14 @@
 
-[How To run SRv6 Mobile Uplane POC](https://github.com/ebiken/p4srv6/blob/c5049a80ba366f0cacf20b8bfb88b21540150383/archive/demo/srv6/demo1-SRv6MobileUplane-dropin.md) 
+[How To run SRv6 Mobile Uplane POC](https://github.com/c3m3gyanesh/p4srv6/blob/4c0f8158d5da79a9f41d80d4c28718f19377ae4f/demo/srv6/demo1-SRv6MobileUplane-dropin.md) 
+
+![images](demo1.png)
++ tcpdump vatp11   
+![images](vtap11.png)
++ tcpdump vatp14 
+![images](vtap14.png)
++ tcpdump veth1    
+![images](veth1.png)
+
 
 # libgtpnl
 ```
@@ -15,11 +24,40 @@ root@ubuntux86:#
 ```
 export PATH=$PATH:/opt/gtp/bin/
 ```
+# topo
+
+```
+root@ubuntux86:# ./demo/srv6/ns-hosts-srv6-demo1.sh -c
+create_network
+ip netns add host1
+ip netns add host2
+ip link add veth1 type veth peer name vtap1
+ip link add veth2 type veth peer name vtap2
+ip link add vtap11 type veth peer name vtap12
+ip link add vtap13 type veth peer name vtap14
+ip link set veth1 netns host1
+ip link set veth2 netns host2
+ip netns exec host1 ip addr add 172.20.0.1/24 dev veth1
+ip netns exec host1 ip -6 addr add fd01::1/64 dev veth1
+ip netns exec host2 ip addr add 172.20.0.2/24 dev veth2
+ip netns exec host2 ip -6 addr add fd01::2/64 dev veth2
+ip netns exec host1 ip link set veth1 up
+ip netns exec host1 ip link set lo up
+ip netns exec host2 ip link set veth2 up
+ip netns exec host2 ip link set lo up
+ip link set dev vtap1 up
+ip link set dev vtap2 up
+ip link set dev vtap11 up
+ip link set dev vtap12 up
+ip link set dev vtap13 up
+ip link set dev vtap14 up
+root@ubuntux86:# 
+```
 
 # p4 switch
 
 ```
-root@ubuntux86:# p4c --target bmv2 --arch v1model  ./archive/p4src/switch.p4
+root@ubuntux86:# p4c --target bmv2 --arch v1model  p4src/switch.p4
 ./archive/p4src/switch.p4(154): [--Wwarn=unused] warning: Table local_mac is not used; removing
     table local_mac {
           ^^^^^^^^^
@@ -29,9 +67,14 @@ root@ubuntux86:# ./archive/demo/srv6/ns-hosts-srv6-demo1.sh -c
 ```
 
 
+```
+ simple_switch switch.json -i 1@vtap1 -i 2@vtap2 -i 11@vtap11 -i 12@vtap12 -i 13@vtap13 -i 14@vtap14 --nanolog ipc:///tmp/bm-0-log.ipc --log-console -L debug --notifications-addr ipc:///tmp/bmv2-0-notifications.ipc
+```
+
 
 ```
 simple_switch_CLI  < fw.txt 
+simple_switch_CLI  < srv6-2.txt 
 ```
 
 
@@ -56,88 +99,47 @@ root@ubuntux86:#
 ```
 
 # gtp   
-
+```
+export PATH=$PATH:/opt/gtp/bin/
+```
 
 ## shell1
-```
-root@ubuntux86:# ip netns exec host1 ip a
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
-    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
-    inet 127.0.0.1/8 scope host lo
-       valid_lft forever preferred_lft forever
-    inet 172.99.0.1/32 scope global lo
-       valid_lft forever preferred_lft forever
-    inet6 ::1/128 scope host 
-       valid_lft forever preferred_lft forever
-6: veth1@if5: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
-    link/ether ba:c3:2c:2d:0f:13 brd ff:ff:ff:ff:ff:ff link-netnsid 0
-    inet 172.20.0.1/24 scope global veth1
-       valid_lft forever preferred_lft forever
-    inet6 fd01::1/64 scope global 
-       valid_lft forever preferred_lft forever
-    inet6 fe80::b8c3:2cff:fe2d:f13/64 scope link 
-       valid_lft forever preferred_lft forever
-root@ubuntux86:# ip netns exec host1 gtp-link add gtp1 ip
-WARNING: attaching dummy socket descriptors. Keep this process running for testing purposes.
 
 ```
+root@ubuntux86:# cat gtp-set.sh 
+ip netns exec host1 ip addr add 192.168.0.1/32 dev lo
+ip netns exec host1 gtp-link add gtp1 ip &
+ip netns exec host1 gtp-tunnel add gtp1 v1 200 100 192.168.0.2 172.20.0.2
+ip netns exec host1 ip route add 192.168.0.2/32 dev gtp1
 
-## shell2
-
-```
-root@ubuntux86:# export PATH=$PATH:/opt/gtp/bin/
-root@ubuntux86:# ip netns exec host1 gtp-tunnel add gtp1 v1 200 100 172.99.0.2 172.20.0.2
+ip netns exec host2 ip addr add 192.168.0.2/32 dev lo
+ip netns exec host2 gtp-link add gtp2 ip &
+ip netns exec host2 gtp-tunnel add gtp2 v1 100 200 192.168.0.1 172.20.0.1
+ip netns exec host2 ip route add 192.168.0.1/32 dev gtp2
 root@ubuntux86:# 
-
 ```
 
-## shell3
-
-
-```
-root@ubuntux86:# export PATH=$PATH:/opt/gtp/bin/
-root@ubuntux86:# ip netns exec host2 gtp-link add gtp2  ip 
-WARNING: attaching dummy socket descriptors. Keep this process running for testing purposes.
-
+## ping
 
 
 ```
-
-
-## shell2
-
-```
-root@ubuntux86:# ip netns exec host2 gtp-tunnel add gtp2 v1 100 200 172.99.0.1 172.20.0.1
-root@ubuntux86:#  ip netns exec host2 ip route add 172.99.0.1/32 dev gtp2
-root@ubuntux86:# 
-
-```
-
-
-```
-simple_switch_CLI  <  srv6.txt 
-```
-
-
-```
-
-root@ubuntux86:# ip netns exec host1 ping 172.99.0.2
-PING 172.99.0.2 (172.99.0.2) 56(84) bytes of data.
+root@ubuntux86:# ip netns exec host2 ping 192.168.0.1
+PING 192.168.0.1 (192.168.0.1) 56(84) bytes of data.
+64 bytes from 192.168.0.1: icmp_seq=1 ttl=64 time=5.45 ms
+64 bytes from 192.168.0.1: icmp_seq=2 ttl=64 time=5.15 ms
+64 bytes from 192.168.0.1: icmp_seq=3 ttl=64 time=5.66 ms
 ^C
---- 172.99.0.2 ping statistics ---
-89 packets transmitted, 0 received, 100% packet loss, time 90063ms
-
+--- 192.168.0.1 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 5.148/5.417/5.655/0.208 ms
+root@ubuntux86:# ip netns exec host1 ping 192.168.0.2
+PING 192.168.0.2 (192.168.0.2) 56(84) bytes of data.
+64 bytes from 192.168.0.2: icmp_seq=1 ttl=64 time=2.95 ms
+64 bytes from 192.168.0.2: icmp_seq=2 ttl=64 time=5.45 ms
+64 bytes from 192.168.0.2: icmp_seq=3 ttl=64 time=5.83 ms
+^C
+--- 192.168.0.2 ping statistics ---
+3 packets transmitted, 3 received, 0% packet loss, time 2003ms
+rtt min/avg/max/mdev = 2.945/4.740/5.827/1.278 ms
 root@ubuntux86:# 
-```
-
-
-```
-root@ubuntux86:# ip netns exec host1 tcpdump  -i veth1
-tcpdump: verbose output suppressed, use -v or -vv for full protocol decode
-listening on veth1, link-type EN10MB (Ethernet), capture size 262144 bytes
-^C10:28:59.977533 IP 172.20.0.1.2152 > 172.20.0.2.2152: UDP, length 92
-10:29:00.979479 IP 172.20.0.1.2152 > 172.20.0.2.2152: UDP, length 92
-10:29:01.993847 IP 172.20.0.1.2152 > 172.20.0.2.2152: UDP, length 92
-10:29:03.017757 IP 172.20.0.1.2152 > 172.20.0.2.2152: UDP, length 92
-10:29:04.041582 IP 172.20.0.1.2152 > 172.20.0.2.2152: UDP, length 92
 ```

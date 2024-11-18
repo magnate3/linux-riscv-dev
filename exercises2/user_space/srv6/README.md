@@ -1,3 +1,10 @@
+# SRv6 在 5G 移动网络中的部署方式
+
+[SRv6 在 5G 移动网络中的部署方式](https://xie.infoq.cn/article/88a6b2a1e03fbe616ee8c62c3)      
+[P4-BMv2-RAN-UPF](https://github.com/guimvmatos/P4-BMv2-RAN-UPF/tree/main)  
+[How To run SRv6 Mobile Uplane POC](https://github.com/ebiken/p4srv6/blob/c5049a80ba366f0cacf20b8bfb88b21540150383/archive/demo/srv6/demo1-SRv6MobileUplane-dropin.md)    
+[SRv6 uSID (micro SID) implementation on P4](https://github.com/netgroup/p4-srv6-usid/tree/master)   
+
 # Per-interface configuration
 Several per-interface sysctls are available to control SRv6 behavior.    
 

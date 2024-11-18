@@ -113,6 +113,14 @@ root@ubuntux86:# ip netns exec ns-gtp-200 ip r
 192.168.0.100 dev gtp-200 scope link 
 root@ubuntux86:# 
 ```
+gtp-tunnel 路由   
+```
+root@ubuntux86:# ip netns exec ns-gtp-200 gtp-tunnel list
+gtp-200 version 1 tei 100/200 ms_addr 192.168.0.100 sgsn_addr 172.100.0.100
+root@ubuntux86:# ip netns exec ns-gtp-100 gtp-tunnel list
+gtp-100 version 1 tei 200/100 ms_addr 192.168.0.200 sgsn_addr 172.100.0.200
+root@ubuntux86:# 
+```
 
 
 ## ns-gtp-200
@@ -139,6 +147,7 @@ root@ubuntux86:# ip netns exec ns-gtp-200 ip a
 root@ubuntux86:# 
 ```
 
+## ping   
 ```
 root@ubuntux86:# ip netns exec ns-gtp-100 ping 192.168.0.200
 PING 192.168.0.200 (192.168.0.200) 56(84) bytes of data.
@@ -159,6 +168,7 @@ PING 192.168.0.100 (192.168.0.100) 56(84) bytes of data.
 3 packets transmitted, 3 received, 0% packet loss, time 2048ms
 rtt min/avg/max/mdev = 0.050/0.059/0.067/0.007 ms
 ```
+
 
 
 

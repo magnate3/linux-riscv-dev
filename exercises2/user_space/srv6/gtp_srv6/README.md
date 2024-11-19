@@ -87,7 +87,14 @@ root@ubuntux86:#
 + tcpdump veth1    
 ![images](veth1.png)
 
-+ GPRS Tunnelling Protocol T-PDU         
++ GPRS Tunnelling Protocol T-PDU      
+
+In GTP we can see there are two planes.
+
+GTP Control Plane ( GTP-C)   
+GTP User Plane (GTP-U)    
+GTP-C packet is sent through the UDP port 2123   
+GTP-U packet is sent through the UDP port 2152     
 ![images](tpdu.png)    
 # libgtpnl
 ```

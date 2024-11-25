@@ -38,17 +38,7 @@ riscv64-unknown-elf-gcc (g5964b5cd727) 11.1.0
 ```
 
 
-or  
-```
-apt install gcc-riscv64-unknown-elf   
-root@ubuntux86:# riscv64-unknown-elf-gcc --version
-riscv64-unknown-elf-gcc () 9.3.0
-Copyright (C) 2019 Free Software Foundation, Inc.
-This is free software; see the source for copying conditions.  There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-root@ubuntux86:# 
-```
 
 
 
@@ -244,4 +234,25 @@ sdb           8:16   1  59.5G  0 disk
 ├─sdb2        8:18   1     4M  0 part 
 ├─sdb3        8:19   1    22M  0 part 
 └─sdb4        8:20   1  59.4G  0 part
+```
+
+## test
+
+
+```
+# ./rpmsg_echo 
+Sending message #0: hello there 0!
+Receiving message #0: test this time 1029250 ns, avg time 1029250 ns, maxtime 1029250 ns
+Sending message #1: hello there 1!
+Receiving message #1: test this time 173500 ns, avg time 601375 ns, maxtime 1029250 ns
+Sending message #2: hello there 2!
+Receiving message #2: test this time 166500 ns, avg time 456416 ns, maxtime 1029250 ns
+Sending message #3: hello there 3!
+Receiving message #3: test this time 109000 ns, avg time 369562 ns, maxtime 1029250 ns
+Sending message #4: hello there 4!
+Receiving message #4: test this time 162500 ns, avg time 328150 ns, maxtime 1029250 ns
+Sending message #5: hello there 5!
+Receiving message #5: test this time 191000 ns, avg time 305291 ns, maxtime 1029250 ns
+^C
+# 
 ```

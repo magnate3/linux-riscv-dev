@@ -229,3 +229,22 @@ PING 192.168.0.2 (192.168.0.2) 56(84) bytes of data.
 rtt min/avg/max/mdev = 2.945/4.740/5.827/1.278 ms
 root@ubuntux86:# 
 ```
+
+# control flow   
+
+```
+table_add srv6_transit_udp t_m_tmap_sid1 2152 => 0xfc345678 0xfd000000000000000000000000000001 0xfd010100000000000000000000000001
+table_add srv6_end end 0xfd010100000000000000000000000001&&&0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF => 100
+table_add srv6_end end_m_gtp4_e 0xfc345678000000000000000000000000&&&0xFFFFFFFF000000000000000000000000 => 100
+```
+
+```
+>>> import ipaddress 
+>>> print(ipaddress.ip_address(0xfc345678)) 
+252.52.86.120
+>>> print(ipaddress.ip_address(0xfd010100000000000000000000000001)) 
+fd01:100::1
+>>> print(ipaddress.ip_address(0xfd000000000000000000000000000001)) 
+fd00::1
+>>> 
+```

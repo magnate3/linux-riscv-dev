@@ -38,3 +38,51 @@ int main()
 ```
 sizeof(struct srh): 8 
 ```
+
+
+```
+static __always_inline int add_srh(struct __sk_buff *skb, void *data,
+								   void *data_end,
+								   struct sidlist_data *sidlist_data)
+{
+	struct ipv6hdr *ipv6 = data + sizeof(struct ethhdr);
+	if (data + sizeof(struct ethhdr) + sizeof(struct ipv6hdr) > data_end)
+		return -1;
+
+	int hdr_ext_len =
+		(sizeof(struct srh) +
+		 sizeof(struct in6_addr) * sidlist_data->sidlist_size - 8) /
+		8;
+
+	struct srh srh = {
+		.next_hdr = ipv6->nexthdr,
+		.hdr_ext_len = hdr_ext_len,
+		.routing_type = SRV6_ROUTING_TYPE,
+		.segments_left = sidlist_data->sidlist_size - 1,
+		.last_entry = sidlist_data->sidlist_size - 1,
+	};
+}
+```
+
++ ipv6  payload_len变化    
+
+```
+ipv6->payload_len =
+		bpf_htons(bpf_ntohs(ipv6->payload_len) + sizeof(struct srh) +
+				  sizeof(struct in6_addr) * sidlist_data->sidlist_size);
+```
++ ipv6->nexthdr     
+```
+#define SRV6_NEXT_HDR 43	/* Routing header. */
+	ipv6->nexthdr = SRV6_NEXT_HDR;
+```
+
+# sizeof(struct srh) + sizeof(struct in6_addr) * sidlist_size == srh_get_hdr_len(struct srh *hdr)
+
+```
+[root@centos7 ~]# ./test2 
+hdr_ext_len: 2, srh_get_hdr_len: 24 
+sizeof(struct srh): 8 
+sizeof(struct srh) + sizeof(struct in6_addr) * sidlist_size : 24, equal: 24 
+ipv6_payload_len change to : 152, equal: 152 
+```

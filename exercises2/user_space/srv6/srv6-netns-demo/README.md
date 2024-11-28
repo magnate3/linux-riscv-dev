@@ -1,6 +1,6 @@
 # srv6-netns-demo
-One touch Build SRv6 Network Namespace with vagrant
-
+[One touch Build SRv6 Network Namespace](https://github.com/vn-cdr/srv6-netns-demo/tree/master)    
+ 
 # Topology
 ![](./srv6-netns.png)
 

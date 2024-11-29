@@ -178,7 +178,7 @@ root@ubuntux86:#
 ```
 
 # action   
-vtap0 ---gtpu_decap_v6---> vtap11 -->   vtap12   ---srv6_End_M_GTP6_D2--->  vtap13 ---srv6_End0 ---> vtap14  ---srv6_End_DT6 --->  vtap15  --->  vtap16 --->  vtap1
+vtap0 ---gtpu_decap_v6---> vtap11 -->   vtap12   ---srv6_End_M_GTP6_D2--->  vtap13  ---> vtap14   ---srv6_End0 ---> vtap15  --->  vtap16 ---srv6_End_DT6 --->   vtap1
 
 
 
@@ -191,11 +191,16 @@ vtap0 ---gtpu_decap_v6---> vtap11 -->   vtap12   ---srv6_End_M_GTP6_D2--->  vtap
 
 
 ##  srv6_End_M_GTP6_D2
+
+![images](vtap12.png)   
 ![images](vtap13.png)   
 
+##  srv6_End0
+![images](vtap14.png)  
 
 ![images](vtap15.png)  
 
+##  srv6_End_DT6
 
 ![images](vtap16.png)  
 

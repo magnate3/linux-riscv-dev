@@ -1,0 +1,4 @@
+table_add fwd forward 0 => 11
+table_add fwd forward 11 => 0
+table_add gtpu_v6 gtpu_encap_v6 2001:db8:a::2 => 2001:db8:b::1 2001:db8:1::1 0x100 2152 255 100
+table_add gtpu_v6 gtpu_decap_v6 2001:db8:b::1 =>

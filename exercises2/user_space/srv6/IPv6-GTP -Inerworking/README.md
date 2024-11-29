@@ -176,3 +176,27 @@ PING 2001:db8:a::2(2001:db8:a::2) 56 data bytes
 rtt min/avg/max/mdev = 6.383/6.421/6.460/0.038 ms
 root@ubuntux86:# 
 ```
+
+# action   
+vtap0 ---gtpu_decap_v6---> vtap11 -->   vtap12   ---srv6_End_M_GTP6_D2--->  vtap13 ---srv6_End0 ---> vtap14  ---srv6_End_DT6 --->  vtap15  --->  vtap16 --->  vtap1
+
+
+
+
+
+
+
+## gNB  gtpu_decap_v6     
+![images](vtap11.png)   
+
+
+##  srv6_End_M_GTP6_D2
+![images](vtap13.png)   
+
+
+![images](vtap15.png)  
+
+
+![images](vtap16.png)  
+
+![images](vtap1.png) 

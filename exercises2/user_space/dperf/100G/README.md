@@ -26,3 +26,38 @@ lspci -n -d 8086:1592 -vvv | grep --color -i width
 
 
 ![images](derf.jpg)
+重要调优参数：
+
+```
+jumbo                       9000
+payload_size                8192
+cc                          3200
+```
+
+
+```
+cat client-tps-port1-1.conf 
+mode                        client
+tx_burst                    128
+launch_num                  10
+cpu                         0 2 4 6 8 10 12 14
+
+jumbo                       9000
+payload_size                8192
+#packet_size                 1000
+duration                    2m
+cps                         400
+cc                          3200
+keepalive                   1ms
+
+#port                       pci             addr         gateway    [mac]
+port                        0000:17:00.0   6.6.245.3   6.6.245.1     6c:fe:54:3d:8a:38 
+
+#                           addr_start      num
+client                      6.6.245.3       8
+
+#                           addr_start      num
+server                      6.6.247.3       8
+#                           port_start      num
+listen                      80              8
+```

@@ -131,6 +131,7 @@ TCP window size:  325 KByte (default)
 [ ID] Interval       Transfer     Bandwidth
 [  1] 0.0000-10.0082 sec  30.5 GBytes  26.2 Gbits/sec
 ```
+iperf uses base 2 for M and K, meaning that K = 1024 and M = 1024*1024.
 
 ```
 numactl -C 24,26,27,28,30,32,34,36 iperf -s   -p 9999

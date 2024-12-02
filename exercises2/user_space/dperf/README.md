@@ -62,3 +62,7 @@ export LD_LIBRARY_PATH=/root/dpdk-stable-21.11.8/build/lib:$LD_LIBRARY_PATH
 export LIBRARY_PATH=/root/dpdk-stable-21.11.8/build/lib:$LIBRARY_PATH
 export PKG_CONFIG_PATH=/root/dpdk-stable-21.11.8/build/install/usr/local/lib/x86_64-linux-gnu/pkgconfig/
 ```
+
+
+# How to test network bandwidth?
+[How to test network bandwidth?](https://dperf.org/doc/html/dperf-faq)   

@@ -172,6 +172,12 @@ done.
 202: 34
 ```
 
++ set_irq_affinity_bynode.sh    
+
+```bash
+   ./set_irq_affinity_bynode.sh `\cat /sys/class/net/eth0/device/numa_node` eth0
+```
+
 
 
 ```

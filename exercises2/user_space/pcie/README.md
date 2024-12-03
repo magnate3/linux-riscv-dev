@@ -115,3 +115,30 @@ af:00.0 Ethernet controller: Intel Corporation Ethernet Controller XL710 for 40G
         Kernel driver in use: i40e
         Kernel modules: i40e
 ```
+
+# 安装 lstopo 命令
+
++ ubuntu   
+```
+sudo apt install hwloc
+```
++ centos    
+```
+sudo yum install hwloc-gui
+```
+
+Show the summarized system topology in a graphical window (or print to console if no graphical display is available):   
+lstopo    
+Show the full system topology without summarizations:   
+lstopo --no-factorize   
+Show the summarized system topology with only [p]hysical indices (i.e. as seen by the OS):   
+lstopo --physical   
+Write the full system topology to a file in the specified format:    
+lstopo --no-factorize --output-format console|ascii|tex|fig|svg|pdf|ps|png|xml path/to/file   
+
+
+```
+ lstopo --no-factorize --output-format png 220.png
+```
+
+![images](220.png)

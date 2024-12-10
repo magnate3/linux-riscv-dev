@@ -48,6 +48,28 @@ ff05
 >>> 
 ```
 
+# ipv4
+
+```
+>>> addr=ipaddress.ip_address('10.10.10.10') 
+>>> print('0x%08x'%int(addr)) 
+0x0a0a0a0a
+>>> 
+
+```
+
+# ipv4 to ipv6
+
+```
+>>> import ipaddress
+>>> a = '10.20.30.40'
+>>> print(ipaddress.IPv6Address('2002::' + a).compressed)
+2002::a14:1e28
+>>> 
+
+
+```
+
 
 #   Convert IP address to integer and vice versa
 

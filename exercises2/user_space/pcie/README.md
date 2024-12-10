@@ -135,8 +135,17 @@ Show the summarized system topology with only [p]hysical indices (i.e. as seen b
 lstopo --physical   
 Write the full system topology to a file in the specified format:    
 lstopo --no-factorize --output-format console|ascii|tex|fig|svg|pdf|ps|png|xml path/to/file   
+Other formats that can be used include svg and pdf:      
 
+$ lstopo --of svg > out.svg    
 
+$ lstopo --of pdf > out.pdf   
+
+```
+lstopo --logical  --output-format png 220.png
+``` 
+
+推荐  lstopo --no-factorize --output-format png 220.png     
 ```
  lstopo --no-factorize --output-format png 220.png
 ```
@@ -197,8 +206,29 @@ Vulnerabilities:
   Tsx async abort:        Not affected
 ```
 
-##   CPU 与内存吞吐量测试(pcm)
+##   CPU 与内存吞吐量测试(pcm)  
+
+
 [NUMA 与 PCIE](https://winddoing.github.io/post/13d4e2a6.html)    
 [Intel 处理器测试工具:Processor Counter Monitor](https://github.com/intel/pcm)
 + 内存的读写速度   
 + 多物理 CPU 之间的 QPI 速度    
+
+
+# lspci -tvv    and  lspci -PP -s
+
+![images](pcie.png)
+
+```
+lspci -s  0000:16:01.0
+16:01.0 PCI bridge: Intel Corporation Device 352a (rev 04)
+```
+
+```
+lspci -PP -s  0000:17:00.0
+16:01.0/17:00.0 Ethernet controller: Intel Corporation Ethernet Controller E810-C for QSFP (rev 02)
+```
+```
+lspci -P  -s  0000:17:00.0
+16:01.0/00.0 Ethernet controller: Intel Corporation Ethernet Controller E810-C for QSFP (rev 02)
+```

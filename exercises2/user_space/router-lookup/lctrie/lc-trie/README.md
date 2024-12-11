@@ -14,6 +14,7 @@ bits32_trie_lookup.c:节点查找代码
 bits32_trie_remove.c:节点删除代码
 
 运行输出信息
+```
 /lib/modules/5.0.0/extra # insmod BiscuitOS-modules-0.0.1.ko 
 [   25.401183] BiscuitOS_modules_0.0.1: loading out-of-tree module taints kernel.
 [   25.424002] bits32_trie_init:[16 - 4]
@@ -49,7 +50,7 @@ bits32_trie_remove.c:节点删除代码
 [   25.432474] - leaf[0x87654321]:pos[0x0]bits[0x0]data[0x1]cindex[0x1]
 [   25.432704] bits32_trie_init finish
 /lib/modules/5.0.0/extra # 
-
+```
 
 实例图解
              bit31  ->                      bit0
@@ -151,7 +152,7 @@ static inline unsigned long __fls(unsigned long word)
 }
 ```
 
-## -DARM64
+## 有-DARM64
 ```
 [root@centos7 lc-trie]# ./bits32_trie 
 main:[16 - 4]~~~~~~~~  start insert  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,7 +180,7 @@ tnode[0x0]:pos[0x1f]bits[0x1]cindex[0x0]- tnode[0x0]:pos[0x1d]bits[0x1]cindex[0x
 ## 没有-DARM64
 
 
-![images](test.png)
+![images](test1.png)
 
 
 

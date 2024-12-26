@@ -70,6 +70,51 @@ ff05
 
 ```
 
+# ipv4/ipv6 and str
+
+
+```
+print(str(ipaddress.ip_address(0xdffff980)))
+223.255.249.128
+```
+
+# ipv4/ipv6 and int
+[ipv4/ipv6 and int](https://stackoverflow.com/questions/9590965/convert-an-ip-string-to-a-number-and-vice-versa)
+```
+>>> import ipaddress
+>>> int(ipaddress.ip_address('1.2.3.4'))
+16909060
+>>> str(ipaddress.ip_address(16909060))
+'1.2.3.4'
+```
+
+
+```
+>>> import ipaddress 
+>>> print(ipaddress.ip_address(0x100000000)) 
+::1:0:0
+>>> 
+>>> print("0x%08x"%0x100000000) 
+0x100000000
+>>> 
+
+```
+
+In Python 3, ints and longs have been merged into just int, which functions pretty much like long used to.    
+```
+>>> int(ipaddress.ip_address(u'1000:2000:3000:4000:5000:6000:7000:8000'))
+21268296984521553528558659310639415296
+>>> str(ipaddress.ip_address(21268296984521553528558659310639415296L))
+  File "<stdin>", line 1
+    str(ipaddress.ip_address(21268296984521553528558659310639415296L))
+                                                                   ^
+SyntaxError: invalid syntax
+>>> str(ipaddress.ip_address(21268296984521553528558659310639415296))
+'1000:2000:3000:4000:5000:6000:7000:8000'
+>>> 
+
+
+```
 
 #   Convert IP address to integer and vice versa
 

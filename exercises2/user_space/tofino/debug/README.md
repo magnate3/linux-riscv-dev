@@ -1,6 +1,26 @@
 
+# dev
 
+```
+bf-sde.pipe_mgr> dev 
+------------------------------------------------------------
+Device|Type               |#pipe|#stg|#prsr|#macblk|#sub-dev
+------|-------------------|-----|----|-----|-------|--------
+0     |BFN-T20-128Q      |4    |20  |36   |-3     |1       
+bf-sde.pipe_mgr> 
+```
 
+# snap
+
+```
+bf-sde.pipe_mgr> profile -d 0
+Num of pipeline profiles: 1 
+---------------------------------------------
+Profile-id | Name            | Pipes in scope 
+---------------------------------------------
+0          | pipe            | 0 1 2 3        
+bf-sde.pipe_mgr> 
+```
 
 ```
 bf-sde.pipe_mgr> phv-dump 
@@ -101,3 +121,26 @@ bf-sde.pipe_mgr> snap-capture-get -h 0x581
 ```
 
 ![images](test.png)
+
+
+#  pipe
+
+
+```
+bf-sde.pipe_mgr.pkt_path_counter> ..
+bf-sde.pipe_mgr> pipe -d 0 -p 0
+Pipeline 0:
+    Logical pipe 0 maps to Physical pipe 0
+bf-sde.pipe_mgr> pipe -d 0 -p 1
+Pipeline 1:
+    Logical pipe 1 maps to Physical pipe 1
+bf-sde.pipe_mgr> pipe -d 0 -p 2
+Pipeline 2:
+    Logical pipe 2 maps to Physical pipe 2
+bf-sde.pipe_mgr> pipe -d 0 -p 3
+Pipeline 3:
+    Logical pipe 3 maps to Physical pipe 3
+bf-sde.pipe_mgr> pipe -d 0 -p 4
+Invalid pipe <4> 
+bf-sde.pipe_mgr> 
+```

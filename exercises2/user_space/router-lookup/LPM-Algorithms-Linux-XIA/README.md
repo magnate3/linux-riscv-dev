@@ -9,4 +9,8 @@ Please visit the [wiki](https://github.com/sumefsp/LPM-Algorithms-Linux-XIA/wiki
 
 
 #  Bottom up traversal  LC-Trie
-[IP Address Lookup TUTORIAL](https://raminaji.wordpress.com/lc-trie/)
+[IP Address Lookup TUTORIAL](https://raminaji.wordpress.com/lc-trie/)    
+
+#  fn_trie_dump    
+
+sfrt_lct_insert    

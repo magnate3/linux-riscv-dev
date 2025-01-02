@@ -13,6 +13,10 @@ bf-sde.pipe_mgr>
 # snap
 
 ```
+snap-create       Create a snapshot Usage: snap-create -d <dev_id> -p <pipe_id: all-pipes=0xFFFF> -s <start_stage> -e <end_stage> -i <direction 0:ingress 1:egress>
+```
+
+```
 bf-sde.pipe_mgr> profile -d 0
 Num of pipeline profiles: 1 
 ---------------------------------------------

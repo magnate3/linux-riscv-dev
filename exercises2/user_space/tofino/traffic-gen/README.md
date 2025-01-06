@@ -7,6 +7,21 @@
 apt-get -y install python3-scapy
 ```
 
+# 面板编号 --> dp 编号
+
+```
+# For getting the dev_ports from the front panel ports itself
+def get_devport(frontpanel, lane):
+    port_hdl_info = bfrt_info.table_get("$PORT_HDL_INFO")
+    key = port_hdl_info.make_key(
+        [gc.KeyTuple("$CONN_ID", frontpanel), gc.KeyTuple("$CHNL_ID", lane)]
+    )   
+    for data, _ in port_hdl_info.entry_get(target, [key], {"from_hw": False}):
+        devport = data.to_dict()["$DEV_PORT"]
+        if devport:
+            return devport
+```
+
 
 # test
 ```
@@ -66,4 +81,36 @@ enable pktgen port
 configure pktgen application
 configure packet buffer
 enable pktgen
+```
+
+#  bfrt.tf2.pktgen.port_cfg   
+
+
+```
+bfrt.tf2.pktgen.port_cfg> get(6)
+Entry 0:
+Entry key:
+    dev_port                       : 0x00000006
+Entry data:
+    recirculation_enable           : True
+    pktgen_enable                  : True
+    pattern_matching_enable        : True
+    clear_port_down_enable         : False
+
+Out[20]: Entry for tf2.pktgen.port_cfg table.
+
+bfrt.tf2.pktgen.port_cfg> 
+```
+
+
+```
+
+bfrt.tf2.pktgen.port_cfg> exit
+bf_rt cli exited normally.
+Starting UCLI from bf-shell 
+
+Cannot read termcap database;
+using dumb terminal settings.
+bf-sde> rate-period 1
+bf-sde> rate-show
 ```

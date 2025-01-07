@@ -22,6 +22,32 @@ def get_devport(frontpanel, lane):
             return devport
 ```
 
+# gen port
+```
+def port_to_pipe(port):
+    local_port = port & 0x7F
+    pipe = port >> 7
+    return pipe
+
+
+def make_port(pipe, local_port):
+    return (pipe << 7) | local_port
+def pgen_port(pipe_id):
+    """
+    Given a pipe return a port in that pipe which is usable for packet
+    generation.  Note that Tofino allows ports 68-71 in each pipe to be used for
+    packet generation while Tofino2 allows ports 0-7.  This example will use
+    either port 68 or port 6 in a pipe depending on chip type.
+    """
+    if g_is_tofino:
+        pipe_local_port = 68
+    if g_is_tofino2:
+        pipe_local_port = 6
+    return make_port(pipe_id, pipe_local_port)
+```
+
+
+
 
 # test
 ```

@@ -13,6 +13,15 @@ bf-sde.pipe_mgr>
 # snap
 
 ```
+bfshell> ucli 
+Cannot read termcap database;
+using dumb terminal settings.
+bf-sde.pm> ..
+bf-sde> pi
+bf-sde> pipe_mgr 
+```
+
+```
 snap-create       Create a snapshot Usage: snap-create -d <dev_id> -p <pipe_id: all-pipes=0xFFFF> -s <start_stage> -e <end_stage> -i <direction 0:ingress 1:egress>
 ```
 

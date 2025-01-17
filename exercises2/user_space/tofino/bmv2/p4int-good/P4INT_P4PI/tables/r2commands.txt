@@ -1,0 +1,26 @@
+#L3 forwading
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.1.0/24 => b8:27:eb:83:45:95 1
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.2.18/32 => 8e:8a:0a:2c:17:de 0
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.3.0/24 => dc:a6:32:40:1b:03 2
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.4.0/24 => dc:a6:32:40:1b:03 2
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.3.6/32 => e4:a4:71:cd:52:99 1
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.1.0.1/32 => b8:27:eb:83:45:95 1
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.1.0.2/32 => d8:3a:dd:11:7a:de 1
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.1.0/24 => dc:a6:32:40:1b:03 1
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.1.1/32 => 3e:90:87:5f:dc:af 1
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.1.9/32 => 38:a2:8c:90:60:6c 1
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.2.18/32 => 60:67:20:87:81:4c 0
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.2.1/32 => 8e:8a:0a:2c:17:de 0
+
+#set up switch ID
+table_set_default process_int_transit.tb_int_insert init_metadata 2
+
+#ARP
+#table_add arpreply.arp_exact arp_reply 10.0.3.1 => 9a:4b:89:ad:8a:59
+#table_add arpreply.arp_exact arp_reply 10.0.3.6 => e4:a4:71:cd:52:99 
+#table_add arpreply.arp_exact arp_reply 10.1.0.1 => b8:27:eb:83:45:95
+#table_add arpreply.arp_exact arp_reply 10.1.0.3 => dc:a6:32:40:1b:03
+table_add arpreply.arp_exact arp_reply 10.0.2.1 => 8e:8a:0a:2c:17:de
+table_add arpreply.arp_exact arp_reply 10.0.2.18 => 60:67:20:87:81:4c
+table_add arpreply.arp_exact arp_reply 10.1.0.2 => d8:3a:dd:11:7a:de
+table_add arpreply.arp_exact arp_reply 10.2.0.1 => 00:e0:4c:53:44:58

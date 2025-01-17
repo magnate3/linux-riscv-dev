@@ -1,0 +1,26 @@
+#creates a mirroring ID to output port specified
+mirroring_add 500 0
+
+#L3 forwading
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.1.0/24 => 00:e0:4c:53:44:58 1
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.2.0/24 => 00:e0:4c:53:44:58 1
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.3.6/32 => e4:a4:71:cd:52:99 0
+#table_add l3_forward.ipv4_lpm ipv4_forward 10.0.4.4/32 => 34:60:f9:c9:ee:84 2 #nao funciona o mirroring se esta linha aqui estiver!!!!
+
+#set up process_int_source_sink
+table_add process_int_source_sink.tb_set_sink int_set_sink 0 => 
+
+#INT report setup towards the INT collector PAPI3 veth0 to INTC in hpelite
+table_add process_int_report.tb_generate_report do_report_encapsulation => 9a:4b:89:ad:8a:59 e4:a4:71:cd:52:99 10.0.3.1 10.0.3.6 1234
+
+#set up switch ID
+table_set_default process_int_transit.tb_int_insert init_metadata 3
+
+#ARP
+table_add arpreply.arp_exact arp_reply 10.0.3.1 => 9a:4b:89:ad:8a:59
+table_add arpreply.arp_exact arp_reply 10.0.3.6 => e4:a4:71:cd:52:99 
+#table_add arpreply.arp_exact arp_reply 10.1.0.1 => b8:27:eb:83:45:95
+table_add arpreply.arp_exact arp_reply 10.1.0.3 => dc:a6:32:40:1b:03
+#table_add arpreply.arp_exact arp_reply 10.0.1.1 => 3e:90:87:5f:dc:af
+#table_add arpreply.arp_exact arp_reply 10.0.1.7 => 60:67:20:87:81:4c
+#table_add arpreply.arp_exact arp_reply 10.0.2.18 => 60:67:20:87:81:4c

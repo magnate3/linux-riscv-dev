@@ -302,7 +302,7 @@ table_add process_int_source_sink.tb_set_sink int_set_sink 1 =>
 table_add process_int_source_sink.tb_set_sink int_set_sink 2 =>
 ```
 
-降低mtu，否则加了int header 后报文超过mtu(1500),sw1_p2 无法接收， tcpdump -i sw1_p2 -env 也无法抓到报文   
++ 降低mtu，否则加了int header 后报文超过mtu(1500),sw1_p2 无法接收， tcpdump -i sw1_p2 -env 也无法抓到报文   
 ```
 ip netns  exec ns1 ifconfig host1 mtu 1400
 root@ubuntux86:# ip netns  exec ns1 ifconfig host1

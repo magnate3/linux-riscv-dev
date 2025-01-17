@@ -1,0 +1,2 @@
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.3.2/32 => 2e:21:21:21:00:12  2e:21:21:21:00:11 2
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.4.2/32 => fa:9c:98:ef:a4:22  2e:21:21:21:00:11 3

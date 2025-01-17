@@ -31,10 +31,10 @@ For the sake of simplicity and due to the shortage of Raspberry Pis, we streamli
 1. Raspberry Pi 3 Model B, Rev 1.2, 1GB of RAM. This device will act as INT source.
 2. Raspberry Pi 4 Model B, Rev 1.5, 8GB of RAM. This device will act as INT transit.
 3. Raspberry Pi 4 Model B, Rev 1.1, 4GB of RAM. This device will act as INT sink.
-![Diagram of the INT solution with three P4Pis.](/pictures/p4pi_intv11.png)
+![Diagram of the INT solution with three P4Pis.](./pictures/p4pi_intv11.png)
 
 As the Raspberry Pis only have one on-board Ethernet and one WiFi interface, we added the necessary USB devices as in the picture:
-![INT lab with three P4Pis](/pictures/p4pi_hw.jpg)
+![INT lab with three P4Pis](./pictures/p4pi_hw.jpg)
 
 ## PRE-REQUISITES
 We started with following the steps in the P4Pi wiki, downloaded the image, burned it to the SD-cards and then boot and configure each one (example code below for s3):
@@ -410,7 +410,7 @@ Import the dashboard in the Grafana web interface. Go to Home > Dashboards > Imp
 ### Visualization in Grafana
 The visualization of the INT packets in Grafana offers quick insights of the behavior of the network. Additionally to the examples we provided in 4.2.2, we now have data from a real environment.
 We can confirm that there is more latency in the sink switch as shown in the Figure:
-![Switch latency in P4PI.](/pictures/p4pi_switch_latency_per_switch.png)
+![Switch latency in P4PI.](./pictures/p4pi_switch_latency_per_switch.png)
 
 As an example, when attacking with unauthorized traffic, we can visually notice and identify the source, as highlighted in the Figure below. As such, we can identify three types of unauthorized flows:
 1. Unauthorized destination ports: only 80, 443 or 5432 should be reached. This may hint a port scan.
@@ -419,7 +419,7 @@ As an example, when attacking with unauthorized traffic, we can visually notice 
 
 The table form easily identifies what are the root causes.
 
-![INT statistics detecting unauthorized flows.](/pictures/p4pi_int_detecting_unauthorized_flows.png)
+![INT statistics detecting unauthorized flows.](./pictures/p4pi_int_detecting_unauthorized_flows.png)
 
 
 

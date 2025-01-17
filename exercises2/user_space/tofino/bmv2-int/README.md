@@ -1,6 +1,9 @@
  [tofino int-mx](https://github.com/mandaryoshi/p4-int/tree/3a9e9e5b2686bd7c2c1b98cd8946fcb83abde55d/int-mx)   
 
 [INT-InBand-Network-Telemetry规则](https://github.com/MehmedGIT/INT-InBand-Network-Telemetry-/blob/master/include/int_parser.p4) 
+
+
+
  # make
  
  ```
@@ -28,7 +31,12 @@ simple_switch_CLI --thrift-port 9092 < rule/s1-commands.txt
 simple_switch_CLI --thrift-port 9093 < rule/s2-commands.txt 
 simple_switch_CLI --thrift-port 9094 < rule/s3-commands.txt 
  ```
- 
+
+# debug 
+
+```
+simple_switch -i 1@sw1_p1 -i 2@sw1_p2 -i 3@sw1_p3 int_md.json  --thrift-port 9092  --nanolog ipc:///tmp/bm-1-log.ipc --device-id 1  --log-console
+```
  
 # test2
  

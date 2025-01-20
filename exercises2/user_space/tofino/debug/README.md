@@ -136,6 +136,13 @@ bf-sde.pipe_mgr> snap-capture-get -h 0x581
 ![images](test.png)
 
 
+## 删除
+
+
+```
+snap-delete -h 0x581
+```
+
 #  pipe
 
 

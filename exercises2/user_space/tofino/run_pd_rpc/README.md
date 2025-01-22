@@ -112,7 +112,7 @@ bfrt.tofino_codel.pipe.Egress.codel_egress.codel_drop_state>
 ```
 
 ## 大小测试
-mod(REGISTER_INDEX=8, f1=4294967295)报错    
+mod(REGISTER_INDEX=8, f1=4294967296)报错    
 
 ```
 [root@centos7 ~]# python3

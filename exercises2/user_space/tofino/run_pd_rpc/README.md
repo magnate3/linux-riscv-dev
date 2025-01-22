@@ -111,7 +111,43 @@ Out[26]: Entry for pipe.Egress.codel_egress.codel_drop_state table.
 bfrt.tofino_codel.pipe.Egress.codel_egress.codel_drop_state> 
 ```
 
+## 数组长度测试   
+
+Register< bit<32>, bit<9> > (32w512) codel_drop_state;  长度是512  
+
+
+get(REGISTER_INDEX=512, from_hw=True)报错    
+```
+bfrt.tofino_codel.pipe.Egress.codel_egress.codel_drop_state> get(REGISTER_INDEX=
+                                                        ...: 8, from_hw=True)
+Entry 0:
+Entry key:
+    $REGISTER_INDEX                : 0x00000008
+Entry data:
+    Egress.codel_egress.codel_drop_state.f1 : [4294967295, 4294967295, 4294967295, 4294967295]
+
+Out[37]: Entry for pipe.Egress.codel_egress.codel_drop_state table.
+
+bfrt.tofino_codel.pipe.Egress.codel_egress.codel_drop_state> get(REGISTER_INDEX=
+                                                        ...: 512, from_hw=True)
+Error: table_entry_get failed on table pipe.Egress.codel_egress.codel_drop_state. [Invalid arguments]
+Out[38]: -1
+
+bfrt.tofino_codel.pipe.Egress.codel_egress.codel_drop_state> get(REGISTER_INDEX=
+                                                        ...: 511, from_hw=True)
+Entry 0:
+Entry key:
+    $REGISTER_INDEX                : 0x000001FF
+Entry data:
+    Egress.codel_egress.codel_drop_state.f1 : [3, 3, 3, 3]
+
+Out[39]: Entry for pipe.Egress.codel_egress.codel_drop_state table.
+
+bfrt.tofino_codel.pipe.Egress.codel_egress.codel_drop_state> 
+```
+
 ## 大小测试
+Register< bit<32>, bit<9> > (32w512) codel_drop_state;  长度是512   
 mod(REGISTER_INDEX=8, f1=4294967296)报错    
 
 ```

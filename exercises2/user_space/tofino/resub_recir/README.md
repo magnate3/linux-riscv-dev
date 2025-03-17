@@ -32,7 +32,9 @@ port-loopback 27/0 mac-near
 
 # test
 
++ ingress port = 8的执行resubmit   
 
++ ingress port = 34的执行recirculate    
 
 ```
 numactl -C 24,26,27,28,30,32,34,36  iperf  -c 10.10.203.3 -p 9999  -P 8 -t 12000 -i 5 -S 0x3

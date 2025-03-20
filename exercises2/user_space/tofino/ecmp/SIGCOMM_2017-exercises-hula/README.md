@@ -12,7 +12,7 @@
 ```
 python3 p4apprunner.py  --build-dir ./build/    --manifest  ./p4app.json    app multiswitch
 ```
-![images](topo.png)
+
 ## test
 + step1   ****python3 generatehula.py****    
  

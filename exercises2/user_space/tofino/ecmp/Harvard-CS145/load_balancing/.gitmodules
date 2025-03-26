@@ -1,0 +1,4 @@
+[submodule "apps"]
+	path = apps
+	url = https://github.com/harvard-cns/cs145-projects-tools
+	branch = main

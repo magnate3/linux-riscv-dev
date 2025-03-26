@@ -1,0 +1,33 @@
+{
+    "flow_groups": [
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h4", "h12"],
+            "dst_host_list": ["h4", "h12"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        }
+    ],
+    "mc_host_list": ["h1", "h9"],
+    "mc_gap_distribution": {
+        "type": "constant",
+        "value": 1000000
+    },
+    "length": 60000000,
+    "output": "./apps/trace/sample.trace"
+}

@@ -1,0 +1,107 @@
+{
+  "p4_src": "p4src/flowlet_switching.p4",
+  "switch": "simple_switch",
+  "compiler": "p4c",
+  "options": "--target bmv2 --arch v1model --std p4-16",
+  "switch_cli": "simple_switch_CLI",
+  "cli": true,
+  "pcap_dump": true,
+  "enable_log": true,
+  "topo_module": {
+    "file_path": "",
+    "module_name": "p4utils.mininetlib.apptopo",
+    "object_name": "AppTopoStrategies"
+  },
+  "controller_module": null,
+  "topodb_module": {
+    "file_path": "",
+    "module_name": "p4utils.utils.topology",
+    "object_name": "Topology"
+  },
+  "mininet_module": {
+    "file_path": "",
+    "module_name": "p4utils.mininetlib.net",
+    "object_name": "P4Mininet"
+  },
+  "topology": {
+    "assignment_strategy": "l2",
+    "auto_arp_tables": true,
+    "links": [["h1", "t1", {"bw": 1}], ["h2", "t1", {"bw": 1}], ["h3", "t2", {"bw": 1}], ["h4", "t2", {"bw": 1}], ["h5", "t3", {"bw": 1}], ["h6", "t3", {"bw": 1}], ["h7", "t4", {"bw": 1}], ["h8", "t4", {"bw": 1}], ["h9", "t5", {"bw": 1}], ["h10", "t5", {"bw": 1}], ["h11", "t6", {"bw": 1}], ["h12", "t6", {"bw": 1}], ["h13", "t7", {"bw": 1}], ["h14", "t7", {"bw": 1}], ["h15", "t8", {"bw": 1}], ["h16", "t8", {"bw": 1}], ["t1", "a1", {"bw": 1}], ["t1", "a2", {"bw": 1}], ["t2", "a1", {"bw": 1}], ["t2", "a2", {"bw": 1}], ["t3", "a3", {"bw": 1}], ["t3", "a4", {"bw": 1}], ["t4", "a3", {"bw": 1}], ["t4", "a4", {"bw": 1}], ["t5", "a5", {"bw": 1}], ["t5", "a6", {"bw": 1}], ["t6", "a5", {"bw": 1}], ["t6", "a6", {"bw": 1}], ["t7", "a7", {"bw": 1}], ["t7", "a8", {"bw": 1}], ["t8", "a7", {"bw": 1}], ["t8", "a8", {"bw": 1}], ["a1", "c1", {"bw": 1}], ["a1", "c2", {"bw": 1}], ["a2", "c3", {"bw": 1}], ["a2", "c4", {"bw": 1}], ["a3", "c1", {"bw": 1}], ["a3", "c2", {"bw": 1}], ["a4", "c3", {"bw": 1}], ["a4", "c4", {"bw": 1}], ["a5", "c1", {"bw": 1}], ["a5", "c2", {"bw": 1}], ["a6", "c3", {"bw": 1}], ["a6", "c4", {"bw": 1}], ["a7", "c1", {"bw": 1}], ["a7", "c2", {"bw": 1}], ["a8", "c3", {"bw": 1}], ["a8", "c4", {"bw": 1}]],
+    "hosts": {
+        "h1": {
+        },
+        "h2": {
+        },
+        "h3": {
+        },
+        "h4": {
+        },
+        "h5": {
+        },
+        "h6": {
+        },
+        "h7": {
+        },
+        "h8": {
+        },
+        "h9": {
+        },
+        "h10": {
+        },
+        "h11": {
+        },
+        "h12": {
+        },
+        "h13": {
+        },
+        "h14": {
+        },
+        "h15": {
+        },
+        "h16": {
+        }
+    },
+    "switches": {
+        "t1": {
+        },
+        "t2": {
+        },
+        "t3": {
+        },
+        "t4": {
+        },
+        "t5": {
+        },
+        "t6": {
+        },
+        "t7": {
+        },
+        "t8": {
+        },
+        "a1": {
+        },
+        "a2": {
+        },
+        "a3": {
+        },
+        "a4": {
+        },
+        "a5": {
+        },
+        "a6": {
+        },
+        "a7": {
+        },
+        "a8": {
+        },
+        "c1": {
+        },
+        "c2": {
+        },
+        "c3": {
+        },
+        "c4": {
+        }
+    }
+  }
+}

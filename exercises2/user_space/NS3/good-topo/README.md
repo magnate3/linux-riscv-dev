@@ -115,6 +115,14 @@ root@ubuntux86:#
 102 42 3 5328 2.000000237
 94 91 3 1956 2.000000438
 ```
+```
+python ./traffic_gen/traffic_gen.py -c /work/High-Precision-Congestion-Control/gen_topo_flow/../traffic_gen/AliStorage2019.txt -n 128 -l 0.25 -b 100G -t 0.1 -o /work//High-Precision-Congestion-Control/gen_topo_flow/config/L_25.00_CDF_AliStorage2019_N_128_T_100ms_B_100_flow.txt
+```
+简化 ：
+
+```
+ python traffic_gen.py -c  AliStorage2019.txt -n 128 -l 0.25 -b 100G -t 0.1 -o  flow.txt
+```
 
 ## n_host
 
@@ -191,4 +199,11 @@ Running Simulation.
 ![images](fct.png)
 ```
 python3 fctAnalysis.py -id 863619304 -dir /work/ovs_p4/High-Precision-Congestion-Control/gen_topo_flow -bdp 104000 -sT 2005000000 -fT 2150000000 > /dev/null 2>&1
+```
+
+```
+fctAnalysis.py  -bdp 104000 -sT 2005000000 -fT 2150000000
+cat mix/fct_topology_flow_dcqcn.txt | awk '{if ($6>2005000000 && $6+$7<2150000000) {print $7/1000, $5} }' | sort -n -k 2
+cat mix/fct_topology_flow_dcqcn.txt | awk '{if ($6>2005000000 && $6+$7<2150000000) {print $7/$8<1?1:$7/$8, $5} }' | sort -n -k 2
+output_slowdown is emptry
 ```

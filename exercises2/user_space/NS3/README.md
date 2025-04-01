@@ -41,18 +41,32 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 ## NS-3 DCQCN
 
-[NS-3 simulator for RDMA DCQCN-](https://github.com/shenliang07/DCQCN-)
+[NS-3 simulator for RDMA DCQCN-实验报告](https://github.com/shenliang07/DCQCN-)
 
 
 ```
 
 ```
 
-# High-Precision-Congestion-Control
+# alibaba-edu/High-Precision-Congestion-Control
 
 
 + 相关项目
 [new_ubuntu_cc High-Precision-Congestion-Control ](https://github.com/zhaoqirun/new_ubuntu_cc/tree/86d2897d7f64f6985bba8c51981bf0fe274880b4/analysis)
+
+[intcc/simulation/mix/](https://github.com/hrQAQ/intcc/tree/master/simulation/mix)   
++ python 版本
+
+```
+python
+Python 2.7.18 (default, Mar  8 2021, 13:02:45) 
+[GCC 9.3.0] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> 
+KeyboardInterrupt
+>>> 
+python run.py --topo topology --trace flow --bw 100 --cc dcqcn --enable_tr 1
+```
 
 + 安装 gcc-5、g++-5
 ```
@@ -131,5 +145,114 @@ Running Simulation.
 ```
 
 ```
-./mix/mix_topology_flow_dcqcn.tr
+./trace_reader ../simulation/mix/mix_topology_flow_dcqcn.tr 
 ```
+
+## analysis
+
+```
+python traffic_gen.py -c AliStorage2019.txt  -n 320 -l 0.3 -b 100G -t 0.1 
+root@ubuntux86:# python traffic_gen.py -c WebSearch_distribution.txt -n 320 -l 0.3 -b 100G -t 0.1 
+root@ubuntux86:# cat WebSearch_distribution.txt 
+0 0
+10000 15
+20000 20
+30000 30
+50000 40
+80000 53
+200000 60
+1000000 70
+2000000 80
+5000000 90
+10000000 97
+30000000 100
+```
+
++ step1   
+
+```
+python run.py --topo topology --trace flow --bw 100 --cc dcqcn --enable_tr 1
+```
+把运行后的config_topology_flow_dcqcn.txt文件中的enable_trace = 0，改为enable_trace = 1，   
++ step2   
+```
+./trace_reader ../simulation/mix/mix_topology_flow_dcqcn.tr 
+
+```
+
+```
+./trace_reader ../simulation/mix/mix_topology_flow_dcqcn.tr  'time>2000000000'
+```
+
+others
+
+```
+./trace_reader ../simulation/mix/mix.tr "sip=0x0b000401"| grep " n:0" | awk '{print $4}' > queue_
+```
+
+
+```
+ python2 fct_analysis.py  -p  fct_topology_flow -s 100  -t 0 -T 2200000000 -b 100
+../simulation/mix/fct_topology_flow_dcqcn.txt
+0.000 200000000 6.175 6.355 6.355
+```
+
+## 测试topo and flow   
+
+
+
+其中topology.txt的内容为：  
+```
+7 1 6
+0
+0 1 100Gbps 0.001ms 0
+0 2 100Gbps 0.001ms 0
+0 3 100Gbps 0.001ms 0
+0 4 100Gbps 0.001ms 0
+0 5 100Gbps 0.001ms 0
+0 6 100Gbps 0.001ms 0
+```
+flow.txt的内容为：   
+```
+5
+2 1 3 100 200000000 2
+3 1 3 100 200000000 2
+4 1 3 100 150000000 2
+5 1 3 100 5000000 2
+6 1 3 100 5000000 2
+```
+
+```
+python2 fct_analysis.py  -p  fct_topology_flow -s 100
+../simulation/mix/fct_topology_flow_dcqcn.txt
+0.000 200000000 6.175 6.355 6.355
+
+```
+
+```
+python3 total_fct_analysis.py 
+平均FCT (ms):
+```
+
+## traffic_gen.py
+
+```
+python traffic_gen.py -c  GoogleRPC2008.txt  -n 320 -l 0.3 -b 100G -t 0.1 -o flow.txt
+```
+```
+du -sh flow.txt
+1.2G    flow.txt
+```
+
+# lomas
+
+[Lomas](https://github.com/ZhiwenLiu99/Lomas/tree/master)
+python2     
+```
+cat run_fct_analysis.sh 
+comm_arg='-p all2all -s 5 -t 0 -b 100'
+exe='python2 fct_analysis.py'
+
+${exe} ${comm_arg}
+```
+![images](ns2.png)

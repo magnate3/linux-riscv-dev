@@ -246,7 +246,8 @@ du -sh flow.txt
 
 # lomas
 
-[Lomas](https://github.com/ZhiwenLiu99/Lomas/tree/master)
+[Lomas](https://github.com/ZhiwenLiu99/Lomas/tree/master)    
+
 python2     
 ```
 cat run_fct_analysis.sh 

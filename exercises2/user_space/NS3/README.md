@@ -6,6 +6,9 @@ root@ubuntux86:# cd ns-allinone-3.40
 ```
  ./build.py --enable-examples --enable-tests
 ```
+# NS-3 Simulator for SRNIC (NSDI'23)
+
+[NS-3 Simulator for SRNIC (NSDI'23)](https://github.com/HKUST-SING/srnic-simulation-public)
 
 #   Floodgate NS-3 simulator
  

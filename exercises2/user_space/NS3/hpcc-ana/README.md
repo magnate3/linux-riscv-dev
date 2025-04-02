@@ -8,3 +8,5 @@ python2 fct_analysis.py  -p  fct_topology_flow   -t 0 -T 2200000000 -b 100
 ```
 
 ![images](plot.png)
+
+![images](data.png)

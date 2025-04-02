@@ -10,6 +10,9 @@ root@ubuntux86:# cd ns-allinone-3.40
 
 [NS-3 Simulator for SRNIC (NSDI'23)](https://github.com/HKUST-SING/srnic-simulation-public)
 
+# NS3-MP-RDMA simulation
+[NS3-MP-RDMA simulation](https://github.com/Cherries-Man/NS3-MP-RDMA/tree/81a0e229f133c32590dcc6005b3d68f2ce628dca)   
+
 #   Floodgate NS-3 simulator
  
 ```
@@ -57,7 +60,11 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 + 相关项目
 [new_ubuntu_cc High-Precision-Congestion-Control ](https://github.com/zhaoqirun/new_ubuntu_cc/tree/86d2897d7f64f6985bba8c51981bf0fe274880b4/analysis)
 
-[intcc/simulation/mix/](https://github.com/hrQAQ/intcc/tree/master/simulation/mix)   
+[intcc/simulation/mix/](https://github.com/hrQAQ/intcc/tree/master/simulation/mix)  
+
+[ns3-detnet-rdma](https://github.com/viscore-ai/ns3-detnet-rdma/tree/ea52f1d63844a9a27b1f80beb5d6a4277a27a0ff) 
+
+[HPCC-PINT](https://github.com/ProbabilisticINT/HPCC-PINT/tree/6ce45efadaffd39bcd5594f60ceb7c2a8aa860f6)  
 + python 版本
 
 ```

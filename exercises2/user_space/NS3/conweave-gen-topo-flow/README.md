@@ -142,8 +142,8 @@ mv leaf_spine_128_100G_OS2.txt  topology.txt
 ```
 ```
 python run.py --trace flow  --topo topology  --cc dcqcn --enable_tr 1 --trace flow --bw 100
-Waf: Entering directory `/work/ovs_p4/High-Precision-Congestion-Control/simulation/build'
-Waf: Leaving directory `/work/ovs_p4/High-Precision-Congestion-Control/simulation/build'
+Waf: Entering directory `/work//High-Precision-Congestion-Control/simulation/build'
+Waf: Leaving directory `/work//High-Precision-Congestion-Control/simulation/build'
 'build' finished successfully (0.297s)
 ENABLE_QCN                      Yes
 USE_DYNAMIC_PFC_THRESHOLD       Yes
@@ -198,7 +198,7 @@ Running Simulation.
 ```
 ![images](fct.png)
 ```
-python3 fctAnalysis.py -id 863619304 -dir /work/ovs_p4/High-Precision-Congestion-Control/gen_topo_flow -bdp 104000 -sT 2005000000 -fT 2150000000 > /dev/null 2>&1
+python3 fctAnalysis.py -id 863619304 -dir /work//High-Precision-Congestion-Control/gen_topo_flow -bdp 104000 -sT 2005000000 -fT 2150000000 > /dev/null 2>&1
 ```
 
 ```

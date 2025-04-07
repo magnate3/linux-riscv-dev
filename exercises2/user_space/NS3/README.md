@@ -99,8 +99,8 @@ CC='gcc-5' CXX='g++-5' ./waf configure
 
 ```
 python run.py --cc dcqcn --trace flow --bw 100 --topo topology --hpai 50
-Waf: Entering directory `/work/ovs_p4/High-Precision-Congestion-Control/simulation/build'
-Waf: Leaving directory `/work/ovs_p4/High-Precision-Congestion-Control/simulation/build'
+Waf: Entering directory `/work//High-Precision-Congestion-Control/simulation/build'
+Waf: Leaving directory `/work//High-Precision-Congestion-Control/simulation/build'
 'build' finished successfully (0.291s)
 ENABLE_QCN                      Yes
 USE_DYNAMIC_PFC_THRESHOLD       Yes

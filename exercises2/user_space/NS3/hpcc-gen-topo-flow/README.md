@@ -17,8 +17,8 @@ ofile.write("%d %d 3 100 %d %.9f\n"%(src, dst, size, t * 1e-9))
 # run
 ```
 python run.py --trace flow  --topo topology  --cc dcqcn --enable_tr 1 --trace flow --bw 100
-Waf: Entering directory `/work/ovs_p4/High-Precision-Congestion-Control/simulation/build'
-Waf: Leaving directory `/work/ovs_p4/High-Precision-Congestion-Control/simulation/build'
+Waf: Entering directory `/work/High-Precision-Congestion-Control/simulation/build'
+Waf: Leaving directory `/work/High-Precision-Congestion-Control/simulation/build'
 'build' finished successfully (1.771s)
 ENABLE_QCN                      Yes
 USE_DYNAMIC_PFC_THRESHOLD       Yes

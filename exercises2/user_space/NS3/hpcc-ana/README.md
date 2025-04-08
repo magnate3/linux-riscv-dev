@@ -3,6 +3,7 @@
 
 [docker caver](https://github.com/denght23/CAVER/tree/107a853de02fcb9fc49307fbc2be8abec6d950ae)   
 
+## error
 ```
 python2 fct_analysis.py  -p  fct_topology_flow   -t 0 -T 2200000000 -b 100
 ```
@@ -15,13 +16,45 @@ python2 fct_analysis.py  -p  fct_topology_flow   -t 0 -T 2200000000 -b 100
 ## run
 + topo    
 ```
-config/fat_k4_100G_OS2.txt 
+mv mix/fat.txt  mix/topology.txt     
 ```
++ flow    
 ```
-python traffic_gen.py -c  AliStorage2019.txt -n 32 -l 0.25 -b 100G -t 0.1 -o  flow.txt
+python traffic_gen.py -c  AliStorage2019.txt -n 320 -l 0.25 -b 100G -t 0.1 -o  flow.txt
 ```
++ third.cc 
 
-##
+```
+        maxRtt = maxBdp = 0;
+        for (uint32_t i = 0; i < node_num; i++){
+                if (n.Get(i)->GetNodeType() != 0)
+                        continue;
+                for (uint32_t j = 0; j < node_num; j++){
+                        if (n.Get(j)->GetNodeType() != 0)
+                                continue;
+                        uint64_t delay = pairDelay[n.Get(i)][n.Get(j)];
+                        uint64_t txDelay = pairTxDelay[n.Get(i)][n.Get(j)];
+                        uint64_t rtt = delay * 2 + txDelay;
+                        uint64_t bw = pairBw[i][j];
+                        uint64_t bdp = rtt * bw / 1000000000/8;
+                        pairBdp[n.Get(i)][n.Get(j)] = bdp;
+                        pairBdp[n.Get(j)][n.Get(i)] = bdp;
+                        pairRtt[i][j] = rtt;
+                        pairRtt[j][i] = rtt;
+                        if (bdp > maxBdp)
+                                maxBdp = bdp;
+                        if (rtt > maxRtt)
+                                maxRtt = rtt;
+                }
+        }
+```
++ run    
+```
+python run.py --trace flow  --topo topology  --cc dcqcn  --trace flow --bw 100
+```
++ python3 fct_analysis.py  or  python3 all-to-all_visual.py         
+![images](plot3.png)
+## source
 %s/1000ns/0.001ms/g  
 
 ```

@@ -149,7 +149,7 @@ with PdfPages('plot.pdf') as pdf:
     # # ax.plot(xvals, result["avg"], markersize=1.0, linewidth=3.0, label="{}".format(lb_mode), linestyle=LS[1])
     # ax.plot(result["size"], result["avg"], markersize=1.0, linewidth=3.0, label="{}".format(lb_mode), linestyle=LS[1], color = 'xkcd:orange')
 
-    lb_mode = "ConWeave"
+    lb_mode = "dcqcn"
     conweave_result = get_steps_from_raw(conweave_id, STEP)
     ax.plot(conweave_result["size"], conweave_result["avg"], markersize=1.0, linewidth=3.0, label="{}".format(lb_mode), linestyle=LS[2], color = 'xkcd:teal')
 

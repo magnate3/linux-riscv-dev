@@ -53,7 +53,7 @@ not --enable_tr 1
 ```
 python run.py --trace flow  --topo topology  --cc dcqcn --bw 100
 ```
-+ python3 fct_analysis.py  or  python3 all-to-all_visual.py         
++  python3 all-to-all_visual.py         
 ![images](plot3.png)
 ## source
 %s/1000ns/0.001ms/g  

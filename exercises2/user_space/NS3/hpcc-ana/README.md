@@ -49,8 +49,9 @@ python traffic_gen.py -c  AliStorage2019.txt -n 320 -l 0.25 -b 100G -t 0.1 -o  f
         }
 ```
 + run    
+not --enable_tr 1     
 ```
-python run.py --trace flow  --topo topology  --cc dcqcn  --trace flow --bw 100
+python run.py --trace flow  --topo topology  --cc dcqcn --bw 100
 ```
 + python3 fct_analysis.py  or  python3 all-to-all_visual.py         
 ![images](plot3.png)

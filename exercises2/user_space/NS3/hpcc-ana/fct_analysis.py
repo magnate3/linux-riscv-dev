@@ -25,8 +25,8 @@ def get_steps_from_raw3(prefix,cc,type,time_limit, step=5):
     #filename = "fct_topology_flows.txt"
     #filename = "../../ns3-tlt-rdma-public/mix/fct_topology_flow_dcqcn.txt"
     #filename = "fct_topology_flow_dcqcn.txt"
-    filename = "../simulation/dataset/fct_topology_flow_dcqcn.txt"
-    #filename = "../simulation/mix/fct_topology_flow_dcqcn.txt"
+    #filename = "../simulation/dataset/fct_topology_flow_dcqcn.txt"
+    filename = "../simulation/mix/fct_topology_flow_dcqcn.txt"
     #filename = "701211154_out_fct.txt"
     time_start = int(2.000 * 1000000000)
     #time_start = int(1.800 * 1000000000)
@@ -166,7 +166,7 @@ if __name__=="__main__":
     #CCs = [ "dcqcn" ]
     step = int(args.step)
     cc = "dcqcn"
-    cc_result = get_steps_from_raw3(args.prefix,cc,type,time_limit,step)
+    cc_result = get_steps_from_raw2(args.prefix,cc,type,time_limit,step)
     with PdfPages('plot.pdf') as pdf:
         fig = plt.figure(figsize=(6, 4))
         ax = plt.gca()

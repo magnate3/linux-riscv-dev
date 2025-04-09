@@ -36,7 +36,16 @@ root@ubuntux86:#
 ![images](plot.png)
 
 ## ./analysis/plot_*.py 
+更改mix/.history  只保留运行conweave    
+```
+root@ubuntux86:# cat mix/.history 
+date,id,ccmode,lbmode,cwh_tx_expiry_time,cwh_extra_reply_deadline,cwh_path_pause_time,cwh_extra_voq_flush_time,cwh_default_voq_waiting_time,pfc,irn,has_win,var_win,topo,bw,cdf,load,time
+04/08/25,701211154,1,9,1000,4,16,64,600,1,0,0,0,fat_k4_100G_OS2,100,AliStorage2019,52,0.1
+./waf --run 'scratch/network-load-balance /work/ns-allinone-3.19/ns-3.19/mix/output/701211154/config.txt' > /work/ns-allinone-3.19/ns-3.19/mix/output/701211154/config.log 2>&1
+./waf --run 'scratch/network-load-balance' --command-template='gdb --args %s /work/ns-allinone-3.19/ns-3.19/mix/output/701211154/config.txt'
 
+root@ubuntux86:# 
+```
 
 ```
 ./analysis/plot_fct.py 

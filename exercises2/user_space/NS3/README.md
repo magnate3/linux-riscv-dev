@@ -62,6 +62,7 @@ This repository contains the source code used for the following papers:
 - [Reverie (NSDI 2024)](https://www.usenix.org/conference/nsdi24)
 - [Credence (NSDI 2024)](https://www.usenix.org/conference/nsdi24)
 -  [ "Network Load Balancing with In-network Reordering Support for RDMA".](https://github.com/KaiLv16/llmsim-sim)   
+-  [Homa DPDK and Aeolus (SIGCOMM'20).](https://github.com/gaoxiongzeng/dpdk-18.05)    
 
 # alibaba-edu/High-Precision-Congestion-Control
 

@@ -10,3 +10,7 @@ pacing rate 基于 delivery rate，4 条流 pacing rate 之和等于 C + probe_q
 
 inflight 同样收敛到公平，4 条流 inflight 之和等于 C * R = 100 * 2：   
 ![images](fig/inflt.png)
+
+# references
+
+[satellite-link-simulation bbr kernel module](https://github.com/ponedo/satellite-link-simulation/tree/master)   

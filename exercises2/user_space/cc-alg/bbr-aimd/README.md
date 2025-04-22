@@ -42,7 +42,12 @@ void bbr_update_sending_bw(struct bbr_flow *f)
          f->index, f->pacing_gain, f->max_bw, f->sending_bw);
 }
 
-```  
+``` 
+
+```
+gcc -Wall -o bbr_additive bbr_additive.c
+```
+ 
 来做个模拟仿真，C = 100，RTPROP = 2，0～1000 时间单位 3条流，1000～2000 时间单位 4 条流，2000～3000 时间单位 2 条流，看下 inflt(采用 with lines smooth bezier 绘制，故显示不出 probertt 的毛刺) 和 rtt：
  
   
@@ -54,11 +59,12 @@ void bbr_update_sending_bw(struct bbr_flow *f)
    
 ![images](fig/inflt.png)
 
-   
+ fig/pacing.png    
 ![images](fig/pacing.png)
 
 ![images](fig/rtt.png)
-的流量保持相同的增量，minrtt 越大增量越大，以补偿长程感知不及时导致 inflt 填充速度慢。   
+
+还有外的改法，也可以解决 aimd 的 rtt 不公平性，将 minrtt 作为底座，aimd 加法增量设置为 α*minrtt，这意味着共享同一 minrtt 链路的流量保持相同的增量，minrtt 越大增量越大，以补偿长程感知不及时导致 inflt 填充速度慢。      
 
 总之，怎么改都行，核心就两点：    
 

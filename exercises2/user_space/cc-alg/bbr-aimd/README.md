@@ -77,3 +77,4 @@ gcc -Wall -o bbr_additive bbr_additive.c
 # references
 
 [satellite-link-simulation bbr kernel module](https://github.com/ponedo/satellite-link-simulation/tree/master)   
+[如何解决TCP BBR的RTT不公平性问题](https://blog.csdn.net/dog250/article/details/119652359)       

@@ -167,6 +167,7 @@ tcp        0      0 0.0.0.0:7777            0.0.0.0:*               LISTEN      
 Failed to modify QP to RTR
 Couldn't connect to remote QP
 ```
+采用-g  1    
 
 + client
 
@@ -176,7 +177,7 @@ Couldn't connect to remote QP
 client read: No space left on device
 Couldn't read remote address
 ```
-
+采用-g  1    
 
 ## rping
 

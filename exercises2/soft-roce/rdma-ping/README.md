@@ -134,6 +134,13 @@ Options:
 8192000 bytes in 0.01 seconds = 4453.38 Mbit/sec
 1000 iters in 0.01 seconds = 14.72 usec/iter
 ```
+```
+./rc_pingpong -d rocep23s0f1   -g  1  -p 7777
+  local address:  LID 0x0001, QPN 0x00000b, PSN 0xcb6399, GID ::ffff:10.22.116.221
+  remote address: LID 0x0001, QPN 0x00000a, PSN 0x98866e, GID ::ffff:10.22.116.220
+8192000 bytes in 0.02 seconds = 4346.75 Mbit/sec
+1000 iters in 0.02 seconds = 15.08 usec/iter
+```
 
 ## client
 
@@ -146,6 +153,15 @@ Options:
   remote address: LID 0x0001, QPN 0x000021, PSN 0x6dc420, GID ::ffff:10.22.116.221
 8192000 bytes in 0.01 seconds = 4460.05 Mbit/sec
 1000 iters in 0.01 seconds = 14.69 usec/iter
+```
+
+
+```
+ ./rc_pingpong 10.22.116.221  -d rocep23s0f0  -g  1  -p 7777
+  local address:  LID 0x0001, QPN 0x00000a, PSN 0x98866e, GID ::ffff:10.22.116.220
+  remote address: LID 0x0001, QPN 0x00000b, PSN 0xcb6399, GID ::ffff:10.22.116.221
+8192000 bytes in 0.02 seconds = 4353.97 Mbit/sec
+1000 iters in 0.02 seconds = 15.05 usec/iter
 ```
 
 ## tcp listen
@@ -346,3 +362,231 @@ test result is 1
 + switch
 
 ![images](ecn2.png)
+
+
+
+## mellanox
+
+
+
+
+```
+root@test:~/rc_pingpong# ./rc_pingpong 10.22.116.221  -d rocep61s0f1  -g  1  -p 7777
+  local address:  LID 0x0000, QPN 0x0001aa, PSN 0xedd4ce, GID fe80::c670:bdff:feaa:1f09
+Couldn't connect to 10.22.116.221:7777
+root@test:~/rc_pingpong# ./rc_pingpong 10.22.116.221  -d rocep61s0f1  -g  1  -p 7777
+  local address:  LID 0x0000, QPN 0x0001ab, PSN 0x5406dc, GID fe80::c670:bdff:feaa:1f09
+client read: No space left on device
+Couldn't read remote address
+root@test:~/rc_pingpong# ./rc_pingpong 10.22.116.221  -d rocep61s0f1  -g  0  -p 7777
+  local address:  LID 0x0000, QPN 0x0001ac, PSN 0xc36bd9, GID fe80::c670:bdff:feaa:1f09
+  remote address: LID 0x0000, QPN 0x0001aa, PSN 0x345d6e, GID fe80::c670:bdff:feaa:1fc9
+Failed status transport retry counter exceeded (12) for wr_id 2
+```
+-g  有问题    
+
+```
+root@test:~/rc_pingpong# ./rc_pingpong 10.22.116.221  -d rocep61s0f1  -g  3  -p 7777
+  local address:  LID 0x0000, QPN 0x0001ad, PSN 0x1ad82e, GID ::ffff:10.22.116.220
+  remote address: LID 0x0000, QPN 0x0001ab, PSN 0x459eaa, GID ::ffff:10.22.116.221
+8192000 bytes in 0.01 seconds = 9668.93 Mbit/sec
+1000 iters in 0.01 seconds = 6.78 usec/iter
+root@test:~/rc_pingpong# 
+```
+
+
++ server   
+
+
+```
+ibv_devinfo  -d  rocep61s0f1 -v
+hca_id: rocep61s0f1
+        transport:                      InfiniBand (0)
+        fw_ver:                         22.36.1010
+        node_guid:                      c470:bd03:00aa:1fc9
+        sys_image_guid:                 c470:bd03:00aa:1fc8
+        vendor_id:                      0x02c9
+        vendor_part_id:                 4125
+        hw_ver:                         0x0
+        board_id:                       MT_0000000359
+        phys_port_cnt:                  1
+        max_mr_size:                    0xffffffffffffffff
+        page_size_cap:                  0xfffffffffffff000
+        max_qp:                         131072
+        max_qp_wr:                      32768
+        device_cap_flags:               0xed721c36
+                                        BAD_PKEY_CNTR
+                                        BAD_QKEY_CNTR
+                                        AUTO_PATH_MIG
+                                        CHANGE_PHY_PORT
+                                        PORT_ACTIVE_EVENT
+                                        SYS_IMAGE_GUID
+                                        RC_RNR_NAK_GEN
+                                        MEM_WINDOW
+                                        XRC
+                                        MEM_MGT_EXTENSIONS
+                                        MEM_WINDOW_TYPE_2B
+                                        RAW_IP_CSUM
+                                        MANAGED_FLOW_STEERING
+                                        Unknown flags: 0xC8400000
+        max_sge:                        30
+        max_sge_rd:                     30
+        max_cq:                         16777216
+        max_cqe:                        4194303
+        max_mr:                         16777216
+        max_pd:                         8388608
+        max_qp_rd_atom:                 16
+        max_ee_rd_atom:                 0
+        max_res_rd_atom:                2097152
+        max_qp_init_rd_atom:            16
+        max_ee_init_rd_atom:            0
+        atomic_cap:                     ATOMIC_HCA (1)
+        max_ee:                         0
+        max_rdd:                        0
+        max_mw:                         16777216
+        max_raw_ipv6_qp:                0
+        max_raw_ethy_qp:                0
+        max_mcast_grp:                  2097152
+        max_mcast_qp_attach:            240
+        max_total_mcast_qp_attach:      503316480
+        max_ah:                         2147483647
+        max_fmr:                        0
+        max_srq:                        8388608
+        max_srq_wr:                     32767
+        max_srq_sge:                    31
+        max_pkeys:                      128
+        local_ca_ack_delay:             16
+        general_odp_caps:
+                                        ODP_SUPPORT
+                                        ODP_SUPPORT_IMPLICIT
+        rc_odp_caps:
+                                        SUPPORT_SEND
+                                        SUPPORT_RECV
+                                        SUPPORT_WRITE
+                                        SUPPORT_READ
+                                        SUPPORT_SRQ
+        uc_odp_caps:
+                                        NO SUPPORT
+        ud_odp_caps:
+                                        SUPPORT_SEND
+        xrc_odp_caps:
+                                        SUPPORT_SEND
+                                        SUPPORT_WRITE
+                                        SUPPORT_READ
+                                        SUPPORT_SRQ
+        completion timestamp_mask:                      0x7fffffffffffffff
+        hca_core_clock:                 1000000kHZ
+        raw packet caps:
+                                        C-VLAN stripping offload
+                                        Scatter FCS offload
+                                        IP csum offload
+                                        Delay drop
+        device_cap_flags_ex:            0x15ED721C36
+                                        RAW_SCATTER_FCS
+                                        PCI_WRITE_END_PADDING
+                                        Unknown flags: 0x100000000
+        tso_caps:
+                max_tso:                        262144
+                supported_qp:
+                                        SUPPORT_RAW_PACKET
+        rss_caps:
+                max_rwq_indirection_tables:                     524288
+                max_rwq_indirection_table_size:                 2048
+                rx_hash_function:                               0x1
+                rx_hash_fields_mask:                            0x800000FF
+                supported_qp:
+                                        SUPPORT_RAW_PACKET
+        max_wq_type_rq:                 8388608
+        packet_pacing_caps:
+                qp_rate_limit_min:      1kbps
+                qp_rate_limit_max:      100000000kbps
+                supported_qp:
+                                        SUPPORT_RAW_PACKET
+        tag matching not supported
+
+        cq moderation caps:
+                max_cq_count:   65535
+                max_cq_period:  4095 us
+
+        maximum available device memory:        131072Bytes
+
+        num_comp_vectors:               48
+                port:   1
+                        state:                  PORT_ACTIVE (4)
+                        max_mtu:                4096 (5)
+                        active_mtu:             1024 (3)
+                        sm_lid:                 0
+                        port_lid:               0
+                        port_lmc:               0x00
+                        link_layer:             Ethernet
+                        max_msg_sz:             0x40000000
+                        port_cap_flags:         0x04010000
+                        port_cap_flags2:        0x0000
+                        max_vl_num:             invalid value (0)
+                        bad_pkey_cntr:          0x0
+                        qkey_viol_cntr:         0x0
+                        sm_sl:                  0
+                        pkey_tbl_len:           1
+                        gid_tbl_len:            255
+                        subnet_timeout:         0
+                        init_type_reply:        0
+                        active_width:           4X (2)
+                        active_speed:           25.0 Gbps (32)
+                        phys_state:             LINK_UP (5)
+                        GID[  0]:               fe80:0000:0000:0000:c670:bdff:feaa:1fc9, RoCE v1
+                        GID[  1]:               fe80::c670:bdff:feaa:1fc9, RoCE v2
+                        GID[  2]:               0000:0000:0000:0000:0000:ffff:0a16:74dd, RoCE v1
+                        GID[  3]:               ::ffff:10.22.116.221, RoCE v2
+```
+
+```
+./rc_pingpong -d  rocep61s0f1   -g  3  -p 7777
+  local address:  LID 0x0000, QPN 0x0001ab, PSN 0x459eaa, GID ::ffff:10.22.116.221
+  remote address: LID 0x0000, QPN 0x0001ad, PSN 0x1ad82e, GID ::ffff:10.22.116.220
+8192000 bytes in 0.01 seconds = 8675.67 Mbit/sec
+1000 iters in 0.01 seconds = 7.55 usec/iter
+```
+
+
+
+```
+ ./RDMA_RC_example -g 3 -d  rocep61s0f1  10.22.116.221 
+ ./RDMA_RC_example -g 3 -d  rocep61s0f1
+```
+
+#  Mellanox Firmware Tools (MFT)
+
++ Mellanox Connect x4 SRIOV Ubuntu 22.04   (***for mst command***) 
+```
+  apt install gcc make dkms
+  wget https://www.mellanox.com/downloads/MFT/mft-4.29.0-131-x86_64-deb.tgz
+```
+
+```
+root@test2:~/mellanox/mft-4.29.0-131-x86_64-deb# ./install.sh
+-I- Removing mft external packages installed on the machine
+-I- Installing package: /root/mellanox/mft-4.29.0-131-x86_64-deb/SDEBS/kernel-mft-dkms_4.29.0-131_all.deb
+-I- Installing package: /root/mellanox/mft-4.29.0-131-x86_64-deb/DEBS/mft_4.29.0-131_amd64.deb
+-I- Installing package: /root/mellanox/mft-4.29.0-131-x86_64-deb/DEBS/mft-autocomplete_4.29.0-131_amd64.deb
+-I- In order to start mst, please run "mst start".
+root@test2:~/mellanox/mft-4.29.0-131-x86_64-deb# mst start
+Starting MST (Mellanox Software Tools) driver set
+Loading MST PCI module - Success
+Loading MST PCI configuration module - Success
+Create devices
+Unloading MST PCI module (unused) - Success
+root@test2:~/mellanox/mft-4.29.0-131-x86_64-deb# 
+```
+
+## 安装MLNX_OFED
+版本：（Linux InfiniBand Drivers)[https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/] 
+
+
+```
+mkdir -p /mnt/MLNX_OFED
+root@test:~/mellanox# mount -o ro,loop MLNX_OFED_LINUX-5.8-6.0.4.2-ubuntu22.04-x86_64.iso  /mnt/MLNX_OFED
+root@test:~/mellanox# cd /mnt/MLNX_OFED/
+root@test:/mnt/MLNX_OFED# uname -a
+Linux test 5.15.0-138-generic #148-Ubuntu SMP Fri Mar 14 19:05:48 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+root@test:/mnt/MLNX_OFED# ./mlnxofedinstall --without-dkms --add-kernel-support --kernel 5.15.0-138-generic --without-fw-update --force
+```

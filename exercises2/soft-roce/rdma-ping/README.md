@@ -579,7 +579,8 @@ root@test2:~/mellanox/mft-4.29.0-131-x86_64-deb#
 ```
 
 ## 安装MLNX_OFED
-版本：（Linux InfiniBand Drivers)[https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/] 
+
+版本：[Linux InfiniBand Drivers](https://network.nvidia.com/products/infiniband-drivers/linux/mlnx_ofed/) 
 
 
 ```

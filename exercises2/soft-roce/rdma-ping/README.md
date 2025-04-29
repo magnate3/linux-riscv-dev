@@ -591,3 +591,84 @@ root@test:/mnt/MLNX_OFED# uname -a
 Linux test 5.15.0-138-generic #148-Ubuntu SMP Fri Mar 14 19:05:48 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
 root@test:/mnt/MLNX_OFED# ./mlnxofedinstall --without-dkms --add-kernel-support --kernel 5.15.0-138-generic --without-fw-update --force
 ```
+
+## 配置
+[Mellanox SN2410交换机RoCE协议配置](http://blog.sysu.tech/RoCE/Mellanox%20SN2410%E4%BA%A4%E6%8D%A2%E6%9C%BARoCE%E5%8D%8F%E8%AE%AE%E9%85%8D%E7%BD%AE/)   
++ 1. RoCE流量设置值   
+在数据包的IP层(网路程)有一块TOS(Type Of Server)域，其中前8个位为DSCP值，后2位为ECN标记位，我们需要把ECN标记位设置为10(二进制)，而DSCP值为26，对应二进制值为11010，连一起就是1101010，对应十进制值就是106     
+
+## dcqcn
+
+
+```
+mstconfig -d 3d:00.1 q | head -8
+
+Device #1:
+----------
+
+Device type:    ConnectX6DX     
+Name:           MCX623106AN-CDA_Ax
+Description:    ConnectX-6 Dx EN adapter card; 100GbE; Dual-port QSFP56; PCIe 4.0/3.0 x16;
+Device:         3d:00.1         
+```
+
+```
+mstconfig -d 3d:00.1 q | grep -i roce
+         ROCE_NEXT_PROTOCOL                  254             
+         ROCE_ADAPTIVE_ROUTING_EN            False(0)        
+         ROCE_CC_LEGACY_DCQCN                False(0)        
+         ROCE_CC_PRIO_MASK_P1                255             
+         ROCE_CC_PRIO_MASK_P2                255             
+         ROCE_CONTROL                        ROCE_ENABLE(2)  
+```
+
+`查询`
+
+```
+mstconfig -d 3d:00.1 i | grep -i dcqcn
+                                                            only if ROCE_CC_LEGACY_DCQCN is FALSE.
+                    ROCE_CC_LEGACY_DCQCN=<False|True>       When TRUE, the device will only use legacy Conges
+                                                            tion Control DCQCN algorithm
+```
+
+
+```
+mstconfig -d 3d:00.1  -y s ROCE_CC_LEGACY_DCQCN=1
+
+Device #1:
+----------
+
+Device type:    ConnectX6DX     
+Name:           MCX623106AN-CDA_Ax
+Description:    ConnectX-6 Dx EN adapter card; 100GbE; Dual-port QSFP56; PCIe 4.0/3.0 x16;
+Device:         3d:00.1         
+
+Configurations:                              Next Boot       New
+         ROCE_CC_LEGACY_DCQCN                False(0)        True(1)         
+
+ Apply new Configuration? (y/n) [n] : y
+Applying... Done!
+-I- Please reboot machine to load new configurations.
+root@test:~/mellanox# mstconfig -d 3d:00.1 q | grep -i roce
+         ROCE_NEXT_PROTOCOL                  254             
+         ROCE_ADAPTIVE_ROUTING_EN            False(0)        
+         ROCE_CC_LEGACY_DCQCN                True(1)         
+         ROCE_CC_PRIO_MASK_P1                255             
+         ROCE_CC_PRIO_MASK_P2                255             
+         ROCE_CONTROL                        ROCE_ENABLE(2)  
+root@test:~/mellanox# 
+```
+
+## command***
+
+
+```
+show_counters  rocep61s0f1
+```
+
+# perftest
+
+
+```
+apt-get -y install perftest
+```

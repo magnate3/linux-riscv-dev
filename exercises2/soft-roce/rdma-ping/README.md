@@ -676,6 +676,20 @@ root@test:~/mellanox#
 ```
 show_counters  rocep61s0f1
 ```
+配置查询 rocev2   
+
+```
+cma_roce_mode -d mlx5_0 -p 1
+cma_roce_mode -d mlx5_1 -p 1
+RoCE v2
+```
+
+## wireshark
+
+```
+ip.dsfield.ecn == 3
+ip.dsfield.dscp
+```
 
 # perftest
 

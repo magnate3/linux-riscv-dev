@@ -622,7 +622,7 @@ mstconfig -d 3d:00.1 q | grep -i roce
          ROCE_CONTROL                        ROCE_ENABLE(2)  
 ```
 
-`查询`
+`用法查询`
 
 ```
 mstconfig -d 3d:00.1 i | grep -i dcqcn
@@ -630,6 +630,17 @@ mstconfig -d 3d:00.1 i | grep -i dcqcn
                     ROCE_CC_LEGACY_DCQCN=<False|True>       When TRUE, the device will only use legacy Conges
                                                             tion Control DCQCN algorithm
 ```
+
+`状态查询`
+
+```
+root@test:~# mstconfig -d 3d:00.1 q | grep -i dcqcn
+         ROCE_CC_LEGACY_DCQCN                True(1)         
+root@test:~# 
+```
+
+
+
 
 
 ```
@@ -659,7 +670,7 @@ root@test:~/mellanox# mstconfig -d 3d:00.1 q | grep -i roce
 root@test:~/mellanox# 
 ```
 
-## command***
+## command 
 
 
 ```

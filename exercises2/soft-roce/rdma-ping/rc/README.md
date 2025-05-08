@@ -1,6 +1,7 @@
 
 # mtu 
 
+
 ![images](mtu.png)
 
 ![images](mtu2.png)
@@ -58,6 +59,8 @@ ifconfig enp4s0f1 mtu 5120
 
  
 # fragment
+
+## ibv_rc_pingpong
  ![images](mtu5.png)
 ```
 ibv_rc_pingpong -d  mlx5_1 -m 4096 -g 3 -s 6144 10.22.116.221
@@ -75,3 +78,40 @@ ibv_rc_pingpong -d  mlx5_1 -m 4096 -s 6144  -g 3
 1000 iters in 0.01 seconds = 8.26 usec/iter
 ```
  ![images](mtu6.png)
+ 
+##  ib_write_bw   
+
+
+![images](mtu7.png)
++ server
+
+```
+ib_write_bw -d mlx5_1  -x 3 --cpu_util --report_gbits -s 6144 -m 4096  
+---------------------------------------------------------------------------------------
+ CPU Utilization works only with Duration mode.
+
+************************************
+* Waiting for client to connect... *
+************************************
+---------------------------------------------------------------------------------------
+                    RDMA_Write BW Test
+ Dual-port       : OFF          Device         : mlx5_1
+ Number of qps   : 1            Transport type : IB
+ Connection type : RC           Using SRQ      : OFF
+ PCIe relax order: ON
+ ibv_wr* API     : ON
+ CQ Moderation   : 100
+ Mtu             : 4096[B]
+ Link type       : Ethernet
+ GID index       : 3
+ Max inline data : 0[B]
+ rdma_cm QPs     : OFF
+ Data ex. method : Ethernet
+```
+
+
++ client    
+
+```
+ib_write_bw -d mlx5_1  -x 3 --cpu_util --report_gbits -s 6144 -m 4096  10.22.116.221
+```

@@ -115,3 +115,17 @@ ib_write_bw -d mlx5_1  -x 3 --cpu_util --report_gbits -s 6144 -m 4096
 ```
 ib_write_bw -d mlx5_1  -x 3 --cpu_util --report_gbits -s 6144 -m 4096  10.22.116.221
 ```
+
+
+## ib_send_bw
+
++ server  
+```
+ib_send_bw -d mlx5_1  -x 3 --cpu_util --report_gbits -s 6144 -m 4096 
+```
++ client  
+
+```
+ib_send_bw -d mlx5_1  -x 3 --cpu_util --report_gbits -s 6144 -m 4096  10.22.116.221
+```
+![images](mtu8.png)

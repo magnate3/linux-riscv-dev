@@ -85,24 +85,24 @@ applications and the Environment Abstraction Layer (EAL) options.
 [lib/src/mt_ptp.c](https://github.com/ricmli/Media-Transport-Library/blob/3127c88b8a73d59520189c72254559a436125ed3/lib/src/mt_ptp.c)  
 
 #  Code Explanation
-----------------
+
 
 The following sections provide an explanation of the main components of the
-code.
+code.   
 
 All DPDK library functions used in the sample code are prefixed with  rte_ 
-and are explained in detail in the *DPDK API Documentation*.
+and are explained in detail in the *DPDK API Documentation*.   
 
 
-The Main Function
-~~~~~~~~~~~~~~~~~
+The Main Function    
+
 
 The main() function performs the initialization and calls the execution
-threads for each lcore.
+threads for each lcore.    
 
 The first task is to initialize the Environment Abstraction Layer (EAL).  The
  argc  and  argv  arguments are provided to the  rte_eal_init() 
-function. The value returned is the number of parsed arguments:
+function. The value returned is the number of parsed arguments:   
 
 ```
 

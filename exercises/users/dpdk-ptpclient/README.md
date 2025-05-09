@@ -47,7 +47,7 @@ The adjustment for slave can be represented as:
 
    adj = -[(T2-T1)-(T4 - T3)]/2
 
-If the command line parameter ``-T 1`` is used the application also
+If the command line parameter  -T 1  is used the application also
 synchronizes the PTP PHC clock with the Linux kernel clock.
 
 Compiling the Application
@@ -55,10 +55,10 @@ Compiling the Application
 
 To compile the sample application see :doc:`compiling`.
 
-The application is located in the ``ptpclient`` sub-directory.
+The application is located in the  ptpclient  sub-directory.
 
 .. note::
-   To compile the application edit the ``config/common_linuxapp`` configuration file to enable IEEE1588
+   To compile the application edit the  config/common_linuxapp  configuration file to enable IEEE1588
    and then recompile DPDK:
 
    .. code-block:: console
@@ -68,7 +68,7 @@ The application is located in the ``ptpclient`` sub-directory.
 Running the Application
 -----------------------
 
-To run the example in a ``linuxapp`` environment:
+To run the example in a  linuxapp  environment:
 
 .. code-block:: console
 
@@ -77,32 +77,34 @@ To run the example in a ``linuxapp`` environment:
 Refer to *DPDK Getting Started Guide* for general information on running
 applications and the Environment Abstraction Layer (EAL) options.
 
-* ``-p portmask``: Hexadecimal portmask.
-* ``-T 0``: Update only the PTP slave clock.
-* ``-T 1``: Update the PTP slave clock and synchronize the Linux Kernel to the PTP clock.
+*  -p portmask : Hexadecimal portmask.
+*  -T 0 : Update only the PTP slave clock.
+*  -T 1 : Update the PTP slave clock and synchronize the Linux Kernel to the PTP clock.
+# reference
 
+[lib/src/mt_ptp.c](https://github.com/ricmli/Media-Transport-Library/blob/3127c88b8a73d59520189c72254559a436125ed3/lib/src/mt_ptp.c)  
 
-Code Explanation
+#  Code Explanation
 ----------------
 
 The following sections provide an explanation of the main components of the
 code.
 
-All DPDK library functions used in the sample code are prefixed with ``rte_``
+All DPDK library functions used in the sample code are prefixed with  rte_ 
 and are explained in detail in the *DPDK API Documentation*.
 
 
 The Main Function
 ~~~~~~~~~~~~~~~~~
 
-The ``main()`` function performs the initialization and calls the execution
+The main() function performs the initialization and calls the execution
 threads for each lcore.
 
 The first task is to initialize the Environment Abstraction Layer (EAL).  The
-``argc`` and ``argv`` arguments are provided to the ``rte_eal_init()``
+ argc  and  argv  arguments are provided to the  rte_eal_init() 
 function. The value returned is the number of parsed arguments:
 
-```c
+```
 
     int ret = rte_eal_init(argc, argv);
     if (ret < 0)
@@ -110,7 +112,7 @@ function. The value returned is the number of parsed arguments:
 ```
 And than we parse application specific arguments
 
-```c
+```
 
     argc -= ret;
     argv += ret;
@@ -119,21 +121,21 @@ And than we parse application specific arguments
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Error with PTP initialization\n");
 ```
-The ``main()`` also allocates a mempool to hold the mbufs (Message Buffers)
+The  main()  also allocates a mempool to hold the mbufs (Message Buffers)
 used by the application:
 
-```c
+```
 
     mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
            MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
-
+```
 Mbufs are the packet buffer structure used by DPDK. They are explained in
 detail in the "Mbuf Library" section of the *DPDK Programmer's Guide*.
 
-The ``main()`` function also initializes all the ports using the user defined
-``port_init()`` function with portmask provided by user:
+The  main()  function also initializes all the ports using the user defined
+port_init() function with portmask provided by user:
 
-```c
+```
 
     for (portid = 0; portid < nb_ports; portid++)
         if ((ptp_enabled_port_mask & (1 << portid)) != 0) {
@@ -146,30 +148,29 @@ The ``main()`` function also initializes all the ports using the user defined
                         portid);
             }
         }
-
 ```
 Once the initialization is complete, the application is ready to launch a
-function on an lcore. In this example ``lcore_main()`` is called on a single
+function on an lcore. In this example  lcore_main()  is called on a single
 lcore.
 
-```c
+```
 
 	lcore_main();
 ```
-The ``lcore_main()`` function is explained below.
+The  lcore_main()  function is explained below.
 
 
 The Lcores Main
 ~~~~~~~~~~~~~~~
-```
+ 
 
 
-As we saw above the ``main()`` function calls an application function on the
+As we saw above the  main()  function calls an application function on the
 available lcores.
 
 The main work of the application is done within the loop:
-`
-```c
+
+```
 
         for (portid = 0; portid < ptp_enabled_port_nb; portid++) {
 
@@ -191,23 +192,22 @@ packets are transmitted on the TX ports.
 
 If the offload flags in the mbuf indicate that the packet is a PTP packet then
 the packet is parsed to determine which type:
-
 ```
 
             if (m->ol_flags & PKT_RX_IEEE1588_PTP)
                  parse_ptp_frames(portid, m);
 
 ```
-All packets are freed explicitly using ``rte_pktmbuf_free()``.
+All packets are freed explicitly using  rte_pktmbuf_free() .
 
 The forwarding loop can be interrupted and the application closed using
-``Ctrl-C``.
-```
+ Ctrl-C .
+
 
 PTP parsing
 ~~~~~~~~~~~
 
-The ``parse_ptp_frames()`` function processes PTP packets, implementing slave
+The  parse_ptp_frames()  function processes PTP packets, implementing slave
 PTP IEEE1588 L2 functionality.
 
 ```
@@ -255,6 +255,4 @@ When we parse the *FOLLOW UP* packet we also create and send a *DELAY_REQUEST* p
 Also when we parse the *DELAY RESPONSE* packet, and all conditions are met we adjust the PTP slave clock.
 
 
-# reference
-
-[lib/src/mt_ptp.c](https://github.com/ricmli/Media-Transport-Library/blob/3127c88b8a73d59520189c72254559a436125ed3/lib/src/mt_ptp.c)    
+  

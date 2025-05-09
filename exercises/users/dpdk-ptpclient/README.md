@@ -102,15 +102,15 @@ The first task is to initialize the Environment Abstraction Layer (EAL).  The
 ``argc`` and ``argv`` arguments are provided to the ``rte_eal_init()``
 function. The value returned is the number of parsed arguments:
 
-.. code-block:: c
+```c
 
     int ret = rte_eal_init(argc, argv);
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Error with EAL initialization\n");
-
+```
 And than we parse application specific arguments
 
-.. code-block:: c
+```c
 
     argc -= ret;
     argv += ret;
@@ -118,11 +118,11 @@ And than we parse application specific arguments
     ret = ptp_parse_args(argc, argv);
     if (ret < 0)
         rte_exit(EXIT_FAILURE, "Error with PTP initialization\n");
-
+```
 The ``main()`` also allocates a mempool to hold the mbufs (Message Buffers)
 used by the application:
 
-.. code-block:: c
+``` c
 
     mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
            MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
@@ -133,7 +133,7 @@ detail in the "Mbuf Library" section of the *DPDK Programmer's Guide*.
 The ``main()`` function also initializes all the ports using the user defined
 ``port_init()`` function with portmask provided by user:
 
-.. code-block:: c
+```c
 
     for (portid = 0; portid < nb_ports; portid++)
         if ((ptp_enabled_port_mask & (1 << portid)) != 0) {
@@ -147,12 +147,12 @@ The ``main()`` function also initializes all the ports using the user defined
             }
         }
 
-
+```
 Once the initialization is complete, the application is ready to launch a
 function on an lcore. In this example ``lcore_main()`` is called on a single
 lcore.
 
-.. code-block:: c
+```c
 
 	lcore_main();
 
@@ -161,13 +161,15 @@ The ``lcore_main()`` function is explained below.
 
 The Lcores Main
 ~~~~~~~~~~~~~~~
+```
+
 
 As we saw above the ``main()`` function calls an application function on the
 available lcores.
 
 The main work of the application is done within the loop:
-
-.. code-block:: c
+`
+``` c
 
         for (portid = 0; portid < ptp_enabled_port_nb; portid++) {
 
@@ -182,6 +184,7 @@ The main work of the application is done within the loop:
 
             rte_pktmbuf_free(m);
         }
+```
 
 Packets are received one by one on the RX ports and, if required, PTP response
 packets are transmitted on the TX ports.
@@ -189,7 +192,7 @@ packets are transmitted on the TX ports.
 If the offload flags in the mbuf indicate that the packet is a PTP packet then
 the packet is parsed to determine which type:
 
-.. code-block:: c
+```c
 
             if (m->ol_flags & PKT_RX_IEEE1588_PTP)
                  parse_ptp_frames(portid, m);
@@ -199,7 +202,7 @@ All packets are freed explicitly using ``rte_pktmbuf_free()``.
 
 The forwarding loop can be interrupted and the application closed using
 ``Ctrl-C``.
-
+```
 
 PTP parsing
 ~~~~~~~~~~~
@@ -207,7 +210,7 @@ PTP parsing
 The ``parse_ptp_frames()`` function processes PTP packets, implementing slave
 PTP IEEE1588 L2 functionality.
 
-.. code-block:: c
+```c
 
     void
     parse_ptp_frames(uint16_t portid, struct rte_mbuf *m) {
@@ -250,6 +253,7 @@ implementation of the PTP slave client:
 
 When we parse the *FOLLOW UP* packet we also create and send a *DELAY_REQUEST* packet.
 Also when we parse the *DELAY RESPONSE* packet, and all conditions are met we adjust the PTP slave clock.
+```
 
 # reference
 

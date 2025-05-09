@@ -84,6 +84,7 @@ applications and the Environment Abstraction Layer (EAL) options.
 
 [lib/src/mt_ptp.c](https://github.com/ricmli/Media-Transport-Library/blob/3127c88b8a73d59520189c72254559a436125ed3/lib/src/mt_ptp.c)  
 
+`DETERMINISTIC 6G `    
 #  Code Explanation
 
 

@@ -155,7 +155,7 @@ lcore.
 ```c
 
 	lcore_main();
-
+```
 The ``lcore_main()`` function is explained below.
 
 
@@ -192,12 +192,12 @@ packets are transmitted on the TX ports.
 If the offload flags in the mbuf indicate that the packet is a PTP packet then
 the packet is parsed to determine which type:
 
-```c
+```
 
             if (m->ol_flags & PKT_RX_IEEE1588_PTP)
                  parse_ptp_frames(portid, m);
 
-
+```
 All packets are freed explicitly using ``rte_pktmbuf_free()``.
 
 The forwarding loop can be interrupted and the application closed using
@@ -210,7 +210,7 @@ PTP parsing
 The ``parse_ptp_frames()`` function processes PTP packets, implementing slave
 PTP IEEE1588 L2 functionality.
 
-```c
+```
 
     void
     parse_ptp_frames(uint16_t portid, struct rte_mbuf *m) {
@@ -243,7 +243,7 @@ PTP IEEE1588 L2 functionality.
             }
         }
     }
-
+```
 There are 3 types of packets on the RX path which we must parse to create a minimal
 implementation of the PTP slave client:
 
@@ -253,7 +253,7 @@ implementation of the PTP slave client:
 
 When we parse the *FOLLOW UP* packet we also create and send a *DELAY_REQUEST* packet.
 Also when we parse the *DELAY RESPONSE* packet, and all conditions are met we adjust the PTP slave clock.
-```
+
 
 # reference
 

@@ -122,7 +122,7 @@ And than we parse application specific arguments
 The ``main()`` also allocates a mempool to hold the mbufs (Message Buffers)
 used by the application:
 
-``` c
+```c
 
     mbuf_pool = rte_pktmbuf_pool_create("MBUF_POOL", NUM_MBUFS * nb_ports,
            MBUF_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE, rte_socket_id());
@@ -169,7 +169,7 @@ available lcores.
 
 The main work of the application is done within the loop:
 `
-``` c
+```c
 
         for (portid = 0; portid < ptp_enabled_port_nb; portid++) {
 

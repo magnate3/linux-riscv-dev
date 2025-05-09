@@ -250,3 +250,7 @@ implementation of the PTP slave client:
 
 When we parse the *FOLLOW UP* packet we also create and send a *DELAY_REQUEST* packet.
 Also when we parse the *DELAY RESPONSE* packet, and all conditions are met we adjust the PTP slave clock.
+
+# reference
+
+[lib/src/mt_ptp.c](https://github.com/ricmli/Media-Transport-Library/blob/3127c88b8a73d59520189c72254559a436125ed3/lib/src/mt_ptp.c)    

@@ -160,8 +160,8 @@ lcore.
 The  lcore_main()  function is explained below.
 
 
-The Lcores Main
-~~~~~~~~~~~~~~~
++  The Lcores Main    
+ 
  
 
 
@@ -204,8 +204,8 @@ The forwarding loop can be interrupted and the application closed using
  Ctrl-C .
 
 
-PTP parsing
-~~~~~~~~~~~
++ PTP parsing   
+ 
 
 The  parse_ptp_frames()  function processes PTP packets, implementing slave
 PTP IEEE1588 L2 functionality.

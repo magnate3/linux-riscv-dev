@@ -1,0 +1,55 @@
+{
+  "program": "falcon.p4",
+  "language": "p4-16",
+  "targets": {
+      "multiswitch": {
+      "auto-control-plane": true,
+      "bmv2_log": true,
+      "pcap_dump": true,
+      "cli": false,
+      "switches": {
+          "s3": {
+              "commands": [
+                "commands_falcon_spine.txt"
+              ]
+          },
+          "s2": {
+              "commands": [
+                "commands_falcon_leaf.txt"
+              ]
+          },
+          "s1": {
+              "commands": [
+                "commands_falcon_leaf.txt"
+              ]
+          }
+      },
+      "links": [["h1", "s3"], ["s3", "s2"], ["s3", "s1"], ["s2", "h2"], ["s2", "h3"], ["s1", "h4"], ["s1", "h5"]],
+      "hosts": {
+        "h1": {
+            "cmd": "python3 host_send.py",
+            "startup_sleep": 0.9,
+            "wait": true
+        },
+        "h2": {
+            "cmd": "python3 host_recv.py h2 0 0",
+            "startup_sleep": 0.2,
+            "wait": false
+        },
+        "h3": {
+            "cmd": "python3 host_recv.py h3 1 1",
+            "wait": false
+        }, 
+        "h4": {
+            "cmd": "python3 host_recv.py h4 2 2",
+            "wait": false
+        }, 
+        "h5": {
+            "cmd": "python3 host_recv.py h5 3 3",
+            "wait": false
+        }
+      }
+      
+    }
+  }
+}

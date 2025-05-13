@@ -1,9 +1,11 @@
 #1 What is MQ-ECN
+
 MQ-ECN is a new ECN marking scheme to enable ECN for multi-service multi-queue production data center networks. MQ-ECN can achieve high throughput, low latency and weighted fair sharing simultaneously. 
 
 For more details about MQ-ECN, please refer to our NSDI 2016 <a href="http://sing.cse.ust.hk/papers/mqecn.pdf">paper</a>.
 
 #2 How to use
+
 ##2.1 Compiling
 MQ-ECN software prototype is implemented as a Linux queuing discipline (qdisc) kernel module, running on multi-NIC servers to emulate switch hardware behaviors. So you need the kernel headers to compile it. You can find available headers on your system in `/lib/modules`. To install the kernel headers, you just need to use the following command：
 <pre><code>$ apt-get install linux-headers-$(uname -r)
@@ -26,6 +28,7 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 ```
 
 ##2.2 Installing
+
 MQ-ECN replaces token bucket rate limiter module. Hence, you need to remove `sch_tbf` before installing MQ-ECN. To install MQ-ECN on a device (e.g., eth1):
 
 <pre><code>$ rmmod sch_tbf
@@ -41,6 +44,7 @@ $ rmmod sch_dwrr
 In above example, we install MQ-ECN on eth1. The shaping rate is 995Mbps (line rate is 1000Mbps). To accurately reflect switch buffer occupancy, we usually trade a little bandwidth. 
 
 ##2.3 Note
+
 To better emulate real switch hardware behaviors, we should avoid large segments on server-emulated software switches. Hence, we need to disable related offloading techniques on all involved NICs. For example, to disable offloading on eth0: 
 <pre><code>
 ethtool -K enp5s0 tso off
@@ -64,6 +68,7 @@ or will
 ```
 
 ##2.4 Configuring
+
 Except for shaping rate, all the parameters of MQ-ECN are configured through `sysctl` interfaces. Here, I only show several important parameters. For the rest, see `params.h` and `params.c` for more details.
 
 <ul>
@@ -98,6 +103,7 @@ To enable MQ-ECN:
 </ul>
 
 ##2.5 WRR
+
 By default, MQ-ECN kernel module performs Deficit Weighted Round Robin (DWRR) scheduling algorithm. You can also enable Weighted Round Robin (WRR) as follows:
 <pre><code>$ sysctl -w dwrr.enable_wrr=1
 </code></pre>

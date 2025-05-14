@@ -27,6 +27,25 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 [root@centos7 MQ-ECN-Software]# 
 ```
 
++ dctcp
+
+```
+[root@centos7 ~]#  sysctl net.ipv4.tcp_available_congestion_control
+net.ipv4.tcp_available_congestion_control = cubic reno
+[root@centos7 ~]# modprobe tcp_dctcp
+[root@centos7 ~]# echo “tcp_dctcp” | tee -a /etc/modules
+“tcp_dctcp”
+[root@centos7 ~]#  sysctl net.ipv4.tcp_available_congestion_control
+net.ipv4.tcp_available_congestion_control = cubic reno dctcp
+[root@centos7 ~]# sysctl -w net.ipv4.tcp_congestion_control=dctcp
+net.ipv4.tcp_congestion_control = dctcp
+[root@centos7 ~]# sysctl net.ipv4.tcp_congestion_control
+net.ipv4.tcp_congestion_control = dctcp
+[root@centos7 ~]# 
+
+```
+
+
 ## 2.2 Installing
 
 MQ-ECN replaces token bucket rate limiter module. Hence, you need to remove `sch_tbf` before installing MQ-ECN. To install MQ-ECN on a device (e.g., eth1):
@@ -107,3 +126,32 @@ To enable MQ-ECN:
 By default, MQ-ECN kernel module performs Deficit Weighted Round Robin (DWRR) scheduling algorithm. You can also enable Weighted Round Robin (WRR) as follows:
 <pre><code>$ sysctl -w dwrr.enable_wrr=1
 </code></pre>
+
+
+## 2.6 mytest
+
++ enable MQ-ECN     
+```
+sysctl -w dwrr.ecn_scheme=3
+```
+
++ not need to configure ,use default config    
+
+```
+sysctl dwrr.port_thresh
+dwrr.port_thresh = 32000
+```
+
+```
+[root@centos7 sch_dwrr2]# sysctl dwrr.port_thresh
+dwrr.port_thresh = 32000
+[root@centos7 sch_dwrr2]# sysctl dwrr.queue_buffer_0
+dwrr.queue_buffer_0 = 2000000
+[root@centos7 sch_dwrr2]# sysctl dwrr.queue_thresh_0
+dwrr.queue_thresh_0 = 32000
+[root@centos7 sch_dwrr2]# 
+```
+
+```
+/proc/sys/dwrr/queue_thresh_4
+```

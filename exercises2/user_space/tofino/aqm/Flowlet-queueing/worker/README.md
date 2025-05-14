@@ -1,0 +1,1 @@
+`gcc -o worker -pthread worker.c`

@@ -229,6 +229,33 @@ dscp 3 25
 ./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
 
+### tcpdump
+
+DSCP=001010 十进制就是10 十六进制就是a，相对应的TOS=00101000 十进制就是40 十六进制就是28    
+
+In both these examples, you can use TOS hex values instead of TOS decimal values, e.g. == 0x48. Alternatively, if you want to use DSCP hex or DSCP decimal values, you can shift the result, for the first example, this would give, as exact equivalents of those above:     
+```
+	$ tcpdump -v -n -i ppp0 'ip and (ip[1] & 0xfc) >> 2 == 0x12'
+```
+and for the second example:
+```
+	$ tcpdump -v -n -i he-ipv6 'ip6 and (ip6[0:2] & 0xfc0) >> 4  == 0x12'
+```
+In both cases, using the DSCP hex value of 0x12 which as you can see from the table above is equivalent to the TOS decimal value 72.   
+
+```
+ tcpdump -v -i eth0 ‘ip[1]&0xfc == 40’，ip[1] 是过滤IP包头的第2个字节，0xfc相当于掩码忽略掉后两位ECN位。
+```
+
+dscp = 1 、dscp = 2 、dscp = 3   
+
+```
+tcpdump -i enp5s0 'ip[1]&0xfc == 0x04' or 'ip[1]&0xfc == 0x08' or 'ip[1]&0xfc == 0x0c' -env
+```
+
+tos 0xe,ECT(0)  
+tos 0xc    
+
 # linux qdisc
 
 ```Text

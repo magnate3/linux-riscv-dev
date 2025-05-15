@@ -130,6 +130,19 @@ By default, MQ-ECN kernel module performs Deficit Weighted Round Robin (DWRR) sc
 
 ## 2.6 mytest
 
++ enable sch_dwrr2
+
+```
+rmmod sch_tbf
+insmod sch_dwrr.ko
+tc qdisc add dev enp5s0 root tbf rate 995mbit limit 1000k burst 1000k mtu 66000 peakrate 1000mbit
+
+```
+for  disable  sch_dwrr2
+```
+tc qdisc del dev enp5s0 root
+```
+
 +  To enable DCTCP on servers:      
 enable MQ-ECN     
 ```
@@ -140,6 +153,8 @@ sysctl -w dwrr.ecn_scheme=3
 sysctl -w net.ipv4.tcp_ecn=1
 
 ```
+
+
 
 + not need to configure ,use default config    
 
@@ -164,7 +179,20 @@ cat /proc/sys/dwrr/queue_buffer_*
 cat /proc/sys/dwrr/queue_dscp_*
 cat /proc/sys/dwrr/queue_quantum_*
 cat /proc/sys/dwrr/queue_thresh_*
+cat /proc/sys/dwrr/port_thresh 
+cat /proc/sys/dwrr/shared_buffer 
 ```
+
++ disable offloading   
+
+```
+ethtool -K enp5s0 tso off
+ethtool -K enp5s0 gso off
+ethtool -K enp5s0 gro off
+```
+![images](test1.png)
+
+
 # linux qdisc
 
 ```Text
@@ -176,22 +204,25 @@ bfifo以字节为单位控制FIFO策略，pfifo以数据包为单位控制FIFO�
 
 + server    
 ```
-ip a add 10.10.103.251/24 dev enp5s0
-ip a add 10.10.103.252/24 dev enp5s0
-ip a add 10.10.103.253/24 dev enp5s0
+ip a add 10.10.103.81/24 dev enahisic2i3
+ip a add 10.10.103.80/24 dev enahisic2i3
+ip a add 10.10.103.79/24 dev enahisic2i3
 ```
 
 ```
 ./bin/server -p 5001 -d   
 ```
 
-+ client   
++ client  
 
 ```
-cat  conf/client_config.txt 
-server 10.10.103.251 5001
-server 10.10.103.252 5001
-server 10.10.103.253 5001
+ip a add 10.10.103.251/24 dev enp5s0
+``` 
+
+```
+server 10.10.103.79 5001
+server 10.10.103.80 5001
+server 10.10.103.81 5001
 req_size_dist conf/DCTCP_CDF.txt
 rate 0Mbps 10
 rate 500Mbps 30

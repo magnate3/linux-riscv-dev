@@ -191,16 +191,7 @@ ethtool -K enp5s0 gso off
 ethtool -K enp5s0 gro off
 ```
 ![images](test1.png)
-
-
-# linux qdisc
-
-```Text
-bfifo和pfifo是内核内置实现的两个非常简单的无类qdisc，数据包按照FIFO策略入队出队，它们唯一的可配置参数就是队列最大长度limit。
-bfifo以字节为单位控制FIFO策略，pfifo以数据包为单位控制FIFO策略。    
-```
-
-# Traffic Generator
+### 2.6.1 Traffic Generator
 
 + server    
 ```
@@ -237,3 +228,11 @@ dscp 3 25
 ```
 ./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```
+
+# linux qdisc
+
+```Text
+bfifo和pfifo是内核内置实现的两个非常简单的无类qdisc，数据包按照FIFO策略入队出队，它们唯一的可配置参数就是队列最大长度limit。
+bfifo以字节为单位控制FIFO策略，pfifo以数据包为单位控制FIFO策略。    
+```
+

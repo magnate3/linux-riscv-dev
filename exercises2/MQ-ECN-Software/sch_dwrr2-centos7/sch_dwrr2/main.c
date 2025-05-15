@@ -187,7 +187,6 @@ static struct dwrr_class *dwrr_classify(struct sk_buff *skb, struct Qdisc *sch)
 		return &(q->queues[0]);
 
 	dscp = iph->tos >> 2;
-
 	for (i = 0; i < dwrr_max_queues; i++)
 	{
 		if (dscp == dwrr_queue_dscp[i])
@@ -413,7 +412,11 @@ static bool dwrr_buffer_overfill(unsigned int len,
 		return false;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 static int dwrr_enqueue(struct sk_buff *skb, struct Qdisc *sch)
+#else
+static int dwrr_enqueue(struct sk_buff *skb, struct Qdisc *sch, struct sk_buff **to_free)
+#endif
 {
 	struct dwrr_class *cl = NULL;
 	unsigned int len = skb_size(skb);
@@ -454,7 +457,8 @@ static int dwrr_enqueue(struct sk_buff *skb, struct Qdisc *sch)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 14, 0)
 	ret = qdisc_enqueue(skb, cl->qdisc);
 #else
-	ret = qdisc_enqueue_tail(skb, cl->qdisc);
+	//ret = qdisc_enqueue_tail(skb, cl->qdisc);
+	ret = qdisc_enqueue(skb, cl->qdisc,to_free);
 #endif
 	if (unlikely(ret != NET_XMIT_SUCCESS))
 	{

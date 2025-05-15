@@ -48,8 +48,8 @@ net.ipv4.tcp_congestion_control = dctcp
 
 ## 2.2 Installing
 
-MQ-ECN replaces token bucket rate limiter module. Hence, you need to remove `sch_tbf` before installing MQ-ECN. To install MQ-ECN on a device (e.g., eth1):
-
+MQ-ECN replaces token bucket rate limiter module. Hence, you need to remove `sch_tbf` before installing MQ-ECN. To install MQ-ECN on a device (e.g., eth1):   
+TBF（Token Bucket Filter）令牌桶过滤器    
 <pre><code>$ rmmod sch_tbf
 $ insmod sch_dwrr.ko
 $ tc qdisc add dev eth1 root tbf rate 995mbit limit 1000k burst 1000k mtu 66000 peakrate 1000mbit
@@ -130,9 +130,15 @@ By default, MQ-ECN kernel module performs Deficit Weighted Round Robin (DWRR) sc
 
 ## 2.6 mytest
 
-+ enable MQ-ECN     
++  To enable DCTCP on servers:      
+enable MQ-ECN     
 ```
 sysctl -w dwrr.ecn_scheme=3
+```
+
+```
+sysctl -w net.ipv4.tcp_ecn=1
+
 ```
 
 + not need to configure ,use default config    
@@ -154,4 +160,49 @@ dwrr.queue_thresh_0 = 32000
 
 ```
 /proc/sys/dwrr/queue_thresh_4
+cat /proc/sys/dwrr/queue_buffer_*
+cat /proc/sys/dwrr/queue_dscp_*
+cat /proc/sys/dwrr/queue_quantum_*
+cat /proc/sys/dwrr/queue_thresh_*
+```
+# linux qdisc
+
+```Text
+bfifo和pfifo是内核内置实现的两个非常简单的无类qdisc，数据包按照FIFO策略入队出队，它们唯一的可配置参数就是队列最大长度limit。
+bfifo以字节为单位控制FIFO策略，pfifo以数据包为单位控制FIFO策略。    
+```
+
+# Traffic Generator
+
++ server    
+```
+ip a add 10.10.103.251/24 dev enp5s0
+ip a add 10.10.103.252/24 dev enp5s0
+ip a add 10.10.103.253/24 dev enp5s0
+```
+
+```
+./bin/server -p 5001 -d   
+```
+
++ client   
+
+```
+cat  conf/client_config.txt 
+server 10.10.103.251 5001
+server 10.10.103.252 5001
+server 10.10.103.253 5001
+req_size_dist conf/DCTCP_CDF.txt
+rate 0Mbps 10
+rate 500Mbps 30
+rate 800Mbps 60
+dscp 0 25
+dscp 1 25
+dscp 2 25
+dscp 3 25
+```
+
+
+```
+./bin/client -b 900 -c conf/client_config.txt -n 5000 -l flows.txt -s 123 -r bin/result.py
 ```

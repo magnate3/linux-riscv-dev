@@ -256,6 +256,8 @@ tcpdump -i enp5s0 'ip[1]&0xfc == 0x04' or 'ip[1]&0xfc == 0x08' or 'ip[1]&0xfc ==
 tos 0xe,ECT(0)  
 tos 0xc    
 
+![images](test2.png)
+
 # linux qdisc
 
 ```Text

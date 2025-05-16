@@ -29,6 +29,13 @@ Linux centos7 4.14.0-115.el7a.0.1.aarch64 #1 SMP Sun Nov 25 20:54:21 UTC 2018 aa
 
 + dctcp
 
+To enable DCTCP on servers:   
+```
+$ sysctl -w net.ipv4.tcp_ecn=1
+$ sysctl -w net.ipv4.tcp_congestion_control=dctcp 
+```
+
+detail:        
 ```
 [root@centos7 ~]#  sysctl net.ipv4.tcp_available_congestion_control
 net.ipv4.tcp_available_congestion_control = cubic reno
@@ -262,6 +269,19 @@ tos 0xc
 
 ```
 tcpdump -i enp5s0 'ip[1]&0x3 == 0x3' -env
+```
+
+### analysis
+
+```
+python2 bin/result.py  flows.txt 
+Parse 1 file
+5000 flows/requests overall average completion time: 36326126 us
+2690 flows/requests (0, 100KB) average completion time: 2043544 us
+2690 flows/requests (0, 100KB) 99th percentile completion time: 8124134 us
+2166 flows/requests [100KB, 10MB) average completion time: 59160122 us
+144 flows/requests [10MB, ) average completion time: 333282457 us
+5000 flows/requests overall average goodput: 0 Mbps
 ```
 
 # linux qdisc

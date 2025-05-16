@@ -258,6 +258,12 @@ tos 0xc
 
 ![images](test2.png)
 
++ CE   
+
+```
+tcpdump -i enp5s0 'ip[1]&0x3 == 0x3' -env
+```
+
 # linux qdisc
 
 ```Text

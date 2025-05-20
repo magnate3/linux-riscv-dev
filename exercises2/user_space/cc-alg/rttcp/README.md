@@ -100,6 +100,12 @@ for centos
 ```
  yum install wireshark
 ```
+Tshark 过滤PCAP的命令实例    
+```
+
+tshark -r 1.pcap -nn -Y rule -w 2.pcap
+说明rule为过滤规则如’dns’为过滤dns数据，总体命令含义为读取1.pcap过滤出dns数据包，写入2.pcap.
+```
 
 # wireshark
 
@@ -108,6 +114,7 @@ tcp.analysis.ack_rtt
 tcp.analysis.bytes_in_flight
 tcp.window_size
 tcp.analysis.retransmission
+tcp.analysis.fast_retransmission
 ```
 Calculate Total Data Sent   
 ```
@@ -172,7 +179,19 @@ $gnuplot a2b_rtt.gpl
 ```
 
 ###  tcptrace Rtt
+
+
+
 [wirelshark tcptrace 识别](https://www.cnblogs.com/codestack/p/18023800)   
+
+
+
+```
+ tcpdump  -i enp61s0f1np1 port 46016  -s 128  -eennvv -w 100-70G.pcap
+```
+
+
+
 ```
 tcptrace -R 100-70G.pcap 
 a2b_rtt.xpl

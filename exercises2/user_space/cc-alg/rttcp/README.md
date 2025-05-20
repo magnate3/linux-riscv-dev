@@ -107,14 +107,140 @@ for centos
 tcp.analysis.ack_rtt
 tcp.analysis.bytes_in_flight
 tcp.window_size
+tcp.analysis.retransmission
+```
+Calculate Total Data Sent   
+```
+tshark -r h7_capture_cubic_150.pcap -Y "tcp && frame.time_relative <= 150" -T fields -e tcp.len | awk '{sum += $1} END {print sum}'
+```
+Calculate Total Data Retransmitted   
+```
+tshark -r h7_capture_cubic_150.pcap -Y "tcp.analysis.retransmission && frame.time_relative <= 150" -T fields -e tcp.len | awk '{sum += $1} END {print sum}'
+```
+Calculate Maximum Window Size   
+```
+tshark -r h7_capture_cubic_150.pcap -T fields -e tcp.window_size_value | sort -nr | head -1
+```
+
++ Time-Sequence Graph
+   
+```
+Time sequence stevens graph 
+```
+[Time-Sequence Graph (tcptrace).](https://packetbomb.com/understanding-the-tcptrace-time-sequence-graph-in-wireshark/)   
+
+
+```
+tshark -nr input.pcap -Y "display filter" -T fields -e frame.number -e tcp.seq -e tcp.options.timestamp.tsval
 ```
 
 ## wireshark 分析
-port 53972 是client的 port    
+port 53972 是client的 port,    
+server  port 999      
+抓包方法（包含client requeust and server response）      
 ```
 tcpdump  -i enp61s0f1np1 port 53972  -s 128  -eennvv -w 70G.pcap
 ```
 ![images](rtt1.png)
+
+![images](rtt2.png)
+
+
+## tcptrace
+
+```
+apt-get -y install tcptrace
+```
+
+```
+$tcpdump -w example.pcap -i eth0 -n
+$tcptrace -R example.pcap
+$xpl2gpl a2b_rtt.xpl
+$gnuplot a2b_rtt.gpl
+```
+
++ help
+
+```
+  -T      create throughput graph[s], (average over 10 segments, see -A)\n\
+  -R      create rtt sample graph[s]\n\
+  -S      create time sequence graph[s]\n\
+  -N      create owin graph[s] (_o_utstanding data on _N_etwork)\n\
+  -F      create segsize graph[s]\n\
+  -L      create time line graph[s]\n\
+  -G	  create ALL graphs\n\
+```
+
+###  tcptrace Rtt
+[wirelshark tcptrace 识别](https://www.cnblogs.com/codestack/p/18023800)   
+```
+tcptrace -R 100-70G.pcap 
+a2b_rtt.xpl
+```
+
+`bash xpl2gpl.txt a2b_rtt.xpl `产生如下文件     
+```
+a2b_rtt.datasets  a2b_rtt.gpl  a2b_rtt.labels
+```
++ step3更改a2b_rtt.gpl后两行设置png输出      
+
+```
+set term png
+set output "a2b_tsg.png"
+```
++ step4    
+```
+gnuplot a2b_rtt.gpl
+```
+
+
+### tcptrace time sequence
+
++ step1   
+```
+tcptrace -S 100-70G.pcap
+```
+产生如下文件    
+
+```
+a2b_tsg.xpl  b2a_tsg.xpl
+```
++ step2   
+```
+bash xpl2gpl.txt a2b_tsg.xpl 
+```
++ step3更改a2b_tsg.gpl后两行设置png输出      
+
+```
+set term png
+set output "a2b_tsg.png"
+```
++ step4 
+```
+gnuplot a2b_tsg.gpl
+```
+
+
+
+
+
++  gnuplot
+1. Producing PDF (.pdf)   
+````
+gnuplot> set term pdf     (will produce PDF )
+gnuplot> set output "printme.pdf" (any filename.pdf you want)
+gnuplot> replot                   (recreates plot but you don't see it, goes to output file)
+gnuplot> unset output  
+gnuplot> unset term  
+```
+2. Producing png   (image file, similar to .jpg)   
+```
+gnuplot> set term png             (will produce .png output)
+gnuplot> set output "printme.png" (output to any filename.png you want)
+gnuplot> replot
+gnuplot> unset term 
+```
+ 
 
 #  ipsumdump (not succ)
 

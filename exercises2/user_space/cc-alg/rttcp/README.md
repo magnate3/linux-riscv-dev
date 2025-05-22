@@ -115,16 +115,147 @@ tcp.analysis.bytes_in_flight
 tcp.window_size
 tcp.analysis.retransmission
 tcp.analysis.fast_retransmission
+tcp.analysis.rto
 ```
-Calculate Total Data Sent   
+
++ retrans   
+`tcp.analysis.retransmission || tcp.analysis.fast_retransmission`
+[Wireshark抓包分析TCP重传](https://chegva.com/3572.html)   
+![images](retrans.png)   
+
+![images](retrans2.png) 
+
+tcp.analysis.retransmission是Wireshark的一个内置过滤表达式，它专门用于检测并显示所有标记为重传的数据包。
+通过这个过滤条件，你可以轻松识别出网络中的TCP重传现象，并进一步分析其原因和影响。   
+
+排除TCP重传数据包如果捕获的TCP包中有太多标识为[TCP Retransmission]的TCP重传包，而你又不希望看到TCP重传的数据包，可以使用逻辑“非”（NOT）操作符 ! 来排除这些重传包，过滤条件如下：    
+```
+!tcp.analysis.retransmission
+```
+这将会隐藏所有TCP重传的数据包，只显示正常的数据流量。
+ 
+```
+tshark -n -q -r 100-70G.pcap -z io,stat,0,tcp.analysis.retransmission,"tcp.analysis.retransmission"
+Running as user "root" and group "root". This could be dangerous.
+
+====================================================
+| IO Statistics                                    |
+|                                                  |
+| Duration: 11.1 secs                              |
+| Interval: 11.1 secs                              |
+|                                                  |
+| Col 1: tcp.analysis.retransmission               |
+|     2: tcp.analysis.retransmission               |
+|--------------------------------------------------|
+|              |1                |2                |
+| Interval     | Frames |  Bytes | Frames |  Bytes |
+|--------------------------------------------------|
+|  0.0 <> 11.1 |    116 | 486088 |    116 | 486088 |
+====================================================
+```
+
+```
+tshark -n -q -r 100-70G.pcap -z io,stat,0,tcp.analysis.retransmission,"tcp.analysis.retransmission and ip.src==10.22.116.220","tcp.analysis.retransmission and ip.src==10.22.116.221"
+Running as user "root" and group "root". This could be dangerous.
+
+=====================================================================
+| IO Statistics                                                     |
+|                                                                   |
+| Duration: 11.1 secs                                               |
+| Interval: 11.1 secs                                               |
+|                                                                   |
+| Col 1: tcp.analysis.retransmission                                |
+|     2: tcp.analysis.retransmission and ip.src==10.22.116.220      |
+|     3: tcp.analysis.retransmission and ip.src==10.22.116.221      |
+|-------------------------------------------------------------------|
+|              |1                |2                |3               |
+| Interval     | Frames |  Bytes | Frames |  Bytes | Frames | Bytes |
+|-------------------------------------------------------------------|
+|  0.0 <> 11.1 |    116 | 486088 |    116 | 486088 |      0 |     0 |
+=====================================================================
+```
+
++ Rto (Retransmission TimeOut)
+
+```
+tshark -n -q -r 100-70G.pcap -z io,stat,0,tcp.analysis.rto,"tcp.analysis.rto and ip.src==10.22.116.220","tcp.analysis.rto and ip.src==10.22.116.221"
+Running as user "root" and group "root". This could be dangerous.
+
+===================================================================
+| IO Statistics                                                   |
+|                                                                 |
+| Duration: 11.1 secs                                             |
+| Interval: 11.1 secs                                             |
+|                                                                 |
+| Col 1: tcp.analysis.rto                                         |
+|     2: tcp.analysis.rto and ip.src==10.22.116.220               |
+|     3: tcp.analysis.rto and ip.src==10.22.116.221               |
+|-----------------------------------------------------------------|
+|              |1               |2               |3               |
+| Interval     | Frames | Bytes | Frames | Bytes | Frames | Bytes |
+|-----------------------------------------------------------------|
+|  0.0 <> 11.1 |      6 | 22548 |      6 | 22548 |      0 |     0 |
+===================================================================
+```
+ + [TCP Dup ACK]    
+当乱序或者丢包发生时，接收方就会收到一些Seq号比期望值大的包，TCP协议每收到一个这种包就会ACK一次期望的Seq值，通过这个方式告知发送方，因此就产生了一些重复的Ack。Wireshark抓到这些重复的Ack就会提示[TCP Dup ACK].   
+```
+tshark -n -q -r 100-70G.pcap -z io,stat,0,tcp.analysis.rto,"tcp.analysis.duplicate_ack and ip.src==10.22.116.220","tcp.analysis.duplicate_ack and ip.src==10.22.116.221"
+Running as user "root" and group "root". This could be dangerous.
+
+===================================================================
+| IO Statistics                                                   |
+|                                                                 |
+| Duration: 11.1 secs                                             |
+| Interval: 11.1 secs                                             |
+|                                                                 |
+| Col 1: tcp.analysis.rto                                         |
+|     2: tcp.analysis.duplicate_ack and ip.src==10.22.116.220     |
+|     3: tcp.analysis.duplicate_ack and ip.src==10.22.116.221     |
+|-----------------------------------------------------------------|
+|              |1               |2               |3               |
+| Interval     | Frames | Bytes | Frames | Bytes | Frames | Bytes |
+|-----------------------------------------------------------------|
+|  0.0 <> 11.1 |      6 | 22548 |      0 |     0 |   1092 | 92136 |
+===================================================================
+```
+
++ out_of_order   
+
+```
+tshark -n -q -r 100-70G.pcap -z io,stat,0,tcp.analysis.out_of_order,"tcp.analysis.out_of_order and ip.src==10.22.116.220","tcp.analysis.out_of_order and ip.src==10.22.116.221"
+Running as user "root" and group "root". This could be dangerous.
+
+=======================================================================
+| IO Statistics                                                       |
+|                                                                     |
+| Duration: 11.1 secs                                                 |
+| Interval: 11.1 secs                                                 |
+|                                                                     |
+| Col 1: tcp.analysis.out_of_order                                    |
+|     2: tcp.analysis.out_of_order and ip.src==10.22.116.220          |
+|     3: tcp.analysis.out_of_order and ip.src==10.22.116.221          |
+|---------------------------------------------------------------------|
+|              |1                 |2                 |3               |
+| Interval     | Frames |  Bytes  | Frames |  Bytes  | Frames | Bytes |
+|---------------------------------------------------------------------|
+|  0.0 <> 11.1 |   1086 | 4576404 |   1086 | 4576404 |      0 |     0 |
+=======================================================================
+```
++ rtt    
+```
+tshark -n -q -r chegva.pcap -z io,stat,0,tcp.analysis.ack_rtt,"tcp.analysis.ack_rtt > 0.06 and tcp.analysis.ack_rtt < 0.12 and ip.src==100.70.11.11 and ip.dst==100.69.11.11","tcp.analysis.ack_rtt > 0.06 and tcp.analysis.ack_rtt < 0.12 and ip.src==100.69.11.11 and ip.dst==100.70.11.11"
+```
+
++ Calculate Total Data Sent   
 ```
 tshark -r h7_capture_cubic_150.pcap -Y "tcp && frame.time_relative <= 150" -T fields -e tcp.len | awk '{sum += $1} END {print sum}'
 ```
-Calculate Total Data Retransmitted   
++ Calculate Total Data Retransmitted   
 ```
 tshark -r h7_capture_cubic_150.pcap -Y "tcp.analysis.retransmission && frame.time_relative <= 150" -T fields -e tcp.len | awk '{sum += $1} END {print sum}'
 ```
-Calculate Maximum Window Size   
++ Calculate Maximum Window Size   
 ```
 tshark -r h7_capture_cubic_150.pcap -T fields -e tcp.window_size_value | sort -nr | head -1
 ```
@@ -259,7 +390,11 @@ gnuplot> set output "printme.png" (output to any filename.png you want)
 gnuplot> replot
 gnuplot> unset term 
 ```
- 
+# ss查看tcp
+
+```
+ ss -eipnt  xxx
+```
 
 #  ipsumdump (not succ)
 

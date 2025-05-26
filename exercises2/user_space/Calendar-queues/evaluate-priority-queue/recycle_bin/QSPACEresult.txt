@@ -1,0 +1,69 @@
+uniform
+3,389835  100
+/proc/self/statm size resident 34,121094 MiB, page_size 4096
+Badness bd = 393,564670
+114,804029  10000
+/proc/self/statm size resident 34,378906 MiB, page_size 4096
+Badness bd = 16,437682
+15356,993914  1000000
+/proc/self/statm size resident 56,937500 MiB, page_size 4096
+Badness bd = 26,683230
+63582,737923  10000000
+/proc/self/statm size resident 263,187500 MiB, page_size 4096
+Badness bd = 37,056997
+
+triangular
+2,980947  100
+/proc/self/statm size resident 34,121094 MiB, page_size 4096
+Badness bd = 406,417289
+106,770992  10000
+/proc/self/statm size resident 34,378906 MiB, page_size 4096
+Badness bd = 16,738500
+18124,605179  1000000
+/proc/self/statm size resident 56,937500 MiB, page_size 4096
+Badness bd = 19,200347
+68455,907106  10000000
+/proc/self/statm size resident 263,187500 MiB, page_size 4096
+Badness bd = 31,831738
+
+exponential
+3,230095  100
+/proc/self/statm size resident 34,121094 MiB, page_size 4096
+Badness bd = 398,342767
+140,989065  10000
+/proc/self/statm size resident 34,378906 MiB, page_size 4096
+Badness bd = 14,195177
+12996,680975  1000000
+/proc/self/statm size resident 56,937500 MiB, page_size 4096
+Badness bd = 27,819982
+53751,245975  10000000
+/proc/self/statm size resident 263,187500 MiB, page_size 4096
+Badness bd = 38,646298
+
+bimodal
+2,066135  100
+/proc/self/statm size resident 34,121094 MiB, page_size 4096
+Badness bd = 445,421383
+2,446175  10000
+/proc/self/statm size resident 34,378906 MiB, page_size 4096
+Badness bd = 430,237245
+57,044983  1000000
+/proc/self/statm size resident 56,937500 MiB, page_size 4096
+Badness bd = 46,321627
+556,813955  10000000
+/proc/self/statm size resident 263,187500 MiB, page_size 4096
+Badness bd = 36,867841
+
+biased
+3,148079  100
+/proc/self/statm size resident 34,121094 MiB, page_size 4096
+Badness bd = 400,912275
+128,090143  10000
+/proc/self/statm size resident 34,378906 MiB, page_size 4096
+Badness bd = 14,539794
+17383,875132  1000000
+/proc/self/statm size resident 56,937500 MiB, page_size 4096
+Badness bd = 19,401690
+64809,219122  10000000
+/proc/self/statm size resident 263,187500 MiB, page_size 4096
+Badness bd = 32,270366

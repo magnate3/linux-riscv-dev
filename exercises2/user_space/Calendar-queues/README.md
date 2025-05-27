@@ -1,5 +1,10 @@
+# buckettop
+
+![images](deq.png)    
+
 
 # Resources
+ *  [Calendar Queues - Overview & Analysis](https://github.com/cucapra/packet-scheduling/discussions/15)   
  * [A list of papers published on this topic](http://stackoverflow.com/questions/6004978/what-is-a-calendar-queue)
  * [1977: An efficient data structure for the simulation event set](http://dl.acm.org/citation.cfm?id=359801)
  * [1979: A Simple and Robust Data Structure for the Simulation Event Set](http://technologists.com/sauer/RC8001.pdf)

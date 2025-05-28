@@ -1,7 +1,16 @@
+# qos
+
+[RoCE通过QoS对Mellanox网卡进行限速](https://www.cnblogs.com/CQzhangyu/p/18139026)   
+
+```
+ib_write_bw <B_IP> -d mlx5_1 -x 3 --tclass=128
+mlnx_qos -i ens10f1np1 --ratelimit=0,0,0,0,4,0,0,0
+```
 
 # ib_write_bw
 * -a 和-s 会冲突吗？     
 * -R
+* max qp  qp=16384     
 ``` 
 rdma_cm QPs     : ON 
 ```  
@@ -77,7 +86,7 @@ numactl -C 24,26,27,28,30,32,34,36  ib_write_bw -d mlx5_1  -x 3  --qp=8 --report
 ```
 
 # ib_send_bw test
-
+-s 1000000    
 ```
 ib_send_bw -d mlx5_1  -x 3 --cpu_util --qp=8 --report_gbits -s 1000000 -m 4096  --run_infinitely
 ib_send_bw -d mlx5_1  -x 3 --cpu_util --qp=8 --report_gbits -s 1000000 -m 4096  10.22.116.221  --run_infinitely

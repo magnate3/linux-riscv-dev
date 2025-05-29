@@ -1,0 +1,13 @@
+duration: 1
+scheduler_p: 4
+
+flows:
+  type: rdma
+  num: 3000
+  distribution: WebSearch
+  distribution_params: []
+  client_nic: mlx5_1
+  client_ip: 10.22.116.220
+  server_nic: mlx5_1
+  server_ip: 10.22.116.221
+  server_port_base: 30001

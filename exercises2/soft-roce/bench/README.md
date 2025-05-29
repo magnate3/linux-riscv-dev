@@ -7,10 +7,45 @@ ib_write_bw <B_IP> -d mlx5_1 -x 3 --tclass=128
 mlnx_qos -i ens10f1np1 --ratelimit=0,0,0,0,4,0,0,0
 ```
 
+#  Queue Pair 
+```
+ibv_devinfo -d mlx5_1 -v | grep qp
+        max_qp:                         131072
+        max_qp_wr:                      32768
+        max_qp_rd_atom:                 16
+        max_qp_init_rd_atom:            16
+        max_raw_ipv6_qp:                0
+        max_raw_ethy_qp:                0
+        max_mcast_qp_attach:            240
+        max_total_mcast_qp_attach:      503316480
+                supported_qp:
+                supported_qp:
+                qp_rate_limit_min:      1kbps
+                qp_rate_limit_max:      100000000kbps
+                supported_qp:
+```
+
+```
+ibv_devinfo -d mlx5_1 -v | grep cq
+        max_cq:                         16777216
+        max_cqe:                        4194303
+        cq moderation caps:
+                max_cq_count:   65535
+                max_cq_period:  4095 us
+```
+
+
+```
+mlxlink -d mlx5_1   |grep "Speed"
+Speed                           : 100G
+Enabled Link Speed (Ext.)       : 0x000007f2 (100G_2X,100G_4X,50G_1X,50G_2X,40G,25G,10G,1G)
+Supported Cable Speed (Ext.)    : 0x000002f2 (100G_4X,50G_2X,40G,25G,10G,1G)
+```
+
 # ib_write_bw
 * -a 和-s 会冲突吗？     
 * -R
-* max qp  qp=16384     
+* max Queue Pair  qp=16384     
 ``` 
 rdma_cm QPs     : ON 
 ```  
@@ -21,7 +56,7 @@ rdma_cm QPs     : ON
 ```
  numactl -C 24,26,27,28,30,32,34,36  ib_write_bw -d mlx5_1  -x 3  --qp=8 --report_gbits -s 6144 -m 4096  -a  -F 
 ```
-
++ client   
 ```
 numactl -C 24,26,27,28,30,32,34,36  ib_write_bw -d mlx5_1  -x 3  --qp=8 --report_gbits -s 6144 -m 4096  10.22.116.221   -a  -F  
 ---------------------------------------------------------------------------------------
@@ -170,8 +205,15 @@ numactl -C 24,26,27,28,30,32,34,36  ib_send_bw -d mlx5_1  -x 3  --qp=8 --report_
  8192       8000             193.11             193.00             2.944988
  16384      8000             194.36             194.33             1.482599
 ```
-
-
+#  Multiple Devices   
+Server side:    
+```
+run_perftest_multi_devices -d mlx5_0,mlx5_2 -c 0,1 --cmd "ib_write_bw"
+```
+Client side:   
+```
+run_perftest_multi_devices -d mlx5_0,mlx5_2 -c 0,1 --cmd "ib_write_bw --report_gbits" --remote <ib interface ip > 
+```
 
 
 # Husky

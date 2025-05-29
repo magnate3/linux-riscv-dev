@@ -1,0 +1,13 @@
+duration: 0.1
+scheduler_p: 1
+
+flows:
+  type: tcp
+  num: 10
+  distribution: uniform
+  distribution_params: [5000000000, 5000000000]
+  client_nic: enp0s8
+  client_ip: 172.16.200.3
+  server_nic: enp0s9
+  server_ip: 172.16.200.10
+  server_port_base: 50001

@@ -1,6 +1,6 @@
 # Awesome 5G  
 
-[![Build Status](https://travis-ci.org/calee0219/awesome-5g.svg?branch=main)](https://travis-ci.org/calee0219/awesome-5g)
+
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/calee0219/awesome-5g/pulls)
 
 [![5G](https://www.3gpp.org/images/5G-logo_250px.jpg)](https://www.3gpp.org/)
@@ -11,8 +11,8 @@ Consult [awesome-telco](https://github.com/ravens/awesome-telco) for more genera
 
 ## free5gc
 
-[gtp5g - 5G compatible GTP kernel module](https://github.com/free5gc/gtp5g)   
-[gtp5g - 5G compatible GTP kernel module](https://github.com/PrinzOwO/gtp5g/tree/master)    
+[gtp5g - 5G compatible GTP kernel module1](https://github.com/free5gc/gtp5g)   
+[gtp5g - 5G compatible GTP kernel module2](https://github.com/PrinzOwO/gtp5g/tree/master)    
 
 ## Contents
 

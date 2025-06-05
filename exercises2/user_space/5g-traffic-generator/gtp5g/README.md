@@ -23,6 +23,14 @@ root@ubuntux86:#
 
 ![images](test1.png)
 
+```
+GTP5G_SDF_FILTER_TOS_TRAFFIC_CLASS
+tc-skbedit
+if (get_qos_enable() && tp != NULL) {
+        color = policePacket(tp, volume_mbqe);
+    }
+Color policePacket(TrafficPolicer* p, int pktLen) {
+```
 ### Install kernel module
 Install the module to the system and load automatically at boot
 ```

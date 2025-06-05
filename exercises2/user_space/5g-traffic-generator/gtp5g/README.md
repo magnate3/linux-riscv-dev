@@ -15,6 +15,12 @@ make clean && make
 
 ## test1
 
+```
+root@ubuntux86:# modprobe udp_tunnel
+root@ubuntux86:# insmod  gtp5g.ko 
+root@ubuntux86:# 
+```
+
 ![images](test1.png)
 
 ### Install kernel module

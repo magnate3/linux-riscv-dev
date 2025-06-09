@@ -14,16 +14,14 @@ for mlx_dev in $(ibdev2netdev |grep enp61s0f1np1 | awk '{print $1}')
 do
    if_dev=$(ibdev2netdev | grep $mlx_dev | awk '{print $5}')
    echo "------------> Current: ${mlx_dev}:${if_dev}"
-   #配置接口mtu 为4500
-   ifconfig "${if_dev}" mtu 4500.                        
-   #配置 RDMA-CM QP 默认 TOS为106
-   cma_roce_tos -d "${mlx_dev}" -t 106
-   #配置4队列pfc使能
-   mlnx_qos -i "${if_dev}" --pfc 0,0,0,0,1,0,0,0 --trust dscp
-   #配置dscp=26(tos/4)报文映射到4队列
-   mlnx_qos -i ${if_dev} --dscp2prio set,26,4
-   #配置 cnp报文dscp 为48；使能4队列ECN功能
-   echo 48 >/sys/class/net/${if_dev}/ecn/roce_np/cnp_dscp
-   echo 1 >/sys/class/net/${if_dev}/ecn/roce_np/enable/4
-   echo 1 >/sys/class/net/${if_dev}/ecn/roce_rp/enable/4
+   # Check DCQCN is enabled on Prio 3
+   IF_NAME="enp61s0f1np1"
+   DEV_NAME="mlx5_1"
+   cat /sys/class/net/$IF_NAME/ecn/roce_np/enable/3
+   cat /sys/class/net/$IF_NAME/ecn/roce_rp/enable/3
+
+   # Check counters related to DCQCN
+   cat /sys/class/infiniband/$DEV_NAME/ports/1/hw_counters/np_cnp_sent
+   cat /sys/class/infiniband/$DEV_NAME/ports/1/hw_counters/np_ecn_marked_roce_packets
+   cat /sys/class/infiniband/$DEV_NAME/ports/1/hw_counters/rp_cnp_handled
 done

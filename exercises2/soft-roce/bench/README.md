@@ -1,10 +1,12 @@
 
+[RDMA测试杂谈](https://mp.weixin.qq.com/s?__biz=Mzg5NzY3NDUyMw==&mid=2247535505&idx=1&sn=8913cd5f4be7fd62d5ae2759a8fa37d9&source=41#wechat_redirect)   
+
 #   Benchmarks
 
 + RDMA Write Benchmarks(https://hpcadvisorycouncil.atlassian.net/wiki/spaces/HPCWORKS/pages/1284603909/Basic+RDMA+Benchmark+Examples+for+AMD+2nd+Gen+EPYC+CPUs+over+HDR+InfiniBand#RDMA-Write-Benchmarks)  
     + RDMA Write Latency (ib_write_lat)    
     + RDMA Write Bandwidth (ib_write_bw)   
-    + RDMA Write Bi-Directional Bandwidth (ib_write_bw -b)    
+    + RDMA Write Bi-Directional Bandwidth (ib_write_bw -b)       
 
 # qos
 
@@ -223,6 +225,68 @@ Client side:
 run_perftest_multi_devices -d mlx5_0,mlx5_2 -c 0,1 --cmd "ib_write_bw --report_gbits" --remote <ib interface ip > 
 ```
 
+#  NEO-Host 
+
+ PCie backpressure/bottleneck, we have a software called NEO-Host that performs lower end diagnosis & performance counters.    
+
+下载deb文件包 wget --quiet http://content.mellanox.com/ofed/MLNX_OFED-5.8-6.0.4.2/MLNX_OFED_LINUX-5.8-6.0.4.2-ubuntu20.04-x86_64.tgz
+```
+root@ljtest:~/mellanox# cat Dockerfile.txt 
+# Build image on top of NVidia MXnet image
+
+# Pin Key Package Versions
+MOFED_VER=5.8-6.0.4.2
+AZML_SDK_VER=1.25.0
+
+# Other required variables for MOFED drivers
+OS_VER=ubuntu20.04
+PLATFORM=x86_64
+
+### Install Mellanox Drivers ###
+#apt-get update && apt-get install -y libcap2 libfuse-dev && \
+#wget --quiet http://content.mellanox.com/ofed/MLNX_OFED-${MOFED_VER}/MLNX_OFED_LINUX-${MOFED_VER}-${OS_VER}-${PLATFORM}.tgz 
+tar -xvf MLNX_OFED_LINUX-${MOFED_VER}-${OS_VER}-${PLATFORM}.tgz && \
+    MLNX_OFED_LINUX-${MOFED_VER}-${OS_VER}-${PLATFORM}/mlnxofedinstall --user-space-only --without-fw-update --all --without-neohost-backend --force
+```
+```
+find ./ -name '*neo*'
+dpkg -i ./DEBS/neohost-backend_1.5.0-102_amd64.deb
+dpkg -i ./DEBS/neohost-sdk_1.5.0-102_amd64.deb
+```
+ 
+![images](neo.png)
+ 
+## 编译（没有成功）
+
+./mlnxofedinstall --without-dkms --add-kernel-support --kernel 5.15.0-138-generic --without-fw-update  --with-neohost-backend  --force (因为python,编译没有成功）
+
++ 依赖pip2 python2     
+``` 
+  apt-get -y install python-pip     
+```
+
+```
+apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' python
+E: Package 'python' has no installation candidate
+``` 
+编辑mlnxofedinstall
+```
+
+                        'neohost-backend' =>
+                                { name => "neohost-backend", parent => "neohost-backend",
+                                selected => 0, installed => 0, rpm_exist => 0, rpm_exist32 => 0,
+                                available => 0, mode => "user",
+                                dist_req_build => [],
+                                dist_req_inst => ["python"],
+                                ofa_req_build => [], ofa_req_inst => [], configure_options => '' },
+```
+
+`install Python 2 in advance and create the symbolic link /usr/bin/python -> python2.`        
+```
+ln -sf /usr/bin/python2 /usr/bin/python
+```
+
+(Neohost)[https://rpubs.com/iamholger/796477)    
 
 # Husky
 Benchmark Suite for RDMA Performance Isolation

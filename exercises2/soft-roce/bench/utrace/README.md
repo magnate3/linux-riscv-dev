@@ -83,3 +83,7 @@ vim log/rdma_output_flow2988.txt
  5133       5                2167.02            1375.93            0.281078
 ---------------------------------------------------------------------------------------
 ```
+
+# references
+
+[beegfs-rdma](https://github.com/multiib/beegfs-thesis/tree/e221583627028083d4e1dc3bc51a3b56331548da)

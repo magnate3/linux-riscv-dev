@@ -393,8 +393,19 @@ python2 /opt/neohost/sdk/get_device_performance_counters.py --mode=shell --dev-u
 ==================================================================================
 ```
 
++ grep 'PCIe Inbound Used BW'     
 
-(Neohost)[https://rpubs.com/iamholger/796477)    
+```
+python2 /opt/neohost/sdk/get_device_performance_counters.py --dev-mst /dev/mst/mt4123_pciconf0 | grep 'PCIe Inbound Used BW'
+```
+```
+python2 /opt/neohost/sdk/get_device_performance_counters.py --mode=shell --dev-uid=0000:3d:00.1  --DEBUG --get-analysis |   grep 'PCIe Inbound Used BW'
+|| PCIe Read Stalled due to No Read Engines                  || 0               ||| PCIe Inbound Used BW                || 0.005         [Gb/s]             ||
+```
+
+This prints the current PCIe Inbound bandwidth (Gb/s). You can calculate the average DRAM access traffic per work request (bytes) by dividing the PCIe Inbound bandwidth by IOPS.
+
+[Neohost](https://rpubs.com/iamholger/796477)    
 
 # Husky
 Benchmark Suite for RDMA Performance Isolation

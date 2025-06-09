@@ -260,7 +260,7 @@ dpkg -i ./DEBS/neohost-sdk_1.5.0-102_amd64.deb
  
 ![images](neo.png)
  
-## 编译
+## 编译neohost-backend   
 + 将iso钟MLNX_OFED复制一份（这样可以编辑mlnxofedinstall）     
 ```
  cp -r /mnt/MLNX_OFED  MLNX_OFED_LINUX-src

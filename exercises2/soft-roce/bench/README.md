@@ -229,6 +229,8 @@ run_perftest_multi_devices -d mlx5_0,mlx5_2 -c 0,1 --cmd "ib_write_bw --report_g
 
  PCie backpressure/bottleneck, we have a software called NEO-Host that performs lower end diagnosis & performance counters.    
 
+
+## install deb （没有成功）
 下载deb文件包 wget --quiet http://content.mellanox.com/ofed/MLNX_OFED-5.8-6.0.4.2/MLNX_OFED_LINUX-5.8-6.0.4.2-ubuntu20.04-x86_64.tgz
 ```
 root@ljtest:~/mellanox# cat Dockerfile.txt 
@@ -253,17 +255,29 @@ find ./ -name '*neo*'
 dpkg -i ./DEBS/neohost-backend_1.5.0-102_amd64.deb
 dpkg -i ./DEBS/neohost-sdk_1.5.0-102_amd64.deb
 ```
+
+
  
 ![images](neo.png)
  
-## 编译（没有成功）
+## 编译
++ 将iso钟MLNX_OFED复制一份（这样可以编辑mlnxofedinstall）     
+```
+ cp -r /mnt/MLNX_OFED  MLNX_OFED_LINUX-src
+```
+./mlnxofedinstall --without-dkms --add-kernel-support --kernel 5.15.0-138-generic --without-fw-update  --with-neohost-backend  --force 
+(因为python,编译会失败,需要更改 mlnxofedinstall）
 
-./mlnxofedinstall --without-dkms --add-kernel-support --kernel 5.15.0-138-generic --without-fw-update  --with-neohost-backend  --force (因为python,编译没有成功）
-
-+ 依赖pip2 python2     
++ step1 eohost依赖pip2 python2     
 ``` 
   apt-get -y install python-pip     
 ```
+`install Python 2 in advance and create the symbolic link /usr/bin/python -> python2.`        
+```
+ln -sf /usr/bin/python2 /usr/bin/python
+```
+
++ step2 解决Dpkg::Options::='--force-confold' python   
 
 ```
 apt-get install -y -o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold' python
@@ -280,11 +294,105 @@ E: Package 'python' has no installation candidate
                                 dist_req_inst => ["python"],
                                 ofa_req_build => [], ofa_req_inst => [], configure_options => '' },
 ```
+将dist_req_inst => ["python"]改成dist_req_inst => ["python2"]
 
-`install Python 2 in advance and create the symbolic link /usr/bin/python -> python2.`        
++ step3 安装dpkg -i ./DEBS/neohost-sdk_1.5.0-102_amd64.deb    
 ```
-ln -sf /usr/bin/python2 /usr/bin/python
+python2 /opt/neohost/sdk/get_device_performance_counters.py --mode=shell --dev-uid=0000:3d:00.1 --run-loop --DEBUG
 ```
+```
+python2 /opt/neohost/sdk/get_device_performance_counters.py --mode=shell --dev-uid=0000:3d:00.1  --DEBUG
+-D- -I- Post request {'execMode': 1, 'module': 'performance', 'method': 'GetDevicePerformanceCounters', 'apiVer': 'v1', 'params': {'getAnalysis': True, 'devUid': '0000:3d:00.1'}, 'id': 245} to neohost
+-D- -D- Initialize Server for a streaming stdin/stdout process neohost...
+-D- -D- Converting {'execMode': 1, 'module': 'performance', 'method': 'GetDevicePerformanceCounters', 'apiVer': 'v1', 'params': {'getAnalysis': True, 'devUid': '0000:3d:00.1'}, 'id': 245}  to JSON Format... 
+-D- -D- Getting Process Output from a streaming process .... 
+=============================================================================================================================================================
+|| Counter Name                                              || Counter Value   ||| Performance Analysis                || Analysis Value [Units]           ||
+=============================================================================================================================================================
+|| Level 0 MTT Cache Hit                                     || 0               |||                                Bandwidth                                ||
+|| Level 0 MTT Cache Miss                                    || 0               ||---------------------------------------------------------------------------
+|| Level 1 MTT Cache Hit                                     || 0               ||| RX BandWidth                        || 0             [Gb/s]             ||
+|| Level 1 MTT Cache Miss                                    || 0               ||| TX BandWidth                        || 0             [Gb/s]             ||
+|| Level 0 MPT Cache Hit                                     || 0               ||===========================================================================
+|| Level 0 MPT Cache Miss                                    || 0               |||                                 Memory                                  ||
+|| Level 1 MPT Cache Hit                                     || 0               ||---------------------------------------------------------------------------
+|| Level 1 MPT Cache Miss                                    || 0               ||| RX Indirect Memory Keys Rate        || 0             [Keys/Packet]      ||
+|| Indirect Memory Key Access                                || 0               ||===========================================================================
+|| ICM Cache Miss                                            || 38              |||                             PCIe Bandwidth                              ||
+|| PCIe Internal Back Pressure                               || 0               ||---------------------------------------------------------------------------
+|| Outbound Stalled Reads                                    || 0               ||| PCIe Inbound Available BW           || 125.3964      [Gb/s]             ||
+|| Outbound Stalled Writes                                   || 0               ||| PCIe Inbound BW Utilization         || 0.004         [%]                ||
+|| PCIe Read Stalled due to No Read Engines                  || 0               ||| PCIe Inbound Used BW                || 0.005         [Gb/s]             ||
+|| PCIe Read Stalled due to No Completion Buffer             || 0               ||| PCIe Outbound Available BW          || 125.3964      [Gb/s]             ||
+|| PCIe Read Stalled due to Ordering                         || 0               ||| PCIe Outbound BW Utilization        || 0.0042        [%]                ||
+|| RX IPsec Packets                                          || 0               ||| PCIe Outbound Used BW               || 0.0053        [Gb/s]             ||
+|| Back Pressure from RXD to PSA                             || 0               ||===========================================================================
+|| Chip Frequency                                            || 429.9913        |||                              PCIe Latency                               ||
+|| Back Pressure from RXB Buffer to RXB FIFO                 || 0               ||---------------------------------------------------------------------------
+|| Back Pressure from PSA switch to RXT                      || 0               ||| PCIe Avg Latency                    || 403           [NS]               ||
+|| Back Pressure from PSA switch to RXB                      || 0               ||| PCIe Max Latency                    || 488           [NS]               ||
+|| Back Pressure from PSA switch to RXD                      || 0               ||| PCIe Min Latency                    || 372           [NS]               ||
+|| Back Pressure from Internal MMU to RX Descriptor Handling || 0               ||===========================================================================
+|| Receive WQE Cache Hit                                     || 0               |||                       PCIe Unit Internal Latency                        ||
+|| Receive WQE Cache Miss                                    || 0               ||---------------------------------------------------------------------------
+|| Back Pressure from PCIe to Packet Scatter                 || 0               ||| PCIe Internal Avg Latency           || 4             [NS]               ||
+|| RX Steering Packets                                       || 0               ||| PCIe Internal Max Latency           || 4             [NS]               ||
+|| RX Steering Packets Fast Path                             || 0               ||| PCIe Internal Min Latency           || 4             [NS]               ||
+|| EQ All State Machines Busy                                || 0               ||===========================================================================
+|| CQ All State Machines Busy                                || 0               |||                               Packet Rate                               ||
+|| MSI-X All State Machines Busy                             || 0               ||---------------------------------------------------------------------------
+|| CQE Compression Sessions                                  || 0               ||| RX Packet Rate                      || 0             [Packets/Seconds]  ||
+|| Compressed CQEs                                           || 0               ||| TX Packet Rate                      || 0             [Packets/Seconds]  ||
+|| Compression Session Closed due to EQE                     || 0               ||===========================================================================
+|| Compression Session Closed due to Timeout                 || 0               |||                                 eSwitch                                 ||
+|| Compression Session Closed due to Mismatch                || 0               ||---------------------------------------------------------------------------
+|| Compression Session Closed due to PCIe Idle               || 0               ||| RX Hops Per Packet                  || 0             [Hops/Packet]      ||
+|| Compression Session Closed due to S2CQE                   || 0               ||| RX Optimal Hops Per Packet Per Pipe || 0             [Hops/Packet]      ||
+|| Compressed CQE Strides                                    || 0               ||| RX Optimal Packet Rate Bottleneck   || 0             [MPPS]             ||
+|| Compression Session Closed due to LRO                     || 0               ||| RX Packet Rate Bottleneck           || 0             [MPPS]             ||
+|| TX Descriptor Handling Stopped due to Limited State       || 0               ||| TX Hops Per Packet                  || 0             [Hops/Packet]      ||
+|| TX Descriptor Handling Stopped due to Limited VL          || 0               ||| TX Optimal Hops Per Packet Per Pipe || 0             [Hops/Packet]      ||
+|| TX Descriptor Handling Stopped due to De-schedule         || 0               ||| TX Optimal Packet Rate Bottleneck   || 0             [MPPS]             ||
+|| TX Descriptor Handling Stopped due to Work Done           || 0               ||| TX Packet Rate Bottleneck           || 0             [MPPS]             ||
+|| TX Descriptor Handling Stopped due to E2E Credits         || 0               ||===========================================================================
+|| Line Transmitted Port 1                                   || 0               ||
+|| Line Transmitted Port 2                                   || 0               ||
+|| Line Transmitted Loop Back                                || 0               ||
+|| RX_PSA0 Steering Pipe 0                                   || 0               ||
+|| RX_PSA0 Steering Pipe 1                                   || 0               ||
+|| RX_PSA0 Steering Cache Access Pipe 0                      || 0               ||
+|| RX_PSA0 Steering Cache Access Pipe 1                      || 0               ||
+|| RX_PSA0 Steering Cache Hit Pipe 0                         || 0               ||
+|| RX_PSA0 Steering Cache Hit Pipe 1                         || 0               ||
+|| RX_PSA0 Steering Cache Miss Pipe 0                        || 0               ||
+|| RX_PSA0 Steering Cache Miss Pipe 1                        || 0               ||
+|| RX_PSA1 Steering Pipe 0                                   || 0               ||
+|| RX_PSA1 Steering Pipe 1                                   || 0               ||
+|| RX_PSA1 Steering Cache Access Pipe 0                      || 0               ||
+|| RX_PSA1 Steering Cache Access Pipe 1                      || 0               ||
+|| RX_PSA1 Steering Cache Hit Pipe 0                         || 0               ||
+|| RX_PSA1 Steering Cache Hit Pipe 1                         || 0               ||
+|| RX_PSA1 Steering Cache Miss Pipe 0                        || 0               ||
+|| RX_PSA1 Steering Cache Miss Pipe 1                        || 0               ||
+|| TX_PSA0 Steering Pipe 0                                   || 0               ||
+|| TX_PSA0 Steering Pipe 1                                   || 0               ||
+|| TX_PSA0 Steering Cache Access Pipe 0                      || 0               ||
+|| TX_PSA0 Steering Cache Access Pipe 1                      || 0               ||
+|| TX_PSA0 Steering Cache Hit Pipe 0                         || 0               ||
+|| TX_PSA0 Steering Cache Hit Pipe 1                         || 0               ||
+|| TX_PSA0 Steering Cache Miss Pipe 0                        || 0               ||
+|| TX_PSA0 Steering Cache Miss Pipe 1                        || 0               ||
+|| TX_PSA1 Steering Pipe 0                                   || 0               ||
+|| TX_PSA1 Steering Pipe 1                                   || 0               ||
+|| TX_PSA1 Steering Cache Access Pipe 0                      || 0               ||
+|| TX_PSA1 Steering Cache Access Pipe 1                      || 0               ||
+|| TX_PSA1 Steering Cache Hit Pipe 0                         || 0               ||
+|| TX_PSA1 Steering Cache Hit Pipe 1                         || 0               ||
+|| TX_PSA1 Steering Cache Miss Pipe 0                        || 0               ||
+|| TX_PSA1 Steering Cache Miss Pipe 1                        || 0               ||
+==================================================================================
+```
+
 
 (Neohost)[https://rpubs.com/iamholger/796477)    
 

@@ -42,6 +42,160 @@
 	};
 ```
 
+
+# Choice of QP types
+With no experience with DCT, we focus our discussion on choice between RC (Reliable Connection) and UD (Unreliable Datagram). Compared to RC, UD has less overhead hence has better raw performance. However, the performance improvement provided by using UD instead of RC is minimal compared to choose UDP over TCP. It is because the RDMA protocol processing is mostly in hardware, while TCP/UDP uses kernel software. The main advantage of using UD is that a single QP can used to talk to any other QPs, while using RC, one needs to create as many QPs as the number of communication peers. However, with the introduction of DCT, QP scalability problem can be well addressed.   
+
+There are a few constrains when using UD:   
+
+Maximum message size is limited by MTU. Modern RDMA compatible NICs supports MTU of size 2KB to 4KB, which means message of size larger than 4KB needs to be broken down into smaller pieces at the sender and re-assembled at the receiver. It simply requires more programming effort.   
+
+Each message sent using UD has a Global Routing Header `(GRH，ibv_grh)` of 40B long. Even if your message is of size 8B, the total amount of data needs to be sent is at least 48B.    
+
+Out-of-order message delivery. Different from RC, the message order is not guaranteed. In case where message order is important, programmers need to keep track of the message order by themselves.   
+
+Unreliable message delivery. Although in today's datacenter environment, package drop is rare, unless applications allow message drops, tracking message delivery and re-transmission scheme all need to be implemented using software.    
+ 
+In my opinion, unless the application allows message drops, does not care about the order of message delivery and always has message size less than the MTU, using UD requires re-implement existing hardware logic (used for RC QP) in software, which leads to more programming effort and potentially worse performance.   
+
+
+```
+numactl -C 24,26,27,28,30,32,34,36  ib_send_bw -d mlx5_1  -x 3 -c UD --qp=1 --report_gbits -s 6144 -m 4096     -a  -F
+numactl -C 24,26,27,28,30,32,34,36  ib_send_bw -d mlx5_1  -x 3 -c UD --qp=1 --report_gbits -s 6144 -m 4096     -a  -F 10.22.116.221
+```
+
+# struct ibv_grh
+`ibv_create_ah`   
+`struct ibv_grh`   
+```
+static inline int get_grh_header_version(struct ibv_grh *grh)
+{
+	int ip6h_version = (be32toh(grh->version_tclass_flow) >> 28) & 0xf;
+	struct iphdr *ip4h = (struct iphdr *)((void *)grh + 20);
+	struct iphdr ip4h_checked;
+}
+``` 
+
+```
+#define IB_OPCODE(transport, op) \
+	IB_OPCODE_ ## transport ## _ ## op = \
+		IB_OPCODE_ ## transport + IB_OPCODE_ ## op
+
+enum {
+	/* transport types -- just used to define real constants */
+	IB_OPCODE_RC                                = 0x00,
+	IB_OPCODE_UC                                = 0x20,
+	IB_OPCODE_RD                                = 0x40,
+	IB_OPCODE_UD                                = 0x60,
+	/* per IBTA 1.3 vol 1 Table 38, A10.3.2 */
+	IB_OPCODE_CNP                               = 0x80,
+	/* Manufacturer specific */
+	IB_OPCODE_MSP                               = 0xe0,
+
+	/* operations -- just used to define real constants */
+	IB_OPCODE_SEND_FIRST                        = 0x00,
+	IB_OPCODE_SEND_MIDDLE                       = 0x01,
+	IB_OPCODE_SEND_LAST                         = 0x02,
+	IB_OPCODE_SEND_LAST_WITH_IMMEDIATE          = 0x03,
+	IB_OPCODE_SEND_ONLY                         = 0x04,
+	IB_OPCODE_SEND_ONLY_WITH_IMMEDIATE          = 0x05,
+	IB_OPCODE_RDMA_WRITE_FIRST                  = 0x06,
+	IB_OPCODE_RDMA_WRITE_MIDDLE                 = 0x07,
+	IB_OPCODE_RDMA_WRITE_LAST                   = 0x08,
+	IB_OPCODE_RDMA_WRITE_LAST_WITH_IMMEDIATE    = 0x09,
+	IB_OPCODE_RDMA_WRITE_ONLY                   = 0x0a,
+	IB_OPCODE_RDMA_WRITE_ONLY_WITH_IMMEDIATE    = 0x0b,
+	IB_OPCODE_RDMA_READ_REQUEST                 = 0x0c,
+	IB_OPCODE_RDMA_READ_RESPONSE_FIRST          = 0x0d,
+	IB_OPCODE_RDMA_READ_RESPONSE_MIDDLE         = 0x0e,
+	IB_OPCODE_RDMA_READ_RESPONSE_LAST           = 0x0f,
+	IB_OPCODE_RDMA_READ_RESPONSE_ONLY           = 0x10,
+	IB_OPCODE_ACKNOWLEDGE                       = 0x11,
+	IB_OPCODE_ATOMIC_ACKNOWLEDGE                = 0x12,
+	IB_OPCODE_COMPARE_SWAP                      = 0x13,
+	IB_OPCODE_FETCH_ADD                         = 0x14,
+	/* opcode 0x15 is reserved */
+	IB_OPCODE_SEND_LAST_WITH_INVALIDATE         = 0x16,
+	IB_OPCODE_SEND_ONLY_WITH_INVALIDATE         = 0x17,
+	IB_OPCODE_FLUSH                             = 0x1C,
+	IB_OPCODE_ATOMIC_WRITE                      = 0x1D,
+
+	/* real constants follow -- see comment about above IB_OPCODE()
+	   macro for more details */
+
+	/* RC */
+	IB_OPCODE(RC, SEND_FIRST),
+	IB_OPCODE(RC, SEND_MIDDLE),
+	IB_OPCODE(RC, SEND_LAST),
+	IB_OPCODE(RC, SEND_LAST_WITH_IMMEDIATE),
+	IB_OPCODE(RC, SEND_ONLY),
+	IB_OPCODE(RC, SEND_ONLY_WITH_IMMEDIATE),
+	IB_OPCODE(RC, RDMA_WRITE_FIRST),
+	IB_OPCODE(RC, RDMA_WRITE_MIDDLE),
+	IB_OPCODE(RC, RDMA_WRITE_LAST),
+	IB_OPCODE(RC, RDMA_WRITE_LAST_WITH_IMMEDIATE),
+	IB_OPCODE(RC, RDMA_WRITE_ONLY),
+	IB_OPCODE(RC, RDMA_WRITE_ONLY_WITH_IMMEDIATE),
+	IB_OPCODE(RC, RDMA_READ_REQUEST),
+	IB_OPCODE(RC, RDMA_READ_RESPONSE_FIRST),
+	IB_OPCODE(RC, RDMA_READ_RESPONSE_MIDDLE),
+	IB_OPCODE(RC, RDMA_READ_RESPONSE_LAST),
+	IB_OPCODE(RC, RDMA_READ_RESPONSE_ONLY),
+	IB_OPCODE(RC, ACKNOWLEDGE),
+	IB_OPCODE(RC, ATOMIC_ACKNOWLEDGE),
+	IB_OPCODE(RC, COMPARE_SWAP),
+	IB_OPCODE(RC, FETCH_ADD),
+	IB_OPCODE(RC, SEND_LAST_WITH_INVALIDATE),
+	IB_OPCODE(RC, SEND_ONLY_WITH_INVALIDATE),
+	IB_OPCODE(RC, FLUSH),
+	IB_OPCODE(RC, ATOMIC_WRITE),
+
+	/* UC */
+	IB_OPCODE(UC, SEND_FIRST),
+	IB_OPCODE(UC, SEND_MIDDLE),
+	IB_OPCODE(UC, SEND_LAST),
+	IB_OPCODE(UC, SEND_LAST_WITH_IMMEDIATE),
+	IB_OPCODE(UC, SEND_ONLY),
+	IB_OPCODE(UC, SEND_ONLY_WITH_IMMEDIATE),
+	IB_OPCODE(UC, RDMA_WRITE_FIRST),
+	IB_OPCODE(UC, RDMA_WRITE_MIDDLE),
+	IB_OPCODE(UC, RDMA_WRITE_LAST),
+	IB_OPCODE(UC, RDMA_WRITE_LAST_WITH_IMMEDIATE),
+	IB_OPCODE(UC, RDMA_WRITE_ONLY),
+	IB_OPCODE(UC, RDMA_WRITE_ONLY_WITH_IMMEDIATE),
+
+	/* RD */
+	IB_OPCODE(RD, SEND_FIRST),
+	IB_OPCODE(RD, SEND_MIDDLE),
+	IB_OPCODE(RD, SEND_LAST),
+	IB_OPCODE(RD, SEND_LAST_WITH_IMMEDIATE),
+	IB_OPCODE(RD, SEND_ONLY),
+	IB_OPCODE(RD, SEND_ONLY_WITH_IMMEDIATE),
+	IB_OPCODE(RD, RDMA_WRITE_FIRST),
+	IB_OPCODE(RD, RDMA_WRITE_MIDDLE),
+	IB_OPCODE(RD, RDMA_WRITE_LAST),
+	IB_OPCODE(RD, RDMA_WRITE_LAST_WITH_IMMEDIATE),
+	IB_OPCODE(RD, RDMA_WRITE_ONLY),
+	IB_OPCODE(RD, RDMA_WRITE_ONLY_WITH_IMMEDIATE),
+	IB_OPCODE(RD, RDMA_READ_REQUEST),
+	IB_OPCODE(RD, RDMA_READ_RESPONSE_FIRST),
+	IB_OPCODE(RD, RDMA_READ_RESPONSE_MIDDLE),
+	IB_OPCODE(RD, RDMA_READ_RESPONSE_LAST),
+	IB_OPCODE(RD, RDMA_READ_RESPONSE_ONLY),
+	IB_OPCODE(RD, ACKNOWLEDGE),
+	IB_OPCODE(RD, ATOMIC_ACKNOWLEDGE),
+	IB_OPCODE(RD, COMPARE_SWAP),
+	IB_OPCODE(RD, FETCH_ADD),
+	IB_OPCODE(RD, FLUSH),
+
+	/* UD */
+	IB_OPCODE(UD, SEND_ONLY),
+	IB_OPCODE(UD, SEND_ONLY_WITH_IMMEDIATE)
+};
+```
+##  UD  SEND_ONLY
+![images](ud3.png)
+
 # mtu of ud   
 
 RDMA UD (Unreliable Datagram) mode support Send/Recv operation only, and with the limit that only one packet can be sent with a send wr, which causes that the transfered message's size should less than MTU at a time.     

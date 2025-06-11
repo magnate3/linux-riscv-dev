@@ -393,6 +393,8 @@ python2 /opt/neohost/sdk/get_device_performance_counters.py --mode=shell --dev-u
 ==================================================================================
 ```
 
+`Wide range access across many objects (QP, CQ, MR) causes ICM cache misses.`
+
 + grep 'PCIe Inbound Used BW'     
 
 ```
@@ -405,7 +407,25 @@ python2 /opt/neohost/sdk/get_device_performance_counters.py --mode=shell --dev-u
 
 This prints the current PCIe Inbound bandwidth (Gb/s). You can calculate the average DRAM access traffic per work request (bytes) by dividing the PCIe Inbound bandwidth by IOPS.
 
-[Neohost](https://rpubs.com/iamholger/796477)    
+[Neohost](https://rpubs.com/iamholger/796477)   
+
+
+##  Understand Inbound / Outbound PCIe Bandwidth Metrics
+
+PCIe transfers may be initiated by both the PCIe device (for example, NIC) and the CPU. So, Intel® VTune™ Profiler distinguishes PCIe bandwidth metrics for the following bandwidth types:   
+```
+Inbound PCIe Bandwidth caused by device transactions targeting the system memory
+
+Inbound Reads show device reads from the memory
+
+Inbound Writes show device writes to the memory
+
+Outbound PCIe Bandwidth caused by CPU transactions targeting device's MMIO space
+
+Outbound Reads show CPU reads from device's MMIO space
+
+Outbound Writes show CPU writes to the device's MMIO space 
+```
 
 # Husky
 Benchmark Suite for RDMA Performance Isolation

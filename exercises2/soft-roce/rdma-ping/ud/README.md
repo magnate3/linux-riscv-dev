@@ -65,8 +65,11 @@ numactl -C 24,26,27,28,30,32,34,36  ib_send_bw -d mlx5_1  -x 3 -c UD --qp=1 --re
 ```
 
 # struct ibv_grh
+[UD模式](https://www.ctyun.cn/developer/article/664125654634565)   
 `ibv_create_ah`   
 `struct ibv_grh`   
+`ibv_query_gid` 
+`IBV_QPT`  
 ```
 static inline int get_grh_header_version(struct ibv_grh *grh)
 {
@@ -75,6 +78,23 @@ static inline int get_grh_header_version(struct ibv_grh *grh)
 	struct iphdr ip4h_checked;
 }
 ``` 
+
+```
+show_gids
+DEV     PORT    INDEX   GID                                     IPv4            VER     DEV
+---     ----    -----   ---                                     ------------    ---     ---
+mlx5_0  1       0       fe80:0000:0000:0000:c670:bdff:feaa:1fc8                 v1      enp61s0f0np0
+mlx5_0  1       1       fe80:0000:0000:0000:c670:bdff:feaa:1fc8                 v2      enp61s0f0np0
+mlx5_1  1       0       fe80:0000:0000:0000:c670:bdff:feaa:1fc9                 v1      enp61s0f1np1
+mlx5_1  1       1       fe80:0000:0000:0000:c670:bdff:feaa:1fc9                 v2      enp61s0f1np1
+mlx5_1  1       2       0000:0000:0000:0000:0000:ffff:0a16:74dd 10.22.116.221   v1      enp61s0f1np1
+mlx5_1  1       3       0000:0000:0000:0000:0000:ffff:0a16:74dd 10.22.116.221   v2      enp61s0f1np1
+mlx5_1  1       4       0000:0000:0000:0000:0000:ffff:0a16:74de 10.22.116.222   v1      enp61s0f1np1
+mlx5_1  1       5       0000:0000:0000:0000:0000:ffff:0a16:74de 10.22.116.222   v2      enp61s0f1np1
+mlx5_1  1       6       0000:0000:0000:0000:0000:ffff:0a16:74df 10.22.116.223   v1      enp61s0f1np1
+mlx5_1  1       7       0000:0000:0000:0000:0000:ffff:0a16:74df 10.22.116.223   v2      enp61s0f1np1
+n_gids_found=10
+```
 
 ```
 #define IB_OPCODE(transport, op) \

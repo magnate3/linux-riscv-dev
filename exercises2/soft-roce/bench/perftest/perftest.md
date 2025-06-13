@@ -50,8 +50,8 @@ Version: 6.06
 ```
 [下载perftest-4.5-0.20](https://github.com/linux-rdma/perftest/releases/tag/v4.5-0.20)    
 ```
-root@ljtest:~/rdma-benckmark/perftest-4.5-0.20# ./ib_send_bw  -V
+root@ubuntu:~/rdma-benckmark/perftest-4.5-0.20# ./ib_send_bw  -V
 Version: 6.10
-root@ljtest:~/rdma-benckmark/perftest-4.5-0.20# 
+root@ubuntu:~/rdma-benckmark/perftest-4.5-0.20# 
 ```
 ![images](test.png)

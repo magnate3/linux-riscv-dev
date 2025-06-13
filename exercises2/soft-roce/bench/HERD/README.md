@@ -58,6 +58,7 @@ Quick start:
 * To run the clients automatically along with the server:
 
 ```bash	
+hugepages-create.sh 0 4096
 # At node-1 (server)
 ./run-servers.sh
 ```
@@ -82,7 +83,7 @@ cat servers
 ```
 从numa node0启动client
 ```bash	
-
+hugepages-create.sh 0 4096
 ./run-client.sh  0
 ```
 

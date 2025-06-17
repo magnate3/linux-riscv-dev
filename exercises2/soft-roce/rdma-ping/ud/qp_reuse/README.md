@@ -32,6 +32,8 @@ Version: 6.10
 
 
 ## client
+
+***client 先连接10.22.116.221，8887 后连接10.22.116.222，8888***
 ![images](cli2.png)
 
 + 设置tcp port and ip     

@@ -25,7 +25,8 @@ net.core.busy_poll = 0
 <a name="chap_12.3"></a>
 
 
-##
+## ibv_poll_cq
+oll策略：poll策略指的是poll CQE的方式，包括busy polling、event-triggered polling，busy polling以高CPU使用代价换取更快的CQE poll速度，event-triggered polling则相应的poll速度慢，但CPU使用代价低；       
 We use ibv_poll_cq to poll a completion queue. It is a busy poll, so it consumes a CPU core, but provides lower latency.    
 ```
 bool pollCompletion(struct ibv_cq* cq) {

@@ -24,7 +24,223 @@ net.core.busy_poll = 0
 
 <a name="chap_12.3"></a>
 
-# X-RDMA
+
+##
+We use ibv_poll_cq to poll a completion queue. It is a busy poll, so it consumes a CPU core, but provides lower latency.    
+```
+bool pollCompletion(struct ibv_cq* cq) {
+  struct ibv_wc wc;
+  int result;
+
+  do {
+    // ibv_poll_cq returns the number of WCs that are newly completed,
+    // If it is 0, it means no new work completion is received.
+    // Here, the second argument specifies how many WCs the poll should check,
+    // however, giving more than 1 incurs stack smashing detection with g++8 compilation.
+    result = ibv_poll_cq(cq, 1, &wc);
+  } while (result == 0);
+
+  if (result > 0 && wc.status == ibv_wc_status::IBV_WC_SUCCESS) {
+    // success
+    return true;
+  }
+
+  // You can identify which WR failed with wc.wr_id.
+  printf("Poll failed with status %s (work request ID: %llu)\n", ibv_wc_status_str(wc.status), wc.wr_id);
+  return false;
+}
+
+```
+ibv_poll_cq returns the number of WCs. As we specify it has to wait at most one WC, the result must be either 0, 1, or negative if error occured.  
+
+## RDMA完成队列CQ读取CQE的同步和异步方法
+用RDMA读取CQ的操作为例展示如何基于`epoll`实现异步操作。先介绍下RDMA用轮询和阻塞的方式读取CQ，再介绍基于`epoll`的异步读取CQ的方法。下文的代码仅作为示例，并不能编译通过。
+
+### RDMA轮询方式读取CQE
+
+RDMA轮询方式读取CQ非常简单，就是不停调用`ibv_poll_cq`来读取CQ里的CQE。这种方式能够最快获得新的CQE，直接用户程序轮询CQ，而且也不需要内核参与，但是缺点也很明显，用户程序轮询消耗大量CPU资源。
+```Rust
+loop {
+    // 尝试读取一个CQE
+    poll_result = ibv_poll_cq(cq, 1, &mut cqe);
+    if poll_result != 0 {
+        // 处理CQE
+    }
+}
+```
+
+### RDMA完成事件通道方式读取CQE
+
+RDMA用完成事件通道读取CQE的方式如下：
+* 用户程序通过调用`ibv_create_comp_channel`创建完成事件通道；
+* 接着在调用`ibv_create_cq`创建CQ时关联该完成事件通道；
+* 再通过调用`ibv_req_notify_cq`来告诉CQ当有新的CQE产生时从完成事件通道来通知用户程序；
+* 然后通过调用`ibv_get_cq_event`查询该完成事件通道，没有新的CQE时阻塞，有新的CQE时返回；
+* 接下来用户程序从`ibv_get_cq_event`返回之后，还要再调用`ibv_poll_cq`从CQ里读取新的CQE，此时调用`ibv_poll_cq`一次就好，不需要轮询。
+
+RDMA用完成事件通道读取CQE的代码示例如下：
+```Rust
+// 创建完成事件通道
+let completion_event_channel = ibv_create_comp_channel(...);
+// 创建完成队列，并关联完成事件通道
+let cq = ibv_create_cq(completion_event_channel, ...);
+
+loop {
+    // 设置CQ从完成事件通道来通知下一个新CQE的产生
+    ibv_req_notify_cq(cq, ...);
+    // 通过完成事件通道查询CQ，有新的CQE就返回，没有新的CQE则阻塞
+    ibv_get_cq_event(completion_event_channel, &mut cq, ...);
+    // 读取一个CQE
+    poll_result = ibv_poll_cq(cq, 1, &mut cqe);
+    if poll_result != 0 {
+        // 处理CQE
+    }
+    // 确认一个CQE
+    ibv_ack_cq_events(cq, 1);
+}
+```
+
+用RDMA完成事件通道的方式来读取CQE，本质是RDMA通过内核来通知用户程序CQ里有新的CQE。事件队列是通过一个设备文件，`/dev/infiniband/uverbs0`（如果有多个RDMA网卡，则每个网卡对应一个设备文件，序号从0开始递增），来让内核通过该设备文件通知用户程序有事件发生。用户程序调用`ibv_create_comp_channel`创建完成事件通道，其实就是打开上述设备文件；用户程序调用`ibv_get_cq_event`查询该完成事件通道，其实就是读取打开的设备文件。但是这个设备文件只用于做事件通知，通知用户程序有新的CQE可读，但并不能通过该设备文件读取CQE，用户程序还要是调用`ibv_poll_cq`来从CQ读取CQE。
+
+用完成事件通道的方式来读取CQE，比轮询的方法要节省CPU资源，但是调用`ibv_get_cq_event`读取完成事件通道会发生阻塞，进而影响用户程序性能。
+
+### 基于epoll异步读取CQE
+
+上面提到用RDMA完成事件通道的方式来读取CQE，本质是用户程序通过事件队列打开`/dev/infiniband/uverbs0`设备文件，并读取内核产生的关于新CQE的事件通知。从完成事件通道`ibv_comp_channel`的定义可以看出，里面包含了一个Linux文件描述符，指向打开的设备文件：
+```Rust
+pub struct ibv_comp_channel {
+    ...
+    pub fd: RawFd,
+    ...
+}
+```
+于是可以借助`epoll`机制来检查该设备文件是否有新的事件产生，避免用户程序调用`ibv_get_cq_event`读取完成事件通道时（即读取该设备文件时）发生阻塞。
+
+首先，用`fcntl`来修改完成事件通道里设备文件描述符的IO方式为非阻塞：
+```Rust
+// 创建完成事件通道
+let completion_event_channel = ibv_create_comp_channel(...);
+// 创建完成队列，并关联完成事件通道
+let cq = ibv_create_cq(completion_event_channel, ...);
+// 获取设备文件描述符当前打开方式
+let flags =
+    libc::fcntl((*completion_event_channel).fd, libc::F_GETFL);
+// 为设备文件描述符增加非阻塞IO方式
+libc::fcntl(
+    (*completion_event_channel).fd,
+    libc::F_SETFL,
+    flags | libc::O_NONBLOCK
+);
+```
+
+接着，创建`epoll`实例，并把要检查的事件注册给`epoll`实例：
+```Rust
+use nix::sys::epoll;
+
+// 创建epoll实例
+let epoll_fd = epoll::epoll_create()?;
+// 完成事件通道里的设备文件描述符
+let channel_dev_fd = (*completion_event_channel).fd;
+// 创建epoll事件实例，并关联设备文件描述符，
+// 当该设备文件有新数据可读时，用边沿触发的方式通知用户程序
+let mut epoll_ev = epoll::EpollEvent::new(
+    epoll::EpollFlags::EPOLLIN | epoll::EpollFlags::EPOLLET,
+    channel_dev_fd
+);
+// 把创建好的epoll事件实例，注册到之前创建的epoll实例
+epoll::epoll_ctl(
+    epoll_fd,
+    epoll::EpollOp::EpollCtlAdd,
+    channel_dev_fd,
+    &mut epoll_ev,
+)
+```
+上面代码有两个注意的地方：
+* `EPOLLIN`指的是要检查设备文件是否有新数据/事件可读；
+* `EPOLLET`指的是epoll用边沿触发的方式来通知。
+
+然后，循环调用`epoll_wait`检查设备文件是否有新数据可读，有新数据可读说明有新的CQE产生，再调用`ibv_poll_cq`来读取CQE：
+```Rust
+let timeout_ms = 10;
+// 创建用于epoll_wait检查的事件列表
+let mut event_list = [epoll_ev];
+loop {
+    // 设置CQ从完成事件通道来通知下一个新CQE的产生
+    ibv_req_notify_cq(cq, ...);
+    // 调用epoll_wait检查是否有期望的事件发生
+    let nfds = epoll::epoll_wait(epoll_fd, &mut event_list, timeout_ms)?;
+    // 有期望的事件发生
+    if nfds > 0 {
+        // 通过完成事件通道查询CQ，有新的CQE就返回，没有新的CQE则阻塞
+        ibv_get_cq_event(completion_event_channel, &mut cq, ...);
+        // 循环读取CQE，直到CQ读空
+        loop {
+            // 读取一个CQE
+            poll_result = ibv_poll_cq(cq, 1, &mut cqe);
+            if poll_result != 0 {
+                // 处理CQE
+                ...
+                // 确认一个CQE
+                ibv_ack_cq_events(cq, 1);
+            } else {
+                break;
+            }
+        }
+    }
+}
+```
+上面代码有个要注意的地方，因为`epoll`是用边沿触发，所以每次有新CQE产生时，都要调用`ibv_poll_cq`把CQ队列读空。考虑如下场景，同时有多个新的CQE产生，但是`epoll`边沿触发只通知一次，如果用户程序收到通知后没有读空CQ，那`epoll`也不会再产生新的通知，除非再有新的CQE产生，`epoll`才会再次通知用户程序。
+
+总之，本文用`epoll`机制实现RDMA异步读取CQE的例子，展示了如何实现RDMA的异步操作。RDMA还有类似的操作，都可以基于`epoll`机制实现异步操作。
+## epoll and ibv_poll_cq
+
+
+```
+uint32_t handle_completion_event(int32_t fd, uint32_t events, void *ctx)
+{
+	struct connection_struct *connection = ctx;
+	struct ibv_cq *comp_queue = NULL;
+	struct ibv_wc work_completion;
+	void *ev_ctx = NULL;
+	int res = 0;
+
+	fprintf(stderr, "%s called\n", __func__);
+
+	/*
+	 * Retrieve the completion event and deal with it. We did not pass 
+	 * a context when we created the completion queue, but we need a place
+	 * for get_cq_events to place that NULL pointer anyway.
+	 */
+	if (ibv_get_cq_event(connection->comp_chan, &comp_queue, &ev_ctx)) {
+		fprintf(stderr, "Could not get completion queue events: %s",
+			strerror(errno));
+		return 1;
+	}
+
+	ibv_ack_cq_events(comp_queue, 1);  /* Ack it */
+
+	/* Re-arm ... we need the subsequent events, if any */
+	if (ibv_req_notify_cq(comp_queue, 0)) {
+		fprintf(stderr, "Could not request notifies on "
+			"comp queue: %s\n",
+			strerror(errno));
+		return 1;
+	}
+
+	while ((res = ibv_poll_cq(comp_queue, 1, &work_completion)) > 0) {
+		handle_completion(connection, &work_completion);
+	}
+
+	/* Did an error occur? */
+	if (res < 0) {
+
+	}
+
+	return 0;
+}
+``` 
+
+## X-RDMA
 X-RDMA混合使用epoll和busy polling 来平衡CPU占用和响应速度，当有消息到来或者timer超时是切换到busy polling模式，当长时间没有事件时则切换到epoll模式   
 
 ## Introduction

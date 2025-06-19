@@ -11,30 +11,35 @@ EXAMPLES
 ========
 
 # Run the server
-$ ./ibv_pipelining_example
+```
+./ibv_pipelining_example -S  10.22.116.221 -p 6666
  -----------------Configuration------------------
- port : 19875
+ Local IP : 10.22.116.221
+ port : 6666
  Block size : 512
  I/O size : 4096
  Queue depth : 8
  ------------------------------------------------
 
-Polls 1155225, completions 31773, comps/poll 0.0
-Busy time 269967195 ns, test time 999964409 ns, busy percent 27.00, time/comp 8496 ns
+Polls 5477, completions 30, comps/poll 0.0
+Busy time 389986 ns, test time 1249371 ns, busy percent 0.04, time/comp 12999 ns
+```
 
 
 # Run the client
-$ ./ibv_pipelining_example -c 10 192.168.1.1
+```
+./ibv_pipelining_example -c  10 -p 6666 -l 2  10.22.116.221
  -----------------Configuration------------------
- Remote IP : 192.168.1.1
- port : 19875
+ Remote IP : 10.22.116.221
+ port : 6666
  Block size : 512
  I/O size : 4096
  Queue depth : 8
  ------------------------------------------------
 
-IOps : 15372
-Polls 41097838, completions 30752, comps/poll 0.0
+DEBUG: REP[0]: received with status SIG_ERROR
+IOps : 0
+```
 
 
 # Run './ibv_pipelining_example --help' for more information.

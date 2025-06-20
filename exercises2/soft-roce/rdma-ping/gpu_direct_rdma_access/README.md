@@ -166,4 +166,10 @@ Starting data transfer (10000 iters)
 FAILURE: Couldn't read "rdma_task completed" message, recv data size 0 (errno=0 'Success')
 ```
 
+```
 ./client 10.22.116.221  -t 0 -a 10.22.116.221   -n 10000 -D 0 -s 4096 -p 18001
+```
+
+# run success
+
+![images](hop.png)

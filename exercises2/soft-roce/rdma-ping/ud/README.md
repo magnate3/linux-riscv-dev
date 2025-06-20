@@ -281,3 +281,11 @@ ibv_rc_pingpong -d  mlx5_1 -g 3 -s 4096 10.22.116.221
 8192000 bytes in 0.01 seconds = 9706.16 Mbit/sec
 1000 iters in 0.01 seconds = 6.75 usec/iter
 ```
+
+## ud mcast
+
+
+```
+./ib_send_bw -d mlx5_1  -x 3 -c UD --qp=1 --report_gbits -s 4096 -m 4096     -a  -F -p 8888
+./ib_send_bw -d mlx5_1  -x 3 -c UD --qp=1 --report_gbits -s 4096 -m 4096     -a  -F 10.22.116.221  -p 8887
+```

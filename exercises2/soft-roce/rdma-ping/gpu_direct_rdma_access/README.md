@@ -171,5 +171,6 @@ FAILURE: Couldn't read "rdma_task completed" message, recv data size 0 (errno=0 
 ```
 
 # run success
+更改qp_attr.ah_attr.grh.hop_limit  = 64 和 ah_attr.grh.hop_limit = 64;        
 
 ![images](hop.png)

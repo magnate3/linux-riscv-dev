@@ -92,6 +92,8 @@ ctx_connect:
 
 # test
 
+
+
 ## server
 
 
@@ -177,6 +179,9 @@ server开启两个进程
 
 
 ## client    
+
+
+dc_ctx_modify_qp_to_rts not call ibv_modify_qp   only prepare struct ibv_qp_attr attr  and then call  ibv_create_ah    
 
 ```
 ./ib_write_dc_bw -d mlx5_1  -x 3 -c DC --qp=2 --report_gbits -s 4096 -m 4096     -a  -F -p 8887 10.22.116.221

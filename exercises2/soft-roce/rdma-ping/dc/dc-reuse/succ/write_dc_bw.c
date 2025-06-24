@@ -45,7 +45,7 @@ os*        disclaimer in the documentation and/or other materials
 
 /******************************************************************************
  ******************************************************************************/
-static int dc_ctx_modify_qp_to_rtr(struct ibv_qp *qp,
+static int dc_ctx_modify_qp_to_rts(struct ibv_qp *qp,
 		struct ibv_qp_attr *attr,
 		struct perftest_parameters *user_param,
 		struct pingpong_dest *dest,
@@ -58,7 +58,7 @@ static int dc_ctx_modify_qp_to_rtr(struct ibv_qp *qp,
 	int flags = IBV_QP_STATE;
 	int ooo_flags = 0;
 
-	attr->qp_state = IBV_QPS_RTR;
+	attr->qp_state = IBV_QPS_RTS;
 	attr->ah_attr.src_path_bits = 0;
 
 	/* in xrc with bidirectional,
@@ -194,7 +194,7 @@ int dc_ctx_connect(struct pingpong_context *ctx,
 		xrc_offset = user_param->num_of_qps / 2;
 	}
 	for (i=0; i < user_param->num_of_qps; i++) {
-		if(dc_ctx_modify_qp_to_rtr(ctx->qp[i], &attr, user_param, &dest[xrc_offset + i], &my_dest[i], i)) {
+		if(dc_ctx_modify_qp_to_rts(ctx->qp[i], &attr, user_param, &dest[xrc_offset + i], &my_dest[i], i)) {
 			fprintf(stderr, "Failed to modify QP %d to RTR\n",ctx->qp[i]->qp_num);
 			return FAILURE;
 		}

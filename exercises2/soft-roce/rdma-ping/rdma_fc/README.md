@@ -5,6 +5,55 @@
 
 #  dc_read_fc
 
+
+```
+/* send control message */
+static int send_control(connection_t *conn, enum packet_type type,
+                        unsigned conn_index)
+{
+    packet_t packet = { .type = type,
+                        .conn_index = conn_index };
+    int dci, ret;
+
+    dci = rand() % NUM_DCI;
+    assert(g_test.dci_outstanding[dci] < g_options.tx_queue_len);
+
+    LOG_TRACE("send_control: ibv_wr_start: qpex = %p\n", g_test.dcis_ex[dci]);
+    ibv_wr_start(g_test.dcis_ex[dci]);
+
+    g_test.dcis_ex[dci]->wr_id = (uint64_t)dci;
+    g_test.dcis_ex[dci]->wr_flags = IBV_SEND_INLINE | IBV_SEND_SIGNALED;
+
+    LOG_TRACE("send_control: ibv_wr_send: wr_id=0x%lx, qpex=%p\n", g_test.dcis_ex[dci]->wr_id, g_test.dcis_ex[dci]);
+    ibv_wr_send(g_test.dcis_ex[dci]);
+
+    LOG_TRACE("send_control: mlx5dv_wr_set_dc_addr: mqpex=%p, ah=%p, rem_dctn=0x%06x\n",
+               g_test.m_dcis_ex[dci], conn->dc_ah, conn->remote_dctn);
+    mlx5dv_wr_set_dc_addr(g_test.m_dcis_ex[dci], conn->dc_ah, conn->remote_dctn, DC_KEY);
+
+    LOG_TRACE("send_control: ibv_wr_set_inline_data: qpex=%p, lkey=0, local_buf=%p, size=%u\n",
+              g_test.dcis_ex[dci], &packet, (uint32_t)sizeof(packet));
+    ibv_wr_set_inline_data(g_test.dcis_ex[dci], &packet, (uint32_t)sizeof(packet));
+    
+//    LOG_TRACE("send_control: ibv_wr_set_sge: qpex=%p, lkey=0, local_buf=%p, size=%u\n",
+//              g_test.dcis_ex[dci], &packet, (uint32_t)sizeof(packet));
+//    ibv_wr_set_sge(g_test.dcis_ex[dci], 0 /*mr->lkey*/, (uintptr_t)&packet, (uint32_t)sizeof(packet));
+
+    LOG_TRACE("send_control: ibv_wr_complete: qpex=%p\n", g_test.dcis_ex[dci]);
+    ret = ibv_wr_complete(g_test.dcis_ex[dci]);
+    if (ret) {
+        LOG_ERROR("send_control: ibv_wr_complete failed (error=%d)\n", ret);
+        return -1;
+    }
+    
+    ++g_test.dci_outstanding[dci];
+
+    LOG_TRACE("Sent packet %d conn_index %d", packet.type, packet.conn_index);
+    return 0;
+}
+
+```
+
 + server
 
 

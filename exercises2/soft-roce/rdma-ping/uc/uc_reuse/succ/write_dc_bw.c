@@ -45,11 +45,107 @@ os*        disclaimer in the documentation and/or other materials
 
 /******************************************************************************
  ******************************************************************************/
-int uc_ctx_connect(struct pingpong_context *ctx,
+static int dc_ctx_modify_qp_to_rtr(struct ibv_qp *qp,
+		struct ibv_qp_attr *attr,
+		struct perftest_parameters *user_param,
+		struct pingpong_dest *dest,
+		struct pingpong_dest *my_dest,
+		int qp_index)
+{
+	int num_of_qps = user_param->num_of_qps;
+	int num_of_qps_per_port = user_param->num_of_qps / 2;
+	int is_dc_server_side = 0;
+	int flags = IBV_QP_STATE;
+	int ooo_flags = 0;
+
+	attr->qp_state = IBV_QPS_RTR;
+	attr->ah_attr.src_path_bits = 0;
+
+	/* in xrc with bidirectional,
+	 * there are send qps and recv qps. the actual number of send/recv qps
+	 * is num_of_qps / 2.
+	 */
+	if ((user_param->connection_type == DC || user_param->use_xrc) && (user_param->duplex || user_param->tst == LAT)) {
+		num_of_qps /= 2;
+		num_of_qps_per_port = num_of_qps / 2;
+	}
+	is_dc_server_side = ((!(user_param->duplex || user_param->tst == LAT) &&
+						 (user_param->machine == SERVER)) ||
+						  ((user_param->duplex || user_param->tst == LAT) &&
+						 (qp_index >= num_of_qps)));
+	/* first half of qps are for ib_port and second half are for ib_port2
+	 * in xrc with bidirectional, the first half of qps are xrc_send qps and
+	 * the second half are xrc_recv qps. the first half of the send/recv qps
+	 * are for ib_port1 and the second half are for ib_port2
+	 */
+	if (user_param->dualport == ON && (qp_index % num_of_qps >= num_of_qps_per_port))
+		attr->ah_attr.port_num = user_param->ib_port2;
+	else
+		attr->ah_attr.port_num = user_param->ib_port;
+
+	if (user_param->connection_type != RawEth) {
+		attr->ah_attr.dlid = (user_param->dlid) ? user_param->dlid : dest->lid;
+		attr->ah_attr.sl = user_param->sl;
+
+		if (((attr->ah_attr.port_num == user_param->ib_port) && (user_param->gid_index == DEF_GID_INDEX))
+				|| ((attr->ah_attr.port_num == user_param->ib_port2) && (user_param->gid_index2 == DEF_GID_INDEX) && user_param->dualport)) {
+
+			attr->ah_attr.is_global = 0;
+		} else {
+
+			attr->ah_attr.is_global  = 1;
+			attr->ah_attr.grh.dgid = dest->gid;
+			attr->ah_attr.grh.sgid_index = (attr->ah_attr.port_num == user_param->ib_port) ? user_param->gid_index : user_param->gid_index2;
+			attr->ah_attr.grh.hop_limit = 0xFF;
+			attr->ah_attr.grh.traffic_class = user_param->traffic_class;
+		}
+		if (user_param->connection_type != UD && user_param->connection_type != SRD) {
+			if (user_param->connection_type == DC) {
+				attr->path_mtu = user_param->curr_mtu;
+				flags |= IBV_QP_AV | IBV_QP_PATH_MTU;
+				if (is_dc_server_side)
+				{
+					attr->min_rnr_timer = MIN_RNR_TIMER;
+					flags |= IBV_QP_MIN_RNR_TIMER;
+				} //DCT
+			}
+			else {
+				attr->path_mtu = user_param->curr_mtu;
+				attr->dest_qp_num = dest->qpn;
+				attr->rq_psn = dest->psn;
+
+				flags |= (IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN);
+
+				if (user_param->connection_type == RC || user_param->connection_type == XRC) {
+
+					attr->max_dest_rd_atomic = my_dest->out_reads;
+					attr->min_rnr_timer = MIN_RNR_TIMER;
+					flags |= (IBV_QP_MIN_RNR_TIMER | IBV_QP_MAX_DEST_RD_ATOMIC);
+				}
+			}
+		}
+	}
+	else if (user_param->raw_qos) {
+		attr->ah_attr.sl = user_param->sl;
+		flags |= IBV_QP_AV;
+	}
+
+	#ifdef HAVE_OOO_ATTR
+		ooo_flags |= IBV_QP_OOO_RW_DATA_PLACEMENT;
+	#endif
+
+	if (user_param->use_ooo)
+		flags |= ooo_flags;
+	//return ibv_modify_qp(qp, attr, flags);
+	return 0;
+}
+
+int dc_ctx_connect(struct pingpong_context *ctx,
 		struct pingpong_dest *dest,
 		struct perftest_parameters *user_param,
 		struct pingpong_dest *my_dest)
 {
+#if 0
 	int i;
 	struct ibv_qp_attr attr;
 	int xrc_offset = 0;
@@ -70,6 +166,87 @@ int uc_ctx_connect(struct pingpong_context *ctx,
 
 		}
          }
+#elif 0
+
+	int i;
+	int xrc_offset = 0;
+	if((user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT)) {
+		xrc_offset = user_param->num_of_qps / 2;
+	}
+	for (i=0; i < user_param->num_of_qps; i++) {
+		if (NULL == ctx->dc_ah[i])
+		{
+			fprintf(stderr, "Failed to modify QP ah %d dest,dc ah is NULL\n",ctx->qp[i]->qp_num);
+			return -1;
+		}
+	}
+	for (i=0; i < user_param->num_of_qps; i++) {
+		ibv_destroy_ah(ctx->ah[i]);
+		ctx->ah[i] = ctx->dc_ah[i];
+		if((user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT))
+			xrc_offset = user_param->num_of_qps / 2;
+         }
+#elif 1
+	int i;
+	int xrc_offset = 0;
+	struct ibv_qp_attr attr;
+	if((user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT)) {
+		xrc_offset = user_param->num_of_qps / 2;
+	}
+	for (i=0; i < user_param->num_of_qps; i++) {
+		if(dc_ctx_modify_qp_to_rtr(ctx->qp[i], &attr, user_param, &dest[xrc_offset + i], &my_dest[i], i)) {
+			fprintf(stderr, "Failed to modify QP %d to RTR\n",ctx->qp[i]->qp_num);
+			return FAILURE;
+		}
+		ibv_destroy_ah(ctx->ah[i]);
+	ctx->ah[i] = ibv_create_ah(ctx->pd,&(attr.ah_attr));
+
+	if (!ctx->ah[i]) {
+		fprintf(stderr, "Failed to create AH\n");
+		return FAILURE;
+	}
+		if((user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT))
+			xrc_offset = user_param->num_of_qps / 2;
+         }
+#else
+	int i;
+	struct ibv_ah_attr  ah_attr;
+	int xrc_offset = 0;
+	int flags = 0;
+        ah_attr.is_global  = 1;
+	//ah_attr.dlid = (user_param->dlid) ? user_param->dlid : dest->lid;
+	ah_attr.port_num = user_param->ib_port;
+        //ah_attr.grh.dgid = dest->gid;
+        ah_attr.grh.sgid_index =  user_param->gid_index ;
+        //ah_attr.grh.sgid_index = (attr->ah_attr.port_num == user_param->ib_port) ? user_param->gid_index : user_param->gid_index2;
+        ah_attr.grh.hop_limit = 0xFF;
+        ah_attr.grh.traffic_class = user_param->traffic_class;
+	if((user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT)) {
+		xrc_offset = user_param->num_of_qps / 2;
+	}
+	for (i=0; i < user_param->num_of_qps; i++) {
+		memset(&ah_attr, 0, sizeof ah_attr);
+		if ((i >= xrc_offset) && (user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT))
+			xrc_offset = -1*xrc_offset;
+		ibv_destroy_ah(ctx->ah[i]);
+	        ah_attr.grh.dgid = dest[xrc_offset + i].gid;
+	        ah_attr.dlid = dest[xrc_offset + i].lid;
+		ctx->ah[i] = ibv_create_ah(ctx->pd, &ah_attr);
+		//fprintf(stdout, " modify dest QP gid %0x\n",dest[xrc_offset + i].gid);
+	        //if (0!= ibv_modify_qp(ctx->qp[i], &attr, flags))
+		if (NULL == ctx->ah[i])
+		{
+			fprintf(stderr, "Failed to modify QP ah %d dest\n",ctx->qp[i]->qp_num);
+
+			return -1;
+		}
+
+		if((user_param->use_xrc || user_param->connection_type == DC) && (user_param->duplex || user_param->tst == LAT))
+			xrc_offset = user_param->num_of_qps / 2;
+         }
+	          
+	   
+#endif
 	 return 0;
 }
 int main(int argc, char *argv[])
@@ -435,7 +612,7 @@ int main(int argc, char *argv[])
 		goto free_mem;
 	}
 
-	if(again && user_param.connection_type == UC)
+	if(again && (user_param.connection_type == DC || user_param.connection_type == UC))
 	{
 	    printf("***********again ******************* \n");
 	    const char *ip_str = "10.22.116.222";
@@ -502,15 +679,16 @@ int main(int argc, char *argv[])
 		//}
 	}
 
+#if 1
 	if (user_param.connection_type == DC)
 	{
 	  // change dest gidx attr.ah_attr.grh.dgid 
-	  if (uc_ctx_connect(&ctx,rem_dest,&user_param,my_dest)) {
+	  if (dc_ctx_connect(&ctx,rem_dest,&user_param,my_dest)) {
 	    		fprintf(stderr," Unable to Connect the HCA's through the link\n");
 	 		goto destroy_context;
 	  }
 	}
-
+#endif
 	/* Print this machine QP information */
 	for (i=0; i < user_param.num_of_qps; i++)
 		ctx_print_pingpong_data(&my_dest[i],&user_comm);
@@ -526,7 +704,16 @@ int main(int argc, char *argv[])
 
 		ctx_print_pingpong_data(&rem_dest[i],&user_comm);
 	}
-
+#if 0
+	if (user_param.connection_type == DC)
+	{
+	  // change dest gidx attr.ah_attr.grh.dgid 
+	  if (dc_ctx_connect(&ctx,rem_dest,&user_param,my_dest)) {
+	    		fprintf(stderr," Unable to Connect the HCA's through the link\n");
+	 		goto destroy_context;
+	  }
+	}
+#endif
 	/* An additional handshake is required after moving qp to RTR. */
 	if (ctx_hand_shake(&user_comm,&my_dest[0],&rem_dest[0])) {
 		fprintf(stderr," Failed to exchange data between server and clients\n");

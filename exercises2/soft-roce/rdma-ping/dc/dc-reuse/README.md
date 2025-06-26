@@ -295,4 +295,24 @@ dc_ctx_modify_qp_to_rts not call ibv_modify_qp   only prepare struct ibv_qp_attr
 ```
 
 
-# IBV_QP_OOO_RW_DATA_PLACEMENT
+# IBV_QP_OOO_RW_DATA_PLACEMENT(Out-of-Order (OOO) Data Placement)
+In certain fabric configurations, InfiniBand packets for a given QP may take up different paths in a network from source to destination. This results into packets being received in an out-of-order manner. These packets can now be handled instead of being dropped, in order to avoid retransmission. Data will be placed into host memory in an out-of-order manner when out of order messages are received.    
+
++ OOO Experimental Verbs   
+  ibv_exp_create_dct   
+
+  IBV_EXP_DCT_OOO_RW_DATA_PLACEMENT
+ 
+
++ OOO Device Attributes   
+IBV_EXP_DEVICE_ATTR_OOO_CAPS   
+```
+enum ib_exp_ooo_flags {
+	/*
+	 * Device should set IB_EXP_DEVICE_OOO_RW_DATA_PLACEMENT
+	 * capability, when it supports handling RDMA reads and writes
+	 * received out of order.
+	 */
+	IB_EXP_DEVICE_OOO_RW_DATA_PLACEMENT	= (1 << 0),
+};
+```

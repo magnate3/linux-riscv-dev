@@ -139,3 +139,9 @@ ignored for this job.
 [ubuntu:598920] 1 more process has sent help message help-mpi-btl-openib.txt / no active ports found
 root@ubuntu:~/openMpi/mpi-benchmarks/src_c# 
 ```
+
+#  多接点
+
+
+
+[集群机器搭建多节点MPI运行环境](https://cloud.tencent.com/developer/article/2156525)   

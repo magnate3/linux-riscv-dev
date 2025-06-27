@@ -80,6 +80,23 @@ static const struct net_protocol tunnel4_protocol = {
         ... ...
 };
 ```
+
+当IP层处理完成（此处指outer的IP header处理），进行上层协议分用，如果上层协议类型是IPPROTO_IPIP，则交由tunnel4_rcv处理。     
+```
+ip_rcv
+   +
+   |- ip_rcv_finish
+       +
+       |- 理由查询
+       |- rt->dst.input 即 ip_local_deliver # 路由查询结果Local IN
+            +
+            |- ip_local_deliver_finish
+                  +
+                  |- inet_protos[]表查询（L4分用）
+                  |- ipprot->handler 即 tunnel4_rcv
+```
+
+### quic   
 ```
 static const struct net_protocol quic_protocol = {
 	.handler =	quic_rcv,

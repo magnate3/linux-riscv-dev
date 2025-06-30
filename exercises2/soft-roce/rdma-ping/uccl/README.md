@@ -110,3 +110,8 @@ Segmentation fault
 
 
 ![images](uccl.png)    
+
+```
+./transport_test --logtostderr   --serverip=10.22.116.220
+./transport_test --logtostderr   --server=true
+```

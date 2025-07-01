@@ -193,5 +193,24 @@ static constexpr uint32_t kChunkSize = 32 << 10;
 UCCL_PARAM(CHUNK_SIZE_KB, "CHUNK_SIZE_KB", 64);    
 
 ## run rdma-uc(有个bug)
-rdma-uc2没有这个bug        
+rdma-uc2也有这个bug        
 ![images](uc2.png)  
+
+```
+*** Aborted at 1751351451 (unix time) try "date -d @1751351451" if you are using GNU date ***
+PC: @                0x0 (unknown)
+*** SIGSEGV (@0x0) received by PID 3517443 (TID 0x7f00c496c640) from PID 0; stack trace: ***
+    @     0x7f00f9c72046 (unknown)
+    @     0x7f00f96ed520 (unknown)
+    @     0x7f00f9742ef4 pthread_mutex_lock
+    @     0x557ca351b4b8 uccl::RDMAContext::try_update_csn()
+    @     0x557ca352ab7b uccl::RDMAContext::uc_rx_chunk()
+    @     0x557ca3544dff uccl::SharedIOContext::uc_poll_recv_cq()
+    @     0x557ca3517ef3 uccl::UcclRDMAEngine::uc_handle_completion()
+    @     0x557ca35283ca uccl::UcclRDMAEngine::run()
+    @     0x7f00f9ab9253 (unknown)
+    @     0x7f00f973fac3 (unknown)
+    @     0x7f00f97d1850 (unknown)
+    @                0x0 (unknown)
+Segmentation fault (core dumped)
+```

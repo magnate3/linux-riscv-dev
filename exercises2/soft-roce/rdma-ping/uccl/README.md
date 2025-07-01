@@ -181,6 +181,36 @@ void dump_ibv_port_attr(struct ibv_port_attr *attr)
 
 }
 ```
+![images](uc3.png)  
+
+3种qp  
+
++ IBV_QPT_UD
+```
+      util_rdma_create_qp(
+          context, &ctrl_qp_, IBV_QPT_UD, use_cq_ex, true,
+          (struct ibv_cq**)&ctrl_cq_ex_, false, kCQSize, pd, port, &ctrl_mr_,
+          nullptr, CtrlChunkBuffPool::kChunkSize * CtrlChunkBuffPool::kNumChunk,
+          kMaxCtrlWRs, kMaxCtrlWRs, 1, 1);
+```
++  IBV_QPT_RC     
+
+```
+    util_rdma_create_qp(factory_dev->context, &comm_base->fifo_qp, IBV_QPT_RC,
+                        false, false, &comm_base->flow_cq, false, kFifoCQSize,
+                        factory_dev->pd, factory_dev->ib_port_num,
+                        &comm_base->fifo_mr, nullptr, kFifoMRSize,
+                        kMaxReq * kMaxRecv, kMaxReq * kMaxRecv, 1, 1);
+```
+
++  IBV_QPT_UC     
+```
+ if (!ucclParamRCMode()){
+
+    qp_init_attr.qp_type = IBV_QPT_UC;
+     
+  }
+```
 
 ## run cause coredump
 ![images](uc.png)  

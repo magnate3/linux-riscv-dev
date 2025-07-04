@@ -1,4 +1,19 @@
 
+# gtest
+
+
+```
+export GLOG_v=4
+```
+
+```
+./transport_test --logtostderr   --serverip=10.22.116.220   >> log.txt  2>&1 &
+```
+or   
+```
+log_level=4
+export GLOG_logtostderr=1 GLOG_v=${log_level}
+```
 
 # make
 

@@ -679,6 +679,42 @@ root@test:~/mellanox# mstconfig -d 3d:00.1 q | grep -i roce
 root@test:~/mellanox# 
 ```
 
+## reset
+关闭ROCE_CC_LEGACY_DCQCN   
+```
+mstconfig -d 3d:00.1  -y s ROCE_CC_LEGACY_DCQCN=0
+
+Device #1:
+----------
+
+Device type:    ConnectX6DX     
+Name:           MCX623106AN-CDA_Ax
+Description:    ConnectX-6 Dx EN adapter card; 100GbE; Dual-port QSFP56; PCIe 4.0/3.0 x16;
+Device:         3d:00.1         
+
+Configurations:                              Next Boot       New
+         ROCE_CC_LEGACY_DCQCN                True(1)         False(0)        
+
+ Apply new Configuration? (y/n) [n] : y
+Applying... Done!
+-I- Please reboot machine to load new configurations.
+```
+
+```
+mlxfwreset -d 3d:00.1 reset -y -l3
+
+Requested reset level for device, 3d:00.1:
+
+3: Driver restart and PCI reset
+Continue with reset?[y/N] y
+-I- Sending Reset Command To Fw             -Done
+-I- Stopping Driver                         -Done
+-I- Resetting PCI                           -Done
+-I- Starting Driver                         -Done
+-I- Restarting MST                          -Skipped
+-I- FW was loaded successfully.
+```
+
 ## command 
 
 

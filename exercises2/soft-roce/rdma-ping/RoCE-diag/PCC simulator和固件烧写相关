@@ -1,0 +1,63 @@
+######################
+#注： 本文档只适用于BF3之前的卡，使用CX6Dx或BF2传统PCC进行算法验证
+######################
+
+1. simulator
+
+#推荐使用simulator进行测试
+#simulater，执行
+source MlnxCCSimSetup
+#进入sim目录，执行
+../bin/ccsim_release ccsim.ini -a
+
+执行simulator之后有两个output files. 
+Sca文件是omnet++的标准输出，collect scalars from the simulation. 
+Param文件是NVIDIA生成的用来验证所用参数的文件 something we generate to validate the parameters you used.
+ 
+也可以使用vectors执行 (there is a config like this in the ini file) 
+会产生vec file的output，需要使用omnet gui来读对应文件(Omnet可以从Omnet官网下载)
+
+2.真正的固件烧写
+
+#参考Programmable Congestion Control Development Package User Manual v2.0进行配置和固件编译烧写
+#执行mlxfwmanager，找到对应的固件
+# mlxfwmanager
+Querying Mellanox devices firmware ...
+
+Device #1:
+----------
+
+  Device Type:      BlueField2
+  Part Number:      MBF2H332A-AENO_Ax_Bx
+  Description:      BlueField-2 P-Series DPU 25GbE Dual-Port SFP56; PCIe Gen4 x8; Crypto Disabled; 16GB on-board DDR; 1GbE OOB management; HHHL
+  PSID:             MT_0000000539
+  PCI Device Name:  /dev/mst/mt41686_pciconf0
+  Base GUID:        08c0eb03003e8eca
+  Base MAC:         08c0eb3e8eca
+  Versions:         Current        Available
+     FW             24.37.1300     N/A
+     FW (Running)   24.37.1014     N/A
+     PXE            3.7.0102       N/A
+     UEFI           14.30.0013     N/A
+     UEFI Virtio blk   22.4.0010      N/A
+     UEFI Virtio net   21.4.0010      N/A
+
+  Status:           No matching image found
+
+#查找参考固件版本
+/mswg/release/host_fw/shared/rel-12_37_1014-build-001/global_fwmanager/mlnx_cc_user_app_12_37_1014.tar.gz
+
+#执行如下命令，打开PCC功能，disable DCQCN
+sudo mlxconfig -d /dev/mst/mt41686_pciconf0 -y s ROCE_CC_LEGACY_DCQCN=0
+sudo mlxconfig -d /dev/mst/mt41686_pciconf0 -y s USER_PROGRAMMABLE_CC=1
+#注意：BF2老的固件版本或者mft工具可能没有上述参数，需要更新固件，更新mft工具到最新版本
+
+3. 清除pcc固件
+
+#	Find the location of PCC image buffers
+ flint -d /dev/mst/mt4125_pciconf0 verify showitoc | grep PROGRAMMABLE_HW_FW
+     /0x01fa0000-0x01fbffff (0x020000)/ (PROGRAMMABLE_HW_FW) - CRC IGNORED
+     /0x01fc0000-0x01fdffff (0x020000)/ (PROGRAMMABLE_HW_FW) - CRC IGNORED
+#	Clear the flag of PCC image buffers to invalidate the fields
+ flint -d /dev/mst/mt4125_pciconf0 ww 0x01fa0000 0
+ flint -d /dev/mst/mt4125_pciconf0 ww 0x01fc0000 0

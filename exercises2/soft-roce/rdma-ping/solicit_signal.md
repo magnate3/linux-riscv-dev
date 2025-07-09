@@ -63,3 +63,76 @@ There are two types of Completion Events that can be requested:
 
 ————IBV_SEND_SOLICITED 为零
 ```
+
+
+
+```
+int process_work_completion_event(struct ibv_comp_channel *completion_channel,
+                                  struct ibv_wc *wc, int expected_wc)
+{
+        struct ibv_cq *cq_ptr = NULL;
+        void *context = NULL; /* User-defined CQ context, N/A here */
+        int ret = 0;
+        int total_wc = 0; /* Number of WC elements we've processed so far */
+
+        /* Blocks and waits for the next IO completion event */
+        ret = ibv_get_cq_event(
+                completion_channel, /* IO Completion Channel */
+                &cq_ptr, /* Which CQ has activity, should match same CQ we created */
+                &context /* User context for CQ, which we didn't set */
+        );
+        if (ret) {
+                fprintf(stderr, "Failed to get CQ event: %s\n",
+                        strerror(errno));
+		return -errno;
+        }
+
+        /* Immediately request more notifications */
+        ret = ibv_req_notify_cq(cq_ptr, 0);
+        if (ret) {
+                fprintf(stderr, "Failed to request notifications for CQ events: %s\n",
+                        strerror(errno));
+		return -errno;
+        }
+
+        /* Since we've received a CQ notification, we now need to process
+         * expected_wc WC elements. ibv_poll_cq() can return 0 or more WC
+         * elements, or errno in the case of failure to poll.
+         */
+        do {
+                ret = ibv_poll_cq(
+                        cq_ptr, /* The CQ we got a notification for */
+                        expected_wc - total_wc, /* Remaining WC elements */
+                        wc + total_wc
+                );
+                if (ret < 0) {
+                        /* ret is errno, in case of failure */
+                        fprintf(stderr, "Failed to poll the CQ for a WC event: %s\n",
+                                strerror(ret));
+		        return -ret;
+                }
+                total_wc += ret;
+        } while (total_wc < expected_wc);
+
+        /* Now that we've gotten expected_wc WC elements, we need to check each
+         * one's status.
+         */
+        for (int i = 0; i < total_wc; i++) {
+                if (wc[i].status != IBV_WC_SUCCESS) {
+                        fprintf(stderr, "Failed status %s (%d) for wr_id %d\n",
+		                ibv_wc_status_str(wc[i].status),
+		                wc[i].status, (int)wc[i].wr_id);
+	                return -1;
+                }
+                printf("Work Request %d status: %s\n", (int)wc[i].wr_id,
+                       ibv_wc_status_str(wc[i].status));
+        }
+
+        /* Finally, ACK the CQ event. We only got 1 CQ event notification for
+         * n WR elements; this is not the number of WC elements we got/expected.
+         */
+        ibv_ack_cq_events(cq_ptr, 1);
+
+        return total_wc;
+}
+```

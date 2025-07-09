@@ -1,0 +1,36 @@
+
+# 1	永久设置：
+mlxconfig -d 08:00.0 s ROCE_CONTROL=1
+
+# 2	临时设置，重启失效：
+# 1）Ofed驱动版本比5.4老：
+echo 0 > /sys/class/net/ens0f0/device/roce_enable
+
+# 2）ofed驱动版本是5.4及其小版本，或ofed版本是5.4及以上但内核版本小于5.5-rc1：
+echo 0 > /sys/class/net/ens0f0/device/roce_enable
+/opt/mellanox/iproute2/sbin/devlink dev reload pci/0000:08:00.0 action driver_reinit
+              
+# 3）OFED版本是5.5及以上，内核版本是5.5 rc1以上
+                     
+# If RoCE can be enabled or disabled via devlink, the sysfs interface for enabling or disabling RoCE should not be used. 
+# In newer kernels, which allow RoCE to be enabled/disabled via Devlink, using sysfs to enable or disable RoCE can result in stack traces and possibly kernel crashes.
+
+# To determine if devlink can be used to enable or disable RoCE, execute the following command after starting OFED:
+      devlink dev param show | grep roce
+
+# Enable/disable roce ONLY via devlink if you see the following output line:
+      name enable_roce type generic
+
+# To enable or disable RoCE via devlink, perform the following to lists the PCI interfaces accessible by devlink:
+devlink dev show   
+
+
+# For Example:
+devlink dev show
+    pci/0000:08:00.0
+    pci/0000:08:00.1
+
+# Then, to enable/disable RoCE on the first PCI interface, execute the following 2 commands:
+
+devlink dev param set pci/0000:08:00.0 name enable_roce value <true | false> cmode driverinit
+devlink dev reload pci/0000:08:00.0

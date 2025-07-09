@@ -1,0 +1,37 @@
+#从rdmamojo翻译
+# 是否可以动态修改不同的连接方式？
+1. Changing the QP state explicitly in the application by calling ibv_modify_qp()
+2. Using librdmacm (in iWARP this is the only way to do it)  -- 怎么改？
+
+# 通信双方不能通过QP发送QP自身信息，所以RDMA中，如果对端信息已知，连接是通过CM使用一个well-known QP (QP 1)来建立以交互这些需要的信息。
+# 这里描述下需要哪些信息，这些信息基于QP的传输类型和状态机不同而不同
+
+#如何得到相关信息
+Some of the attributes can be taken from the QP itself (QP number), some of them from the local port number, some of them are being determined by the application.
+
+
+# RC QP
+以下假定我们在节点X和节点Y间建立RC QP
+
+In side X the P_Key value at the port's qp_attr.port_num(X) P_Key table[qp_attr.pkey_index(X)] must be equal to same at side Y (what is matters is the P_Key value and not its index in the table) and at least one of them must be full member
+qp_attr.rq_psn(X) must be equal to qp_attr.sq_psn(Y)
+qp_attr.dest_qp_num(X) must be equal to qp->qp_num(Y)
+qp_attr.path_mtu(X) must be equal to qp_attr.path_mtu(Y)
+qp_attr.max_rd_atomic(X) must be less or equal then qp_attr.max_dest_rd_atomic(Y)
+qp_attr.port_num(X) must be equal to qp_attr.ah_attr.port_num(X)
+The LID qp_attr.ah_attr.dlid(X) must be assigned to port qp_attr.port_num(Y) in side Y
+qp_attr.port_num(X) + qp_attr.ah_attr.src_path_bits(X) must be equal to qp_attr.ah_attr.dlid(Y)
+If GRH is configured in QP X: the value qp_attr.ah_attr.grh.dgid(X) must exist in side Y GID's table of port qp_attr.port_num(Y)
+
+
+# UD QP
+以下假定我们在节点X和节点Y间建立RC QP，每端都用ah_attr创建一个AH
+
+In side X the P_Key value at the port's qp_attr.port_num(X) P_Key table[qp_attr.pkey_index(X)] must be equal to same at side Y (what is matters is the P_Key value and not its index in the table) and at least one of them must be full member
+qp_attr.port_num(X) must be equal to ah_attr.port_num(X)
+If using unicast: the LID in qp_attr.ah_attr.dlid(X) must be assigned to port qp_attr.port_num(Y) in side Y
+If using multicast: QP(Y) must be a member of the multicast group of the LID qp_attr.ah_attr.dlid(X)
+send_wr.wr.ud.remote_qpn(X) must be equal to qp->qp_num(Y)
+If GRH is configured in ah_attr X: the value ah_attr.grh.dgid(X) must exist in side Y GID's table of port qp_attr.port_num(Y)
+qp_attr.qkey(X) should be equal to qp_attr.qkey(Y) unless a different Q_Key value is used in send_wr.wr.ud.remote_qkey(X) when sending a message
+ 

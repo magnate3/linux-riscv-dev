@@ -1,3 +1,12 @@
+
+#  rdma res show
+
+```
+ rdma res show
+0: mlx5_0: pd 2 cq 3 qp 1 cm_id 0 mr 0 ctx 0 srq 2 
+1: mlx5_1: pd 3 cq 4 qp 65 cm_id 0 mr 1 ctx 1 srq 2 
+```
+
 # test
 
 

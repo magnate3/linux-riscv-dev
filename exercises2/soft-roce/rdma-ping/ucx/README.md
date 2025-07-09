@@ -65,7 +65,34 @@ ucx_perf_run  -> …… -> uct_ud_verbs_post_send
 
 
 
-
+```
+(gdb) bt
+#0  uct_ud_mlx5_post_send (max_log_sge=2147483647, neth=0x7fffe7bfe850, wqe_size=<optimized out>, ctrl=0x555555867140, ce_se=0 '\000', ep=0x555555660b90, iface=0x5555556df2c0)
+    at ud/ud_mlx5.c:103
+#1  uct_ud_mlx5_ep_am_bcopy (tl_ep=0x555555660b90, id=<optimized out>, pack_cb=<optimized out>, arg=<optimized out>, flags=<optimized out>) at ud/ud_mlx5.c:438
+#2  0x00007ffff7f84a34 in uct_ep_am_bcopy (flags=1, arg=0x7ffff7503930, pack_cb=0x7ffff7f83c80 <ucp_wireup_msg_pack>, id=1 '\001', ep=<optimized out>)
+    at /root/rdma-bench/ucx/src/uct/api/uct.h:3074
+#3  ucp_wireup_msg_progress (self=0x555555672c08) at wireup/wireup.c:176
+#4  0x00007ffff7f8231a in ucp_wireup_ep_progress_pending (self=0x55555566b928) at wireup/wireup_ep.c:121
+#5  0x00007ffff771f3ba in uct_ud_ep_do_pending (arbiter=arbiter@entry=0x5555556df908, group=group@entry=0x555555660bb8, elem=elem@entry=0x55555566b930, arg=arg@entry=0x1)
+    at ud/base/ud_ep.c:1654
+#6  0x00007ffff7e3cc16 in ucs_arbiter_dispatch_nonempty (arbiter=0x5555556df908, per_group=per_group@entry=1, cb=0x7ffff771f2f0 <uct_ud_ep_do_pending>, cb_arg=cb_arg@entry=0x1)
+    at datastruct/arbiter.c:321
+#7  0x00007ffff76107c6 in ucs_arbiter_dispatch (per_group=1, cb=<optimized out>, cb_arg=0x1, arbiter=0x5555556df908) at /root/rdma-bench/ucx/src/ucs/datastruct/arbiter.h:386
+#8  uct_ud_iface_progress_pending (is_async=1, iface=0x5555556df2c0) at /root/rdma-bench/ucx/src/uct/ib/ud/base/ud_iface.h:471
+#9  uct_ud_mlx5_iface_async_progress (ud_iface=0x5555556df2c0) at ud/ud_mlx5.c:615
+#10 0x00007ffff760baef in uct_ud_iface_async_progress (iface=0x5555556df2c0) at /root/rdma-bench/ucx/src/uct/ib/ud/base/ud_inl.h:275
+#11 uct_ud_mlx5_iface_async_handler (fd=<optimized out>, events=<optimized out>, arg=0x5555556df2c0) at ud/ud_mlx5.c:712
+#12 0x00007ffff7e3099a in ucs_async_handler_invoke (events=1 '\001', handler=0x55555583dfc0) at async/async.c:268
+#13 ucs_async_handler_dispatch (handler=handler@entry=0x55555583dfc0, events=events@entry=1 '\001') at async/async.c:290
+#14 0x00007ffff7e314fb in ucs_async_dispatch_handlers (handler_ids=handler_ids@entry=0x7ffff7503c04, count=count@entry=1, events=1 '\001') at async/async.c:322
+#15 0x00007ffff7e344bb in ucs_async_thread_ev_handler (callback_data=<optimized out>, events=<optimized out>, arg=0x7ffff7503d70) at async/thread.c:88
+#16 0x00007ffff7e56f39 in ucs_event_set_wait (event_set=<optimized out>, num_events=num_events@entry=0x7ffff7503d6c, timeout_ms=<optimized out>, 
+    event_set_handler=event_set_handler@entry=0x7ffff7e34480 <ucs_async_thread_ev_handler>, arg=arg@entry=0x7ffff7503d70) at sys/event_set.c:215
+#17 0x00007ffff7e34bb2 in ucs_async_thread_func (arg=0x5555556152c0) at async/thread.c:131
+#18 0x00007ffff7c27ac3 in start_thread (arg=<optimized out>) at ./nptl/pthread_create.c:442
+#19 0x00007ffff7cb9850 in clone3 () at ../sysdeps/unix/sysv/linux/x86_64/clone3.S:81
+```
 
 
 
@@ -110,5 +137,15 @@ export LD_LIBRARY_PATH=$PWD/install-debug/lib
 ./ucp_client_server -a 10.22.116.220 -p 13337 -c tag
 
 ```
+export UCX_LOG_LEVEL=debug
+./uct_hello_world -d mlx5_1:1 -t rc_verbs
+./uct_hello_world -d mlx5_1:1 -t rc_verbs -n 10.22.116.220  
+```
 
+# folly
+
+
+```
+./build/fbcode_builder/getdeps.py install-system-deps --recursive
+python3 ./build/fbcode_builder/getdeps.py --allow-system-packages build
 ```

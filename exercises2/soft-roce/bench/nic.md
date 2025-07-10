@@ -1,5 +1,8 @@
 
-
+```
+/sys/class/infiniband/mlx5_1/ports/1/hw_counters
+/sys/class/infiniband/mlx5_1/ports/1/counters
+```
 
 ```
 root@ubuntu:~# ibstatus

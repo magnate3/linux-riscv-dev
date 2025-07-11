@@ -287,3 +287,37 @@ CA 'mlx5_5'
                 Link layer: InfiniBand
 ```
 
+##  Failed to set port sniffer1: command interface bad param  
+
+
+```
+root@ubuntu:~/rc_pingpong# ibdump  -d   mlx5_1  -i 1  -w /tmp/traces/capture1.pcap
+Initiating resources ...
+searching for IB devices in host
+Port active_mtu=1024
+MR was registered with addr=0x562e589fba50, lkey=0x4100f, rkey=0x4100f, flags=0x1
+ ------------------------------------------------
+ Device                         : "mlx5_1"
+ Physical port                  : 1
+ Link layer                     : Ethernet
+ Dump file                      : /tmp/traces/capture1.pcap
+ Sniffer WQEs (max burst size)  : 4096
+ ------------------------------------------------
+
+Failed to set port sniffer1: command interface bad param
+root@ubuntu:~/rc_pingpong# ethtool --show-priv-flags    enp61s0f1np1
+Private flags for enp61s0f1np1:
+rx_cqe_moder       : on
+tx_cqe_moder       : off
+rx_cqe_compress    : off
+tx_cqe_compress    : off
+rx_striding_rq     : on
+rx_no_csum_complete: off
+xdp_tx_mpwqe       : on
+skb_tx_mpwqe       : on
+tx_port_ts         : off
+dropless_rq        : off
+per_channel_stats  : on
+tx_xdp_hw_checksum : off
+skb_xmit_more      : off
+```

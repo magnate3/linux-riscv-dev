@@ -79,6 +79,8 @@ std::vector<rdma_request> rdma_context::ParseReqFromStr() {
       sge.lkey = buf->local_K_;
       req.sglist.push_back(sge);
     }
+    LOG(ERROR) <<"debug request : " << ss.str()  << " req.opcode " << req.opcode << " req.sge_num  " << req.sge_num;
+
     requests.push_back(req);
     if (ss.peek() == ',') ss.ignore();
   }
@@ -114,6 +116,12 @@ int rdma_context::Init() {
   return 0;
 }
 
+int rdma_context::CloseDeive() {
+    ibv_close_device(this->ctx_);
+    return 0;
+
+
+}
 int rdma_context::InitDevice() {
   struct ibv_device *dev = nullptr;
   struct ibv_device **device_list = nullptr;

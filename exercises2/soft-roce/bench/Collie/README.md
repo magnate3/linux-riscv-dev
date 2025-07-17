@@ -74,25 +74,54 @@ python3 search/collie.py --config  ./example.json
 
 ## test run
 
+help    
 ```
-./collie_engine --server --dev=mlx5_1 --gid=3 --qp_type=2 --mtu=3 --qp_num=1 --buf_num=4 --mr_num=4 --buf_size=65536 --receive=1_65536,2_4096_4096
-I0611 06:40:41.073875 278602 main.cpp:18] Grfwork starts
-I0611 06:40:41.106448 278602 main.cpp:30] Collie server has started.
-I0611 06:40:41.106570 278603 context.cpp:369] About to listen on port 12000
-I0611 06:40:41.106587 278603 context.cpp:375] Server listen thread starts
-E0611 06:41:42.277411 278605 endpoint.cpp:179] Failed to modify QP to RTR: Invalid argument [22]
-E0611 06:41:42.277446 278605 context.cpp:553] Activate Recv Endpoint 0 failed
-E0611 06:41:55.957463 278607 context.cpp:474] QP Overflow, request rejected
+./collie_engine  --help
+```
+
+ log  
+```
+LOG(ERROR) << "dbg batch_size is " << batch_size;
+```
+ 
+ 
++ 修复bug
+
+```
+pici_client->CloseDeive();
 ```
 
 ```
- ./collie_engine --connect=10.22.116.221 --dev=mlx5_1 --gid=3 --qp_type=2 --mtu=3 --qp_num=1 --buf_num=4 --mr_num=4 --buf_size=65536 --request=s_1_5120,w_2_4096_512,r_1_65536
-I0611 06:41:55.883708 3200525 main.cpp:18] Grfwork starts
-E0611 06:41:55.917788 3200525 context.cpp:676] Receiver does not support 1 senders
-E0611 06:41:55.917811 3200525 main.cpp:44] Collie client connect to 10.22.116.221 failed
-terminate called after throwing an instance of 'std::system_error'
-  what():  Invalid argument
-Aborted (core dumped)
+
+  if(listen_thread.joinable())
+      listen_thread.join();
+  if(server_thread.joinable())
+      server_thread.join();
+```
+
+
+
+```
+./collie_engine --server --dev=mlx5_1 --gid=3 --qp_type=2 --mtu=5 --qp_num=8 --buf_num=4 --mr_num=4 --buf_size=4096 --receive=1_4096 --send_batch 1  --send_sge_batch_size 1 --recv_batch 1 --recv_sge_batch_size 1
+I0717 01:58:33.530675 1498836 main.cpp:18] Grfwork starts
+I0717 01:58:33.571673 1498836 main.cpp:30] Collie server has started.
+I0717 01:58:33.571770 1498838 context.cpp:369] About to listen on port 12000
+I0717 01:58:33.571789 1498838 context.cpp:375] Server listen thread starts
+I0717 01:58:39.716312 1498840 context.cpp:571] Endpoint 0 has started
+I0717 02:02:15.486127 1498841 context.cpp:571] Endpoint 1 has started
+I0717 02:02:21.397862 1498842 context.cpp:571] Endpoint 2 has started
+I0717 02:09:00.185498 1498846 context.cpp:571] Endpoint 3 has started
+I0717 02:09:41.089587 1498847 context.cpp:571] Endpoint 4 has started
+I0717 02:09:46.272518 1498848 context.cpp:571] Endpoint 5 has started
+I0717 02:12:31.673686 1498849 context.cpp:571] Endpoint 6 has started
+
+```
+
+```
+./collie_engine --connect=10.22.116.221 --dev=mlx5_1 --gid=3 --qp_type=2 --mtu=5 --qp_num=1 --buf_num=4 --mr_num=4 --buf_size=4096  --request=s_1_4096 --send_batch 1  --send_sge_batch_size 1 --recv_batch 1 --recv_sge_batch_size 1 --iters 1
+I0717 02:12:31.642817 3587718 main.cpp:18] Grfwork starts
+E0717 02:12:31.672823 3587718 context.cpp:82] debug request : s_1_4096 req.opcode 2 req.sge_num  1
+E0717 02:12:31.672849 3587718 main.cpp:49] Collie client run over...
 ```
 
 

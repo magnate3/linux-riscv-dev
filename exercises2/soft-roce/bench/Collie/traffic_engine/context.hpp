@@ -108,6 +108,7 @@ class rdma_context {
 
   int Init();
 
+  int CloseDeive();
   // Connection Setup: Server side
   int Listen();
   int ServerDatapath();

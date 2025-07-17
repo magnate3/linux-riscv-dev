@@ -28,6 +28,12 @@ int main(int argc, char **argv) {
     server_thread =
         std::thread(&Collie::rdma_context::ServerDatapath, pici_server);
     LOG(INFO) << "Collie server has started.";
+
+    if(listen_thread.joinable())
+        listen_thread.join();
+    if(server_thread.joinable())
+        server_thread.join();
+    pici_server->CloseDeive();
   }
   // Set up client
   if (FLAGS_connect != "") {
@@ -45,8 +51,8 @@ int main(int argc, char **argv) {
       }
     }
     pici_client->ClientDatapath();
+    LOG(ERROR) << "Collie client run over... ";
+    pici_client->CloseDeive();
   }
-  listen_thread.join();
-  server_thread.join();
   return 0;
 }

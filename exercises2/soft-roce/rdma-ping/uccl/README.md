@@ -2,7 +2,18 @@
 #  UCCL   
 
 
-[UCCL-Tran：为GPU网络打造的可扩展软件传输层](https://zhuanlan.zhihu.com/p/1925692992087390160)   
+[UCCL-Tran：为GPU网络打造的可扩展软件传输层](https://zhuanlan.zhihu.com/p/1925692992087390160)  
+
+## mytest
+
+```
+rm rdma_test.cc 
+```
+
+
+```
+./transport_test --help
+```
 
 # gtest
 
@@ -65,7 +76,7 @@ UCCL_PARAM(ROCE_GID_IDX, "ROCE_GID_IDX", 3);
 UCCL_PARAM(RCMode, "RCMODE", true);
 ```
 
-+ azure_perm_traffic/transport_config.h   
++ transport_config.h添加   
 
 ```
 static constexpr bool ROCE_NET = true;

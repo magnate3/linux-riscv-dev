@@ -364,7 +364,6 @@ static void client_worker(void) {
           hipSuccess);
 #endif
 #else
-    printf("not use gpu memory ,use cpu memory \n");
     void* data =
         mmap(nullptr, FLAGS_msize * FLAGS_nreq * FLAGS_nmsg,
              PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

@@ -1009,7 +1009,6 @@ static inline struct ibv_mr* util_rdma_create_host_memory_mr(struct ibv_pd* pd,
   UCCL_INIT_CHECK(addr != MAP_FAILED, "mmap failed");
   mr = ibv_reg_mr(pd, addr, size,
                   IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE);
-  printf("ibv_reg_mr return %s \n", NULL ==  mr ? "null" : "no null");
   UCCL_INIT_CHECK(mr != nullptr, "ibv_reg_mr failed");
   return mr;
 }

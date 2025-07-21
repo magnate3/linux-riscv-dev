@@ -9,18 +9,15 @@
 
 /// Interface configuration.
 // For Azure HPC Ubuntu 22.04 only, normally it should be "mlx5_".
-static char const* IB_DEVICE_NAME_PREFIX = "mlx5_";
-#static char const* IB_DEVICE_NAME_PREFIX = "mlx5_ib";
-static constexpr bool ROCE_NET = true;
+static char const* IB_DEVICE_NAME_PREFIX = "mlx5_ib";
+static constexpr bool ROCE_NET = false;
 // If SINGLE_CTRL_NIC is set, all devices will use the same IP.
-static std::string SINGLE_CTRL_NIC("enp61s0f1np1");
-static constexpr uint8_t DEVNAME_SUFFIX_LIST[8] = {0, 1, 0, 0, 0, 0, 0, 0};
-#static constexpr uint8_t DEVNAME_SUFFIX_LIST[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+static std::string SINGLE_CTRL_NIC("eth0");
+static constexpr uint8_t DEVNAME_SUFFIX_LIST[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 static constexpr uint8_t NUM_DEVICES = 1;
 // static constexpr uint8_t DEVNAME_SUFFIX_LIST[8] = {0, 2, 4, 6, 0, 0, 0, 0};
 // static constexpr uint8_t NUM_DEVICES = 4;
-static constexpr double LINK_BANDWIDTH = 100.0 * 1e9 / 8;  // 1m00Gbps
-//static constexpr double LINK_BANDWIDTH = 200.0 * 1e9 / 8;  // 200Gbps
+static constexpr double LINK_BANDWIDTH = 200.0 * 1e9 / 8;  // 200Gbps
 static constexpr uint32_t MAX_PEER = 256;
 // Maximum number of flows (one-way) on each engine.
 static constexpr uint32_t MAX_FLOW = 256;
@@ -34,7 +31,7 @@ static constexpr uint8_t GID_IDX = ROCE_NET ? 3 : 0;
 /// Interface configuration.
 
 // # of engines per device.
-static constexpr uint32_t NUM_ENGINES = 1;
+static constexpr uint32_t NUM_ENGINES = 3;
 static uint32_t NUM_CPUS = std::thread::hardware_concurrency();
 // Each dev use [ENGINE_CPU_START_LIST[dev], ENGINE_CPU_START_LIST[dev] +
 // NUM_ENGINES)

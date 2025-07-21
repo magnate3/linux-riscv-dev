@@ -11,6 +11,18 @@
 #define LAZY_CREATE_ENGINE
 #endif
 
+/// Interface configuration.
+// For Azure HPC Ubuntu 22.04 only, normally it should be "mlx5_".
+static char const* IB_DEVICE_NAME_PREFIX = "mlx5_";
+//static char const* IB_DEVICE_NAME_PREFIX = "mlx5_ib";
+static constexpr bool ROCE_NET = true;
+// If SINGLE_CTRL_NIC is set, all devices will use the same IP.
+static std::string SINGLE_CTRL_NIC("enp61s0f1np1");
+static constexpr uint8_t DEVNAME_SUFFIX_LIST[8] = {0, 1, 0, 0, 0, 0, 0, 0};
+static constexpr uint8_t NUM_DEVICES = 1;
+static constexpr double LINK_BANDWIDTH = 100.0 * 1e9 / 8;  // 1m00Gbps
+//static constexpr double LINK_BANDWIDTH = 200.0 * 1e9 / 8;  // 200Gbps
+
 // Whether to pin the thread to the NUMA node.
 UCCL_PARAM(PIN_TO_NUMA, "PIN_TO_NUMA", 1);
 // Traffic class for RoCE.
@@ -29,7 +41,6 @@ UCCL_PARAM(RCMode, "RCMODE", true);
 #else
 // Use RC for data transfer.
 UCCL_PARAM(RCMode, "RCMODE", false);
-//UCCL_PARAM(RCMode, "RCMODE", true);
 #endif
 
 // Bypass the pacing stage.
@@ -41,7 +52,6 @@ UCCL_PARAM(NUM_ENGINES, "NUM_ENGINES", 4);
 // Path/QP per engine.
 UCCL_PARAM(PORT_ENTROPY, "PORT_ENTROPY", 32);
 // Maximum chunk size for each WQE.
-//UCCL_PARAM(CHUNK_SIZE_KB, "CHUNK_SIZE_KB", 2);
 UCCL_PARAM(CHUNK_SIZE_KB, "CHUNK_SIZE_KB", 64);
 #else
 UCCL_PARAM(NUM_ENGINES, "NUM_ENGINES", 1);

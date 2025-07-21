@@ -59,10 +59,8 @@ class BuffPool {
   }
 
   inline int alloc_buff(uint64_t* buff_addr) {
-    if (empty()){
-	    printf("buf is full and no available space \n");
-	    return -1;
-    }
+    if (empty()) return -1;
+
     *buff_addr = (uint64_t)base_addr_ + buffer_pool_[head_];
     head_ = (head_ + 1) & (num_elements_ - 1);
     return 0;

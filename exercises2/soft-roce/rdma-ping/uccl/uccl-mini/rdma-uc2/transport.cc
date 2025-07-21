@@ -772,7 +772,6 @@ RDMAEndpoint::RDMAEndpoint(int num_engines_per_dev)
 
 bool RDMAEndpoint::initialize_engine_by_dev(int dev) {
   static std::vector<std::once_flag> flags_per_dev_(num_devices_);
-  printf("num_devices_ %d, if equal 0 and will coredump \n",num_devices_);
   std::call_once(flags_per_dev_[dev], [this, dev]() {
     int start_engine_idx = dev * num_engines_per_dev_;
     int end_engine_idx = (dev + 1) * num_engines_per_dev_ - 1;
@@ -1698,11 +1697,8 @@ RDMAContext::RDMAContext(TimerManager* rto, uint32_t* engine_unacked_bytes,
   qp_init_attr.qp_context = this;
   qp_init_attr.send_cq = ibv_cq_ex_to_cq(io_ctx->send_cq_ex_);
   qp_init_attr.recv_cq = ibv_cq_ex_to_cq(io_ctx->recv_cq_ex_);
-  if (!ucclParamRCMode()){
-
+  if (!ucclParamRCMode())
     qp_init_attr.qp_type = IBV_QPT_UC;
-    printf("******** qp type is uc \n");
-  }
   else
     qp_init_attr.qp_type = IBV_QPT_RC;
   qp_init_attr.cap.max_send_wr = 2 * kMaxReq * kMaxRecv;
@@ -1741,7 +1737,6 @@ RDMAContext::RDMAContext(TimerManager* rto, uint32_t* engine_unacked_bytes,
 
   if constexpr (kReceiverCCA == RECEIVER_CCA_EQDS) {
     // Create Credit QP, SCQ/RCQ and MR for engine or pacer.
-    printf("call util_rdma_create_qp_seperate_cq and create uc type \n");
     util_rdma_create_qp_seperate_cq(
         context_, &credit_qp_, IBV_QPT_UC, true, false,
         (struct ibv_cq**)&pacer_credit_cq_ex_,
@@ -2319,7 +2314,6 @@ void RDMAContext::drain_rtx_queue(SubUcclFlow* subflow) {
 
 bool RDMAContext::try_retransmit_chunk(SubUcclFlow* subflow,
                                        struct wr_ex* wr_ex) {
-  //printf("enter try_retransmit_chunk \n");
   if (!EventOnTxRTXData(subflow, wr_ex)) return false;
 
   auto* lossy_qpw = &dp_qps_[wr_ex->qpidx];
@@ -2333,22 +2327,9 @@ bool RDMAContext::try_retransmit_chunk(SubUcclFlow* subflow,
 
   retr_hdr = io_ctx_->pop_retr_hdr();
 
-  //printf("retr_hdr is NULL ? %s \n " , NULL == retr_hdr ? "yes": "no");
-  if(NULL == retr_hdr){
-     printf("retr_hdr is NULL  \n ");
-  }
-  if(-1 == retr_hdr){
-     printf("retr_hdr is -1\n ");
-  }
-  if(NULL == wr_ex){
-     printf("wr_ex is NULL  \n ");
-  }
   struct retr_chunk_hdr* hdr =
       reinterpret_cast<struct retr_chunk_hdr*>(retr_hdr);
-  hdr->remote_addr = 0x8888;
-  //printf("hdr->remote_addr is ok \n");
   hdr->remote_addr = wr_ex->wr.wr.rdma.remote_addr;
-  //printf("hdr->remote_addr is %p\n", wr_ex->wr.wr.rdma.remote_addr);
   // Network byte order.
   hdr->imm_data = wr_ex->wr.imm_data;
 
@@ -2366,8 +2347,6 @@ bool RDMAContext::try_retransmit_chunk(SubUcclFlow* subflow,
   retr_wr.next = nullptr;
 
   int ret = ibv_post_send(lossy_qpw->qp, &retr_wr, &bad_wr);
-  if(ret)
-  printf("ibv_post_send return %d \n",ret);
   DCHECK(ret == 0) << ret;
 
   UCCL_LOG_IO << "successfully retransmit chunk for QP#"
@@ -2377,7 +2356,6 @@ bool RDMAContext::try_retransmit_chunk(SubUcclFlow* subflow,
               << ", csn: " << IMMData(ntohl(wr_ex->wr.imm_data)).GetCSN()
               << " for flow: " << subflow->fid_;
 
-  //printf("leave try_retransmit_chunk \n");
   return true;
 }
 

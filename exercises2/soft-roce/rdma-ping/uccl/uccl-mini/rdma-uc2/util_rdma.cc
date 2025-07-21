@@ -70,7 +70,6 @@ int RDMAFactory::init_devs() {
       if (!(match_if_list(devices[d]->name, port_num, user_ifs, num_ifs,
                           searchExact) ^
             searchNot)) {
-        printf("init devices name %s  num_ifs %d match fail \n", devices[d]->name , num_ifs);
         ibv_close_device(context);
         continue;
       }
@@ -80,7 +79,6 @@ int RDMAFactory::init_devs() {
         continue;
       }
 
-      printf("match succ and start to init devices name %s  num_ifs %d \n", devices[d]->name , num_ifs);
       // Initialize Dev
       struct FactoryDevice dev;
       strncpy(dev.ib_name, devices[d]->name, sizeof(devices[d]->name));
@@ -159,7 +157,7 @@ int RDMAFactory::init_devs() {
       }
 
       rdma_ctl->devices_.push_back(dev);
-      printf("Initialized %s\n succ ", devices[d]->name);
+      printf("Initialized %s\n", devices[d]->name);
       __num_devices++;
     }
   }

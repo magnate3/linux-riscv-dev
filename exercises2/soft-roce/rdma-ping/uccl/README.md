@@ -275,3 +275,121 @@ PC: @                0x0 (unknown)
     @                0x0 (unknown)
 Segmentation fault (core dumped)
 ```
+
+
+# p2p
+
+
+```
+pip3 install  pybind11
+apt-get install libelf-dev -y
+```
+
+
+## listen
+
+
+```
+(gdb) bt
+#0  listen () at ../sysdeps/unix/syscall-template.S:120
+#1  0x0000555555577b47 in uccl::create_listen_socket (listen_port=30000, listen_fd=0x5555555be170) at /root/rdma-bench/uccl/include/util/util.h:141
+#2  operator() (__closure=0x7fffffffe280) at transport.cc:815
+#3  std::__invoke_impl<void, uccl::RDMAEndpoint::initialize_engine_by_dev(int)::<lambda()> > (__f=...) at /usr/include/c++/11/bits/invoke.h:61
+#4  std::__invoke<uccl::RDMAEndpoint::initialize_engine_by_dev(int)::<lambda()> > (__fn=...) at /usr/include/c++/11/bits/invoke.h:96
+#5  operator() (__closure=<optimized out>) at /usr/include/c++/11/mutex:776
+#6  operator() (__closure=0x0) at /usr/include/c++/11/mutex:712
+#7  _FUN () at /usr/include/c++/11/mutex:712
+#8  0x00007ffff7a65ee8 in __pthread_once_slow (once_control=0x55555560a210, init_routine=0x7ffff7dd8d50 <__once_proxy>) at ./nptl/pthread_once.c:116
+#9  0x00005555555660a7 in __gthread_once (__func=<optimized out>, __once=0x55555560a210) at /usr/include/x86_64-linux-gnu/c++/11/bits/gthr-default.h:700
+#10 std::call_once<uccl::RDMAEndpoint::initialize_engine_by_dev(int)::<lambda()> > (__f=..., __once=...) at /usr/include/c++/11/mutex:783
+#11 uccl::RDMAEndpoint::initialize_engine_by_dev (this=this@entry=0x5555555a24c0 <ep>, dev=dev@entry=0) at transport.cc:775
+#12 0x000055555555d826 in main (argc=<optimized out>, argv=<optimized out>) at transport_test.cc:411
+(gdb) 
+```
+
+## use cpu memory test
+
+```
+int const kMaxNumGPUs = 1;
+```
+
+```
+#ifndef CPU_MEMORY
+  DCHECK(local_gpu_idx_ < gpu_cards.size() && gpu_cards.size() <= kMaxNumGPUs)
+      << "Local GPU index out of range";
+  auto ib_nics = uccl::get_rdma_nics();
+  // Find the RDMA NIC that is closest to each of the GPUs.
+  for (int i = 0; i < kMaxNumGPUs; i++) {
+    auto gpu_device_path = gpu_cards[i];
+    auto ib_nic_it = std::min_element(
+        ib_nics.begin(), ib_nics.end(), [&](auto const& a, auto const& b) {
+          return uccl::cal_pcie_distance(gpu_device_path, a.second) <
+                 uccl::cal_pcie_distance(gpu_device_path, b.second);
+        });
+    gpu_to_dev[i] = ib_nic_it - ib_nics.begin();
+  }
+  std::cout << "Detected best GPU-NIC mapping: " << std::endl;
+  for (int i = 0; i < kMaxNumGPUs; i++) {
+    std::cout << "\tGPU " << i << " -> NIC " << gpu_to_dev[i] << " ("
+              << ib_nics[gpu_to_dev[i]].first << ")" << std::endl;
+  }
+  std::cout << std::endl;
+#endif
+```
+
++ server
+
+
+```
+python3  benchmark.py --role server --local-gpu-idx 0 --num-cpus 4
+UCCL P2P Benchmark — role: server
+Message sizes: 256 B, 1.0 KB, 4.0 KB, 16.0 KB, 64.0 KB, 256.0 KB, 1.0 MB, 10.0 MB, 100.0 MB
+Device: cpu | Local GPU idx: 0 | Iterations: 1000
+Creating Engine with GPU index: 0, CPUs: 4
+Initialized mlx5_1
+Initialized 4 engines for 1 devices totally, with 4 engines per device
+Creating Engine GPU num: 0
+Endpoint initialized successfully
+[Server] Waiting for connection …
+Waiting to accept incoming connection...
+[Server] Connected to 10.22.116.220 (GPU 0) conn_id=0
+[Server]    256 B :   0.25 Gbps |   0.03 GB/s
+[Server]   1.0 KB :   0.98 Gbps |   0.12 GB/s
+[Server]   4.0 KB :   3.62 Gbps |   0.45 GB/s
+[Server]  16.0 KB :  12.30 Gbps |   1.54 GB/s
+[Server]  64.0 KB :  35.55 Gbps |   4.44 GB/s
+[Server] 256.0 KB :  68.28 Gbps |   8.54 GB/s
+[Server]   1.0 MB :  86.73 Gbps |  10.84 GB/s
+[Server]  10.0 MB :  95.50 Gbps |  11.94 GB/s
+[Server] 100.0 MB :  96.71 Gbps |  12.09 GB/s
+[Server] Benchmark complete
+Destroying Engine...
+Engine destroyed
+```
+
+
+```
+python3  benchmark.py --role client --remote-ip 10.22.116.221  --local-gpu-idx 0 --num-cpus 4
+UCCL P2P Benchmark — role: client
+Message sizes: 256 B, 1.0 KB, 4.0 KB, 16.0 KB, 64.0 KB, 256.0 KB, 1.0 MB, 10.0 MB, 100.0 MB
+Device: cpu | Local GPU idx: 0 | Iterations: 1000
+Creating Engine with GPU index: 0, CPUs: 4
+Initialized mlx5_1
+Initialized 4 engines for 1 devices totally, with 4 engines per device
+Creating Engine GPU num: 0
+Endpoint initialized successfully
+Attempting to connect to 10.22.116.221:0
+[Client] Connected to 10.22.116.221 conn_id=0
+[Client]    256 B :   0.25 Gbps |   0.03 GB/s
+[Client]   1.0 KB :   0.98 Gbps |   0.12 GB/s
+[Client]   4.0 KB :   3.62 Gbps |   0.45 GB/s
+[Client]  16.0 KB :  12.30 Gbps |   1.54 GB/s
+[Client]  64.0 KB :  35.55 Gbps |   4.44 GB/s
+[Client] 256.0 KB :  68.28 Gbps |   8.54 GB/s
+[Client]   1.0 MB :  86.73 Gbps |  10.84 GB/s
+[Client]  10.0 MB :  95.50 Gbps |  11.94 GB/s
+[Client] 100.0 MB :  96.71 Gbps |  12.09 GB/s
+[Client] Benchmark complete
+Destroying Engine...
+Engine destroyed
+```

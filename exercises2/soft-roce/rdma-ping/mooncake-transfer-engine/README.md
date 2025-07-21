@@ -86,6 +86,27 @@ I0710 09:47:03.754519 3571485 rdma_context.cpp:125] RDMA device: mlx5_1, LID: 0,
 I0710 09:47:04.304725 3571485 transfer_engine_bench.cpp:422] numa node num: 2
 ```
 
++ listen    
+
+```
+(gdb) bt
+#0  listen () at ../sysdeps/unix/syscall-template.S:120
+#1  0x00005555555aa4dc in mooncake::SocketHandShakePlugin::startDaemon (this=0x555555603410, listen_port=<optimized out>, sockfd=<optimized out>)
+    at /root/rdma-bench/Mooncake/mooncake-transfer-engine/src/transfer_metadata_plugin.cpp:634
+#2  0x0000555555598d3a in mooncake::TransferMetadata::startHandshakeDaemon(std::function<int (mooncake::TransferMetadata::HandShakeDesc const&, mooncake::TransferMetadata::HandShakeDesc&)>, unsigned short, int) (this=this@entry=0x555555603140, on_receive_handshake=..., listen_port=listen_port@entry=15808, sockfd=sockfd@entry=5) at /usr/include/c++/11/bits/shared_ptr_base.h:1295
+#3  0x00005555555af6b0 in mooncake::RdmaTransport::startHandshakeDaemon (this=0x555555604fa0, local_server_name=...)
+    at /root/rdma-bench/Mooncake/mooncake-transfer-engine/src/transport/rdma_transport/rdma_transport.cpp:461
+#4  0x00005555555b2f7f in mooncake::RdmaTransport::install (this=0x555555604fa0, local_server_name="10.22.116.220:12345", meta=..., topo=...)
+    at /root/rdma-bench/Mooncake/mooncake-transfer-engine/src/transport/rdma_transport/rdma_transport.cpp:71
+#5  0x000055555558b995 in mooncake::MultiTransport::installTransport (this=0x5555555fdf90, proto="rdma", topo=std::shared_ptr<mooncake::Topology> (use count 4, weak count 0) = {...})
+    at /root/rdma-bench/Mooncake/mooncake-transfer-engine/src/multi_transport.cpp:222
+#6  0x0000555555594f32 in mooncake::TransferEngine::installTransport (this=this@entry=0x555555602d00, proto="rdma", args=<optimized out>)
+    at /root/rdma-bench/Mooncake/mooncake-transfer-engine/src/transfer_engine.cpp:192
+#7  0x000055555556cd2d in target () at /root/rdma-bench/Mooncake/mooncake-transfer-engine/example/transfer_engine_bench.cpp:391
+#8  0x0000555555568619 in main (argc=<optimized out>, argv=<optimized out>) at /root/rdma-bench/Mooncake/mooncake-transfer-engine/example/transfer_engine_bench.cpp:454
+(gdb) 
+```
+
 ```
 epoll_wait
 ibv_fork_init

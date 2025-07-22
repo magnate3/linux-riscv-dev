@@ -366,7 +366,7 @@ Waiting to accept incoming connection...
 Destroying Engine...
 Engine destroyed
 ```
-
++ client   
 
 ```
 python3  benchmark.py --role client --remote-ip 10.22.116.221  --local-gpu-idx 0 --num-cpus 4
@@ -392,4 +392,94 @@ Attempting to connect to 10.22.116.221:0
 [Client] Benchmark complete
 Destroying Engine...
 Engine destroyed
+```
+
+# nccl
++ NCCL的传输层分析（二）    
+
+```
+// @ref ncclIbNetCommBase
+struct alignas(32) NetCommBase {
+  // Pointing to rdma_ctx_->fifo_mr_->addr.
+  struct RemFifo* fifo;
+
+  // CQ for Fifo QP and GPU flush QP and RC QP.
+  struct ibv_cq* flow_cq;
+
+  // Fifo QP based on Reliable Connection (RC).
+  struct ibv_qp* fifo_qp;
+  // Memory region for Fifo.
+  struct ibv_mr* fifo_mr;
+
+  // RC UP for small messages bypassing UcclEngine.
+  struct ibv_qp* rc_qp;
+
+  uint64_t remote_fifo_addr;
+  uint32_t remote_fifo_rkey;
+};
+
+/// @ref ncclIbSendComm
+struct SendComm {
+  struct NetCommBase base;
+  // Track outstanding FIFO requests.
+  struct ucclRequest* fifo_ureqs[kMaxReq][kMaxRecv];
+  uint64_t fifo_head;
+};
+
+/// @ref ncclIbRecvComm
+struct RecvComm {
+  struct NetCommBase base;
+
+  // QP for GPU flush.
+  struct ibv_qp* gpu_flush_qp;
+  // Memory region for GPU flush.
+  struct ibv_mr* gpu_flush_mr;
+  struct ibv_sge gpu_flush_sge;
+  // GPU flush buffer
+  int gpu_flush;
+};
+```
+
+## uccl 
+
+
+通过分析NCCL传输层的数据数据流程可以看到，Recv会将地址信息通过RDMA＿WRITE写到发送端，发送端会根据Recv端写过来的地址信息去将自己的数据发送出去。总而言之，NCCL的数据发送的流程是由Recv驱动的，这是NCCL传输层最关键的一点。
+
+![images](nccl.png)    
+
+```
+/**
+ * @brief A FIFO queue for flow control.
+ * Receiver posts a buffer to the FIFO queue for the sender to use RDMA WRITE.
+ */
+struct RemFifo {
+  // FIFO elements prepared for sending to remote peer.
+  struct FifoItem elems[kMaxReq][kMaxRecv];
+  // Tail pointer of the FIFO.
+  uint64_t fifo_tail;
+  // Only used for testing RC.
+  uint32_t sizes[kMaxReq][kMaxRecv];
+};
+```
++  transport_test server     
+
+```
+(gdb) bt
+#0  uccl::UcclFlow::post_fifo (this=0x5598d70905a0, engine_idx=1, data=0x7ffe07703c68, size=0x7ffe07703ce4, n=1, mhandle=0x7ffe07703ca8, wr=0x5598d7127f00, sge=0x5598d7127f80)
+    at transport.cc:137
+#1  0x00005598a3743f8f in uccl::RDMAEndpoint::uccl_recv_async (this=this@entry=0x5598a37644c0 <ep>, flow=0x5598d70905a0, mhandles=mhandles@entry=0x7ffe07703ca8, 
+    data=data@entry=0x7ffe07703c68, size=size@entry=0x7ffe07703ce4, n=1, ureq=0x5598d7127ec0) at transport.cc:1534
+#2  0x00005598a3724104 in server_tpt (datas=std::vector of length 4, capacity 4 = {...}, mhandles=std::vector of length 4, capacity 4 = {...}, 
+    conn_ids=std::vector of length 4, capacity 4 = {...}) at transport_test.cc:177
+#3  server_worker () at transport_test.cc:331
+#4  0x00005598a371f947 in main (argc=<optimized out>, argv=<optimized out>) at transport_test.cc:438
+```
+
++   benchmark.py  server  
+
+```
+#0  uccl::UcclFlow::post_fifo (this=0x5602d7b5b080, engine_idx=0, data=0x7ffd79b4b988, size=0x7ffd79b4b9a4, n=1, mhandle=0x7ffd79b4b9a8, wr=0x7ffd79b4ba00, sge=0x7ffd79b4ba80)
+    at transport.cc:137
+#1  0x00007f32ec81899f in uccl::RDMAEndpoint::uccl_recv_async (this=0x5602d78127e0, flow=0x5602d7b5b080, mhandles=<optimized out>, data=<optimized out>, size=0x7ffd79b4b9a4, n=1, 
+    ureq=0x7ffd79b4b9c0) at transport.cc:1534
 ```

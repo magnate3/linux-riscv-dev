@@ -446,6 +446,15 @@ struct RecvComm {
 通过分析NCCL传输层的数据数据流程可以看到，Recv会将地址信息通过RDMA＿WRITE写到发送端，发送端会根据Recv端写过来的地址信息去将自己的数据发送出去。总而言之，NCCL的数据发送的流程是由Recv驱动的，这是NCCL传输层最关键的一点。
 
 ![images](nccl.png)    
+ncclIbPostFifo流程分析：       
+1 往comm->remFifo[MAX_REQUESTS][NCCL_NET_IB_MAX_RECVS]中的某一行填写地址信息，即ncclIbSendFifo中的addr，rkey等地址信息     
+
+2 将某一行的地址信息作为一整块内存（内存大小为NCCL_NET_IB_MAX_RECVS*sizeof(struct ncclIbSendFifo)），并把这块内存作为WR的sge，   
+
+sge的length就是这块内存的大小（NCCL_NET_IB_MAX_RECVS*sizeof(struct ncclIbSendFifo)），并填充好WR中其他相关的信息。   
+
+3 将WR通过RDMA_WRITE写到对端的一块内存，对端将会根据本端发送的地址信息进行数据的发送。    
+![images](nccl2.png)  
 
 ```
 /**

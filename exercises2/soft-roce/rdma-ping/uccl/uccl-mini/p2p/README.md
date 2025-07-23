@@ -63,7 +63,7 @@ Destroying Engine...
 Engine destroyed
 ```
 
-
++ client   
 ```
 python3  benchmark.py --role client --remote-ip 10.22.116.221  --local-gpu-idx 0 --num-cpus 4
 UCCL P2P Benchmark — role: client

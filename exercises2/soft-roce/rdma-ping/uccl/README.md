@@ -4,6 +4,17 @@
 
 [UCCL-Tran：为GPU网络打造的可扩展软件传输层](https://zhuanlan.zhihu.com/p/1925692992087390160)  
 
+```
+./transport_test --logtostderr   --serverip=10.22.116.221 --perftype=basic --iterations=8
+./transport_test --logtostderr   --server=true  --perftype=basic --iterations=8
+```
+
+
+```
+python3  benchmark.py --role server --local-gpu-idx 0 --num-cpus 4 --sizes 16384 --iters 1
+python3  benchmark.py --role client --remote-ip 10.22.116.221  --local-gpu-idx 0 --num-cpus 4  --sizes 16384 --iters 1
+```
+
 ## mytest
 
 ```
@@ -438,6 +449,20 @@ struct RecvComm {
   // GPU flush buffer
   int gpu_flush;
 };
+struct ncclIbQpInfo {
+  uint32_t lid;
+  uint8_t ib_port;
+  uint8_t link_layer;
+  uint32_t qpn[NCCL_IB_MAX_QPS];
+
+  // For RoCE
+  uint64_t spn;
+  uint64_t iid;
+  enum ibv_mtu mtu;
+
+  // FIFO RDMA info
+  uint32_t fifoRkey;
+  ui
 ```
 
 ## uccl 
@@ -455,6 +480,15 @@ sge的length就是这块内存的大小（NCCL_NET_IB_MAX_RECVS*sizeof(struct nc
 
 3 将WR通过RDMA_WRITE写到对端的一块内存，对端将会根据本端发送的地址信息进行数据的发送。    
 ![images](nccl2.png)  
+
+
+
+```
+  // Prepare my fifo
+  NCCLCHECK(wrap_ibv_reg_mr(&comm->fifoMr, comm->verbs.pd, comm->fifo, sizeof(struct ncclIbSendFifo)*MAX_REQUESTS*NCCL_NET_IB_MAX_RECVS, IBV_ACCESS_LOCAL_WRITE|IBV_ACCESS_REMOTE_WRITE|IBV_ACCESS_REMOTE_READ));
+  qpInfo.fifoRkey = comm->fifoMr->rkey;
+  qpInfo.fifoAddr = (uint64_t)comm->fifo;
+```
 
 ```
 /**
@@ -484,6 +518,26 @@ struct RemFifo {
 #4  0x00005598a371f947 in main (argc=<optimized out>, argv=<optimized out>) at transport_test.cc:438
 ```
 
+
++  server  ibv_post_send    
+```
+#0  ibv_post_send (bad_wr=0x7fffddbe9fa8, wr=0x7fffffffe1c0, qp=0x555555912878) at /usr/include/infiniband/verbs.h:3327
+#1  uccl::RDMAContext::supply_rx_buff (this=0x7fffd8002ed0, ureq=0x7fffffffe180) at transport.cc:1854
+#2  0x0000555555567bdc in uccl::UcclRDMAEngine::handle_rx_work (this=0x5555556003a0) at transport.cc:269
+#3  0x00005555555762f5 in uccl::UcclRDMAEngine::run (this=0x5555556003a0) at transport.cc:441
+```
+
+```
+#0  ibv_post_send (bad_wr=<optimized out>, wr=<optimized out>, qp=<optimized out>) at util_rdma.cc:550
+#1  uccl::SharedIOContext::flush_acks (this=0x555555600540) at util_rdma.cc:553
+#2  0x0000555555592c49 in uccl::SharedIOContext::uc_poll_recv_cq (this=this@entry=0x555555600540) at util_rdma.cc:691
+#3  0x0000555555565f73 in uccl::UcclRDMAEngine::uc_handle_completion (this=this@entry=0x5555556003a0) at transport.cc:222
+#4  0x000055555557631a in uccl::UcclRDMAEngine::handle_completion (this=0x5555556003a0) at /root/rdma-bench/uccl/rdma/transport.h:718
+#5  uccl::UcclRDMAEngine::run (this=0x5555556003a0) at transport.cc:447
+```
+
+
+
 +   benchmark.py  server  
 
 ```
@@ -491,4 +545,67 @@ struct RemFifo {
     at transport.cc:137
 #1  0x00007f32ec81899f in uccl::RDMAEndpoint::uccl_recv_async (this=0x5602d78127e0, flow=0x5602d7b5b080, mhandles=<optimized out>, data=<optimized out>, size=0x7ffd79b4b9a4, n=1, 
     ureq=0x7ffd79b4b9c0) at transport.cc:1534
+```
+
+## fifo is ready ?
+
+```
+check_fifo_ready
+```
+
+```
+int RDMAEndpoint::uccl_send_async(UcclFlow* flow, struct Mhandle* mhandle,
+                                  void const* data, size_t const size,
+                                  struct ucclRequest* ureq) {
+  ureq->type = ReqTx;
+  ureq->send.data_len = size;
+
+  int slot, nmsg;
+
+  if (!flow->check_fifo_ready(&slot, &nmsg)) return -1;
+```
+
+##  server control
+
+控制qp
+
+```
+      util_rdma_create_qp(
+          context, &ctrl_qp_, IBV_QPT_UD, use_cq_ex, true,
+          (struct ibv_cq**)&ctrl_cq_ex_, false, kCQSize, pd, port, &ctrl_mr_,
+          nullptr, CtrlChunkBuffPool::kChunkSize * CtrlChunkBuffPool::kNumChunk,
+          kMaxCtrlWRs, kMaxCtrlWRs, 1, 1);
+```
+
+
+```
+    for (int i = 0; i < kMaxAckWRs; i++) {
+          memset(&tx_ack_wr_[i], 0, sizeof(tx_ack_wr_[i]));
+          memset(&tx_ack_sge_[i], 0, sizeof(tx_ack_sge_[i]));
+          tx_ack_wr_[i].sg_list = &tx_ack_sge_[i];
+          tx_ack_wr_[i].num_sge = 1;
+          tx_ack_wr_[i].opcode = IBV_WR_SEND_WITH_IMM;
+          tx_ack_wr_[i].send_flags = IBV_SEND_SIGNALED;
+        }
+```
+
+```
+3285    void RDMAContext::try_post_acks(int num_ack, uint64_t chunk_addr, bool force) {
+(gdb) bt
+#0  uccl::RDMAContext::try_post_acks (this=0x7fffd8002ed0, num_ack=1, chunk_addr=140736914866176, force=false) at transport.cc:3285
+#1  0x0000555555569cd7 in uccl::RDMAContext::uc_post_acks (this=0x7fffd8002ed0) at transport.cc:2188
+#2  0x0000555555592d28 in uccl::SharedIOContext::uc_poll_recv_cq (this=this@entry=0x555555600540) at util_rdma.cc:691
+#3  0x0000555555565f73 in uccl::UcclRDMAEngine::uc_handle_completion (this=this@entry=0x5555556003a0) at transport.cc:222
+#4  0x000055555557631a in uccl::UcclRDMAEngine::handle_completion (this=0x5555556003a0) at /root/rdma-bench/uccl/rdma/transport.h:718
+```
+
+## client controller plane
+
+
+```
+#0  ibv_start_poll (attr=0x7fffddbea02c, cq=0x5555556c5270) at /usr/include/infiniband/verbs.h:1540
+#1  uccl::SharedIOContext::poll_ctrl_cq (this=this@entry=0x5555555bca60) at util_rdma.cc:425
+#2  0x0000555555565f3c in uccl::UcclRDMAEngine::uc_handle_completion (this=this@entry=0x5555555bc8c0) at transport.cc:211
+#3  0x000055555557631a in uccl::UcclRDMAEngine::handle_completion (this=0x5555555bc8c0) at /root/rdma-bench/uccl/rdma/transport.h:718
+#4  uccl::UcclRDMAEngine::run (this=0x5555555bc8c0) at transport.cc:447
 ```

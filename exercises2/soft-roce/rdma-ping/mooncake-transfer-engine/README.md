@@ -3,6 +3,7 @@
 
 [注释](https://github.com/sunshenao/mc/tree/b67619f63a8bc128069953588a585a04f60c78fa/mooncake-transfer-engine)
 
+[Mooncake Transfer Engine 发布啦！](https://libfeng.com/posts/mooncake-transfer-engine/)         
 
 #  编译 
 

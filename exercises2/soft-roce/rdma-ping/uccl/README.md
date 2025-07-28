@@ -1027,3 +1027,162 @@ void IbvProxy::ARCollContext::process_sharp_completions() {
   }
 }
 ```
+
+### pcie flush qp
+
+
+```
+#ifdef AR_DISABLE_PCIE_FLUSH
+void IbvProxy::ARCollContext::init_gdr() {
+  // TODO: check if this needs to be called only once per process
+  const int gpu_page_shift = 16;
+  const int gpu_page_size = (1UL << gpu_page_shift);
+
+  gdr_ = gdr_open();
+  PROXY_ASSERT(gdr_);
+  {
+    auto ret = gdr_pin_buffer(gdr_, (CUdeviceptr)(d_ag_cmd_), gpu_page_size, 0, 0, &gdr_mh_);
+    PROXY_ASSERT(ret == 0);
+  }
+  {
+    auto ret = gdr_map(gdr_, gdr_mh_, (void**)&h_gdr_ag_cmd_, gpu_page_size);
+    PROXY_ASSERT(ret == 0);
+  }
+  *h_gdr_ag_cmd_ = 0;
+}
+#else
+void IbvProxy::ARCollContext::init_pcie_flush() {
+  auto& cfg = proxy_ctx_->cfg_;
+
+  // For PCIe flush
+  int num_devices = 0;
+  struct ibv_device** devices = ibv_get_device_list(&num_devices);
+  PROXY_ASSERT_MSG(devices, "Can't get ib device list");
+
+  // find ibv device that matches with the current device name and open
+  for (int d = 0; d < num_devices; d++) {
+    const char* dev_name = ibv_get_device_name(devices[d]);
+    PROXY_ASSERT_MSG(dev_name, "Unable to get device name");
+    if (cfg.ib_dev_ == std::string(dev_name)) {
+      context_ = ibv_open_device(devices[d]);
+      PROXY_ASSERT_MSG(context_, "Unable to open device");
+      break;
+    }
+  }
+  ibv_free_device_list(devices);
+
+  // Allocate PD
+  pd_ = ibv_alloc_pd(context_);
+  PROXY_ASSERT_MSG(pd_, "Unable to allocate protection domain for dev " + cfg.ib_dev_);
+
+  // Create CQ
+  cq_ = ibv_create_cq(context_, AR_MAX_BLOCKS, NULL, NULL, 0);
+  PROXY_ASSERT_MSG(cq_, "Unable to create completion queue");
+
+  // Allocate null mr on host
+  h_flush_mr_ = ibv_alloc_null_mr(pd_);
+  PROXY_ASSERT_MSG(h_flush_mr_, "Null MR allocation failed");
+
+  // Allocate flush atomic mr
+  const int gpu_page_shift = 16;
+  const int gpu_page_size = (1UL << gpu_page_shift);
+  d_flush_atomic_mr_ =
+      ibv_reg_mr(pd_, d_ag_cmd_, gpu_page_size,
+                 (IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_ATOMIC));
+  PROXY_ASSERT_MSG(d_flush_atomic_mr_, "Null MR allocation failed");
+
+  struct ibv_qp_init_attr qp_init_attr;
+  memset(&qp_init_attr, 0, sizeof(struct ibv_qp_init_attr));
+  qp_init_attr.send_cq = cq_;
+  qp_init_attr.recv_cq = cq_;
+  qp_init_attr.qp_type = IBV_QPT_RC;
+  qp_init_attr.sq_sig_all = 0;
+  qp_init_attr.cap.max_send_wr = AR_MAX_BLOCKS;
+  qp_init_attr.cap.max_recv_wr = 1;
+  qp_init_attr.cap.max_send_sge = 1;
+  qp_init_attr.cap.max_recv_sge = 1;
+  qp_init_attr.cap.max_inline_data = 0;
+
+  // Create QP
+  qp_ = ibv_create_qp(pd_, &qp_init_attr);
+  PROXY_ASSERT_MSG(qp_, "Unable to create flush QP");
+
+  // QP state machine
+  {
+    struct ibv_qp_attr qp_attr;
+    memset(&qp_attr, 0, sizeof(ibv_qp_attr));
+    qp_attr.qp_state = IBV_QPS_INIT;
+    qp_attr.pkey_index = 0;
+    qp_attr.port_num = cfg.ib_port_;
+    qp_attr.qp_access_flags =
+        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_READ | IBV_ACCESS_REMOTE_ATOMIC;
+    int ret = ibv_modify_qp(qp_, &qp_attr,
+                            IBV_QP_STATE | IBV_QP_PKEY_INDEX | IBV_QP_PORT | IBV_QP_ACCESS_FLAGS);
+    PROXY_ASSERT_MSG(ret == 0, "Modify QP failed");
+  }
+
+  // Get QP info
+  {
+    struct ibv_port_attr port_attr;
+    auto ret = ibv_query_port(context_, cfg.ib_port_, &port_attr);
+    PROXY_ASSERT_MSG(ret == 0, "Unable to query port for port info");
+
+    qp_info_.ib_port = cfg.ib_port_;
+    qp_info_.lid = port_attr.lid;
+    qp_info_.qpn = qp_->qp_num;
+    qp_info_.mtu = port_attr.active_mtu;
+  }
+
+  // Move to RTR state
+  {
+    struct ibv_qp_attr qp_attr;
+    memset(&qp_attr, 0, sizeof(struct ibv_qp_attr));
+    qp_attr.qp_state = IBV_QPS_RTR;
+    qp_attr.path_mtu = qp_info_.mtu;
+    qp_attr.dest_qp_num = qp_info_.qpn;
+    qp_attr.rq_psn = 0;
+    qp_attr.max_dest_rd_atomic = AR_MAX_BLOCKS;
+    qp_attr.min_rnr_timer = 12;
+    qp_attr.ah_attr.is_global = 0;
+    qp_attr.ah_attr.dlid = qp_info_.lid;
+    qp_attr.ah_attr.sl = 0;
+    qp_attr.ah_attr.src_path_bits = 0;
+    qp_attr.ah_attr.port_num = qp_info_.ib_port;
+
+    auto ret = ibv_modify_qp(qp_, &qp_attr,
+                             IBV_QP_STATE | IBV_QP_AV | IBV_QP_PATH_MTU | IBV_QP_DEST_QPN |
+                                 IBV_QP_RQ_PSN | IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER);
+    PROXY_ASSERT_MSG(ret == 0, "Modify QP failed");
+  }
+
+  // Move to RTS state
+  {
+    struct ibv_qp_attr qp_attr;
+    memset(&qp_attr, 0, sizeof(struct ibv_qp_attr));
+    qp_attr.qp_state = IBV_QPS_RTS;
+    qp_attr.timeout = 14;
+    qp_attr.retry_cnt = 7;
+    qp_attr.rnr_retry = 7;
+    qp_attr.sq_psn = 0;
+    qp_attr.max_rd_atomic = AR_MAX_BLOCKS;
+    auto ret = ibv_modify_qp(qp_, &qp_attr,
+                             IBV_QP_STATE | IBV_QP_TIMEOUT | IBV_QP_RETRY_CNT | IBV_QP_RNR_RETRY |
+                                 IBV_QP_SQ_PSN | IBV_QP_MAX_QP_RD_ATOMIC);
+    PROXY_ASSERT_MSG(ret == 0, "Modify QP failed RS state");
+  }
+
+  memset(&wr_, 0, sizeof(struct ibv_send_wr));
+  sge_.length = sizeof(size_t);
+  sge_.lkey = h_flush_mr_->lkey;
+  sge_.addr = 0;
+  wr_.wr.atomic.remote_addr = (uint64_t)(d_ag_cmd_);
+  wr_.wr.atomic.rkey = d_flush_atomic_mr_->rkey;
+  wr_.wr.atomic.compare_add = 1;
+  wr_.sg_list = &(sge_);
+  wr_.num_sge = 1;
+  wr_.opcode = IBV_WR_ATOMIC_FETCH_AND_ADD;
+}
+#endif
+```
+
++  ibv_alloc_null_mr   

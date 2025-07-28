@@ -634,3 +634,396 @@ static constexpr enum ReceiverCCA kReceiverCCA = RECEIVER_CCA_NONE;
 // value greater than 0.
 static constexpr std::size_t kFastRexmitDupAckThres = ROCE_NET ? 32 : 65536;
 ```
+
+# gpu
+![images](gpu.png)
+MSCCL++ delivers two types of channels, PortChannel and MemoryChannel. PortChannel provides port-mapping-based data copy and synchronization methods. When called, these methods send/receive a signal to/from a host-side proxy, which will trigger (R)DMA (such as cudaMemcpy* or ibv_post_send) or issue synchronization methods (such as cudaStreamSynchronize or ibv_poll_cq). 
+
+
+```
+testResult_t ncclAlltoAll_n(void* sendbuff, void* recvbuff, size_t count, ncclDataType_t type, ncclComm_t comm,
+                            cudaStream_t stream, struct All2AllInfo* info) {
+	size_t rankOffset = count * sizeof(BRUCK_TYPE);
+
+	// NCCLCHECK(ncclGroupStart());
+	for (int r = 0; r < info->nRanks; r++) {
+		NCCLCHECK(ncclSend(((char*)sendbuff) + r * rankOffset, count, type, r, comm, stream));
+		NCCLCHECK(ncclRecv(((char*)recvbuff) + r * rankOffset, count, type, r, comm, stream));
+	}
+	// NCCLCHECK(ncclGroupEnd());
+
+	return testSuccess;
+}
+```
+
+## GDR
+
+```
+#ifdef USE_CUDA
+    int cuda_sync_post_send_client(OmniContext* dctx_ptr, uint32_t num, uint32_t *current_offsets, 
+                            uint32_t *next_offsets, uint32_t slot, uint32_t qp_num, uint32_t buff_index)
+    {
+        struct ibv_send_wr sr;
+        struct ibv_sge sge;
+        struct ibv_send_wr *bad_wr = NULL;
+        int qid, mid;
+        if (unlikely(qp_num==0)) 
+        {
+            qid = (slot/num_slots_per_thread)*num_qps_per_aggregator_per_thread*num_aggregators
+                    +slot%(num_qps_per_aggregator_per_thread*num_aggregators);
+            mid = qp_num_to_peerid[dctx_ptr->qp[qid]->qp_num];
+        }
+        else 
+        {
+	        qid = qp_num_revert[qp_num];
+	        mid = qp_num_to_peerid[qp_num];            
+        }
+        //std::cout<<"send: qp_num="<<dctx_ptr->qp[qid]->qp_num<<std::endl;
+        int rc;
+        memset(&sge, 0, sizeof(sge));
+        uint8_t *tmp = (uint8_t *)dctx_ptr->comm_buf+(2*message_size*slot+buff_index*(2*message_size)*num_slots_per_thread*num_worker_threads)*buff_unit_size;
+        for(uint32_t i=0; i<num; i++)
+        {
+            if (unlikely(current_offsets[i]+block_size-start_offset > tensor_size))
+            {
+                //memset(tmp+i*block_size*element_size, 0, block_size*element_size);
+                if (current_offsets[i]-start_offset < tensor_size)
+                    cudaMemcpy(tmp+i*block_size*element_size, (uint8_t *)tu.ptr+current_offsets[i]*element_size, (start_offset+tensor_size-current_offsets[i])*element_size, cudaMemcpyDeviceToHost);
+            }
+            else
+            {   
+                cudaMemcpy(tmp+i*block_size*element_size, (uint8_t *)tu.ptr+current_offsets[i]*element_size, block_size*element_size, cudaMemcpyDeviceToHost);
+            }
+        }
+        memcpy(tmp+block_size*num*element_size, next_offsets, num*sizeof(uint32_t));
+        sge.addr = (uintptr_t)tmp;
+        sge.length = block_size*num*element_size+num*sizeof(uint32_t);
+        sge.lkey = dctx_ptr->mr->lkey;
+        memset(&sr, 0, sizeof(sr));
+        sr.wr_id = 0;
+        sr.sg_list = &sge;
+        sr.num_sge = 1;
+        sr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
+        sr.send_flags = IBV_SEND_SIGNALED;
+        sr.wr.rdma.remote_addr = dctx_ptr->remote_props_array[mid].addr+(2*message_size*slot
+                                    +2*message_size*num_slots_per_thread*num_worker_threads*dctx_ptr->workerId)*buff_unit_size;
+		sr.wr.rdma.rkey = dctx_ptr->remote_props_array[mid].rkey;
+        sr.imm_data = (typecode << 28) + (num << 16) + slot;
+        rc = ibv_post_send(dctx_ptr->qp[qid], &sr, &bad_wr);
+        if (rc)
+            fprintf(stderr, "failed to post SR %d\n", rc);
+        return rc;
+    }
+    int cuda_async_post_send_client(OmniContext* dctx_ptr, uint32_t num, uint32_t *current_offsets, 
+                            uint32_t *next_offsets, uint32_t slot, uint32_t qp_num, uint32_t buff_index)
+    {
+        struct ibv_send_wr sr;
+        struct ibv_sge sge;
+        struct ibv_send_wr *bad_wr = NULL;
+        int qid, mid;
+        if (unlikely(qp_num==0)) 
+        {
+            qid = (slot/num_slots_per_thread)*num_qps_per_aggregator_per_thread*num_aggregators
+                    +slot%(num_qps_per_aggregator_per_thread*num_aggregators);
+            mid = qp_num_to_peerid[dctx_ptr->qp[qid]->qp_num];
+        }
+        else 
+        {
+	        qid = qp_num_revert[qp_num];
+	        mid = qp_num_to_peerid[qp_num];            
+        }
+        //std::cout<<"send: qp_num="<<dctx_ptr->qp[qid]->qp_num<<std::endl;
+        int rc;
+        memset(&sge, 0, sizeof(sge));
+        uint8_t *tmp = (uint8_t *)dctx_ptr->comm_buf+(2*message_size*slot+buff_index*(2*message_size)*num_slots_per_thread*num_worker_threads)*buff_unit_size;
+        for(uint32_t i=0; i<num; i++)
+        {
+            uint32_t chunk_id = (current_offsets[i]-start_offset)*element_size/chunk_size;
+            if (chunk_finished[chunk_id]==false)
+            {
+                cudaEventSynchronize(events[chunk_id]);
+                cudaEventDestroy(events[chunk_id]);
+                chunk_finished[chunk_id] = true;
+            }
+            if (unlikely(current_offsets[i]+block_size-start_offset > tensor_size))
+            {
+                //memset(tmp+i*block_size*element_size, 0, block_size*element_size);
+                if (current_offsets[i]-start_offset < tensor_size)
+                    memcpy(tmp+i*block_size*element_size, (uint8_t *)dctx_ptr->host_tensor+current_offsets[i]*element_size, (start_offset+tensor_size-current_offsets[i])*element_size);
+            }
+            else
+            {   
+                memcpy(tmp+i*block_size*element_size, (uint8_t *)dctx_ptr->host_tensor+current_offsets[i]*element_size, block_size*element_size);
+            }
+        }
+        memcpy(tmp+block_size*num*element_size, next_offsets, num*sizeof(uint32_t));
+        sge.addr = (uintptr_t)tmp;
+        sge.length = block_size*num*element_size+num*sizeof(uint32_t);
+        sge.lkey = dctx_ptr->mr->lkey;
+        memset(&sr, 0, sizeof(sr));
+        sr.wr_id = 0;
+        sr.sg_list = &sge;
+        sr.num_sge = 1;
+        sr.opcode = IBV_WR_RDMA_WRITE_WITH_IMM;
+        sr.send_flags = IBV_SEND_SIGNALED;
+        sr.wr.rdma.remote_addr = dctx_ptr->remote_props_array[mid].addr+(2*message_size*slot
+                                    +2*message_size*num_slots_per_thread*num_worker_threads*dctx_ptr->workerId)*buff_unit_size;
+		sr.wr.rdma.rkey = dctx_ptr->remote_props_array[mid].rkey;
+        sr.imm_data = (typecode << 28) + (num << 16) + slot;
+        rc = ibv_post_send(dctx_ptr->qp[qid], &sr, &bad_wr);
+        if (rc)
+            fprintf(stderr, "failed to post SR %d\n", rc);
+        return rc;
+    }
+#endif
+```
+
+```
+    void OmniContext::AllReduce_GDR(int32_t *ptr, int count, cudaStream_t stream, int devId)
+    {
+        cudaSetDevice(devId);
+        uint32_t block_size = omnireduce_par.getBlockSize();
+        uint32_t block_count = count/block_size;
+        int threshold = 0;
+        if (count%block_size!=0)
+            block_count += 1;
+        uint8_t *d_bitmap;
+        cudaMalloc((void **)&d_bitmap, block_count);
+        compute_bitmap(ptr, d_bitmap, count, block_size, stream, threshold);
+        cudaStreamSynchronize(stream);
+        cudaMemcpy((uint8_t *)bitmap, (uint8_t *)d_bitmap, block_count, cudaMemcpyDeviceToHost);
+        uint32_t direct_memory = omnireduce_par.getDirectMemory();
+        if (direct_memory)
+        {
+            send_address(count, INT32);
+        }
+        else
+        {
+            std::cerr<<"Need to set GPU direct"<<std::endl;
+            exit(1);
+        }
+        int32_t tensor_id = tid_counter.fetch_add(1)+1;
+        //send tensor
+        TensorUpdate tu;
+        tu.ptr = ptr;
+        tu.count = count;
+        tu.start_idx = 0;
+        tu.id = tensor_id;
+        tu.root = 0;
+        tu.type = INT32;
+        tu.op = ALLREDUCE;
+        tu.bitmap_ptr = bitmap;
+        tu.block_count = block_count;
+        tu.devId = -1;
+        tu.async = false;
+        tu.bitmap_async = false;
+        send_tensor(&tu);
+        //receive result
+        receive_result(tensor_id);
+        cudaFree(d_bitmap);
+    }
+```
+
+
+```
+    void OmniContext::AllReduce(int32_t *ptr, int count, cudaStream_t stream, int devId)
+    {
+        uint32_t gpu_devId = omnireduce_par.getGpuDeviceId();
+        if (gpu_devId!=devId)
+        {
+            std::cerr<<"Use GPU:"<<devId<<" but set GPU:"<<gpu_devId<<std::endl;
+            exit(1);
+        }
+        uint32_t direct_memory = omnireduce_par.getDirectMemory();
+        uint32_t adaptive_blocksize = omnireduce_par.getAdaptiveBlockSize();
+        cudaSetDevice(devId);
+        if (direct_memory)
+        {
+            if (adaptive_blocksize)
+            {
+                //set block size here
+                uint32_t block_size = 256;
+                omnireduce_par.setBlockSize(block_size);
+                omnireduce_par.setMessageSize(block_size);
+                uint32_t num_blocks_per_thread = omnireduce_par.getNumSlotsPerTh();
+                omnireduce_par.setInfOffset(num_blocks_per_thread);
+            }
+            AllReduce_GDR(ptr, count, stream, devId);
+        }
+        else
+        {
+            if (adaptive_blocksize)
+            {
+                //set block size here
+                uint32_t block_size = 256;
+                omnireduce_par.setBlockSize(block_size);
+                uint32_t message_size = omnireduce_par.getMessageSize();
+                uint32_t num_blocks_per_thread = omnireduce_par.getNumSlotsPerTh()*(message_size/block_size);
+                omnireduce_par.setInfOffset(num_blocks_per_thread);
+                send_address(count, INT32);
+            }
+            AllReduce_NGDR(ptr, count, stream, devId, true, false);
+        }
+    }
+
+```
+
++ gdr app
+
+```
+cat cuda_worker_test.cpp 
+#include "omnireduce/context.hpp"
+#include <unistd.h>
+#include <iostream>
+#include "mpi.h"
+#include <cuda_runtime.h>
+#define DATA_TYPE float
+//#define DATA_TYPE int
+
+int main(int argc, char *argv[]) {
+    int devID=0;
+    cudaSetDevice(devID);
+    cudaDeviceProp deviceProps;
+    cudaGetDeviceProperties(&deviceProps, devID);
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    printf("CUDA device [%s]\n", deviceProps.name);
+    MPI_Init(&argc, &argv);
+    int myrank=0, worldsize=1;
+    MPI_Comm_size(MPI_COMM_WORLD, &worldsize);
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+    omnireduce::OmniContext& omniContext = omnireduce::OmniContext::getInstance();
+    srand(omniContext.workerId+1);
+    uint32_t block_size = omnireduce::omnireduce_par.getBlockSize();
+    uint32_t tensor_size = 67108864;
+    uint32_t block_count = tensor_size/block_size;
+    if (tensor_size%block_size!=0)
+        block_count += 1;
+    DATA_TYPE *input = (DATA_TYPE *)malloc(tensor_size*sizeof(DATA_TYPE));
+    DATA_TYPE *d_input;
+    cudaMalloc((void **)&d_input, tensor_size*sizeof(DATA_TYPE));
+    cudaMemset(d_input, 0, tensor_size*sizeof(DATA_TYPE));
+    DATA_TYPE *output = (DATA_TYPE *)malloc(tensor_size*sizeof(DATA_TYPE));
+    DATA_TYPE *output_dev = (DATA_TYPE *)malloc(tensor_size*sizeof(DATA_TYPE));
+    memset(input, 0, tensor_size*sizeof(DATA_TYPE));
+    uint8_t *bitmap = (uint8_t *)malloc(block_count*sizeof(uint8_t));
+    double density_ratio = 0.01;
+    double rnum = 0;
+    for(uint32_t i=0; i<block_count; i++)
+    {
+        rnum = rand()%100/(double)101;
+        if (rnum < density_ratio && omniContext.workerId!=-1)
+        {
+            bitmap[i] = 0;
+        }
+        else
+        {
+            bitmap[i] = 1;
+        }
+        if (bitmap[i]==0)
+        {
+            for(uint32_t j=0; j<block_size; j++)
+            {
+                if(i*block_size+j<tensor_size)
+                    input[i*block_size+j] = 1;
+            }
+        }
+    }
+    MPI_Allreduce(input, output, tensor_size, MPI_FLOAT, MPI_SUM, MPI_COMM_WORLD);
+    //MPI_Allreduce(input, output, tensor_size, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    int round = 0;
+    int warmups = 10;
+    int num_rounds = 100;
+    struct timeval cur_time;
+    unsigned long start_time_usec;
+    unsigned long diff_time_usec;
+    while(round<warmups) {
+        cudaMemcpy(d_input, input, sizeof(DATA_TYPE)*tensor_size, cudaMemcpyHostToDevice);
+        omniContext.AllReduce(d_input, tensor_size, stream, devID);
+        round++;
+    }
+    
+    round = 0;
+    while (round<num_rounds) {
+        if(myrank==0)
+            std::cout<<"round: "<<round<<std::endl;
+        cudaMemcpy(d_input, input, sizeof(DATA_TYPE)*tensor_size, cudaMemcpyHostToDevice);
+        MPI_Barrier(MPI_COMM_WORLD);
+        gettimeofday(&cur_time, NULL);
+        start_time_usec = (cur_time.tv_sec * 1000000) + (cur_time.tv_usec);
+        omniContext.AllReduce(d_input, tensor_size, stream, devID);
+        gettimeofday(&cur_time, NULL);
+        diff_time_usec = (cur_time.tv_sec * 1000000) + (cur_time.tv_usec) - start_time_usec;
+        if(myrank==0)
+            std::cout<<"tensor size:"<<tensor_size*4<<" Bytes; time: "<<diff_time_usec<<" us; alg bw: "<<tensor_size*4*1.0/(1024*1024*1024)/((double)diff_time_usec/1000000)<<" GB/s"<<std::endl;
+        round++;
+        cudaMemcpy(output_dev, d_input, sizeof(DATA_TYPE)*tensor_size, cudaMemcpyDeviceToHost);
+        for(uint32_t i=0; i<tensor_size; i++)
+            if(output_dev[i]!=output[i])
+            {
+                std::cout<<"rank: "<<myrank<<"; result check: error"<<std::endl;
+                std::cout<<i<<": "<<output_dev[i]<<" "<<output[i]<<std::endl;
+                break;
+            }
+    }
+    cudaMemcpy(output_dev, d_input, sizeof(DATA_TYPE)*tensor_size, cudaMemcpyDeviceToHost);
+    
+    for(uint32_t i=0; i<tensor_size; i++)
+        if(output_dev[i]!=output[i])
+        {
+            std::cout<<"rank: "<<myrank<<"; result check: error"<<std::endl;
+            std::cout<<i<<": "<<output_dev[i]<<" "<<output[i]<<std::endl;
+            return 0;
+        }
+    std::cout<<"result check: ok"<<std::endl;
+    
+    return 0;
+}
+```
+
+
+## pcie flush
+
++ ib_proxy.cpp
+```
+#ifndef AR_DISABLE_PCIE_FLUSH
+void IbvProxy::ARCollContext::do_pcie_flush() {
+  // Set signaling for last block
+  bool signaled = ((sharp_cmpl_counter_ % num_blocks_) == (size_t)(num_blocks_ - 1));
+  wr_.wr_id = sharp_cmpl_counter_;
+  wr_.send_flags = (signaled) ? IBV_SEND_SIGNALED : 0;
+  struct ibv_send_wr* bad_wr;
+  __sync_synchronize();
+  auto ret = ibv_post_send(qp_, &wr_, &bad_wr);
+  PROXY_ASSERT(ret == 0);
+
+  if (signaled) {
+    // Wait for completion
+    struct ibv_wc wc;
+    int res = 0;
+    while (res == 0) {
+      res = ibv_poll_cq(cq_, 1, &wc);
+    }
+    PROXY_ASSERT_MSG((res > 0) && (wc.status == IBV_WC_SUCCESS),
+                     "Poll cq failed with res " + std::to_string(res) +
+                         " wc status: " + std::to_string(wc.status));
+  }
+}
+#endif
+
+void IbvProxy::ARCollContext::process_sharp_completions() {
+  if (sharp_req_counter_ > sharp_cmpl_counter_) {
+    if (sharp_coll_req_test(handle[sharp_cmpl_counter_ % MAX_SHARP_BLOCKS])) {
+#ifdef AR_DISABLE_PCIE_FLUSH
+      *h_gdr_ag_cmd_ = (sharp_cmpl_counter_ + 1);
+      _mm_mfence();
+#else
+      do_pcie_flush();
+#endif
+      // HCTR_LOG_S(INFO, WORLD) << "Sharp completion received" << std::endl;
+      HCTR_SHARP_CHECK_(sharp_coll_req_free(handle[sharp_cmpl_counter_ % MAX_SHARP_BLOCKS]));
+      sharp_cmpl_counter_++;
+    }
+  }
+}
+```

@@ -4,6 +4,12 @@
 
 [UCCL-Tran：为GPU网络打造的可扩展软件传输层](https://zhuanlan.zhihu.com/p/1925692992087390160)  
 
+[NCCL 源码解读(17): Primitives Simple](https://blog.hidva.com/2025/03/09/nccl-primitives-simple/)   
+[阿里云 ACCL-Barex -- GDR: 再深一点](https://blog.hidva.com/2025/05/07/gdr-in-depth/)    
+
+
+
+
 ```
 ./transport_test --logtostderr   --serverip=10.22.116.221 --perftype=basic --iterations=8
 ./transport_test --logtostderr   --server=true  --perftype=basic --iterations=8
@@ -608,4 +614,23 @@ int RDMAEndpoint::uccl_send_async(UcclFlow* flow, struct Mhandle* mhandle,
 #2  0x0000555555565f3c in uccl::UcclRDMAEngine::uc_handle_completion (this=this@entry=0x5555555bc8c0) at transport.cc:211
 #3  0x000055555557631a in uccl::UcclRDMAEngine::handle_completion (this=0x5555555bc8c0) at /root/rdma-bench/uccl/rdma/transport.h:718
 #4  uccl::UcclRDMAEngine::run (this=0x5555555bc8c0) at transport.cc:447
+```
+
+
+# 拥塞控制
+
+
+```
+static constexpr enum SenderCCA kSenderCCA = SENDER_CCA_TIMELY;
+static constexpr enum ReceiverCCA kReceiverCCA = RECEIVER_CCA_NONE;
+```
+
++  duplicate acks
+```
+// kFastRexmitDupAckThres equals to 1 means all duplicate acks are caused by
+// packet loss. This is true for flow-level ECMP, which is the common case. When
+// the network supports adaptive routing, duplicate acks may be caused by
+// adaptive routing. In this case, kFastRexmitDupAckThres should be set to a
+// value greater than 0.
+static constexpr std::size_t kFastRexmitDupAckThres = ROCE_NET ? 32 : 65536;
 ```

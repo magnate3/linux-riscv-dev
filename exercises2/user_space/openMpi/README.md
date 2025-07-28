@@ -29,6 +29,14 @@ mpiexec (OpenRTE) 4.1.4
 Report bugs to http://www.open-mpi.org/community/help/
 ```
 
+## OpenMPI中使用UCX¶
+UCX在OpenMPI是默认的pml，在OpenSHMEM中是默认的spml，一般安装好设置号后无需用户自己设置就可使用，用户也可利用下面方式显式指定：   
+
+在Open MPI中显式指定采用UCX：   
+mpirun --mca pml ucx --mca osc ucx ...   
+在OpenSHMEM显示指定采用UCX：    
+oshrun --mca spml ucx ...    
+
 ## mpi-benchmarks
 
 
@@ -142,6 +150,134 @@ root@ubuntu:~/openMpi/mpi-benchmarks/src_c#
 
 #  多接点
 
+```
+在10.22.116.221机器上
+
+1)运行：ssh-keygen -t rsa
+
+2)然后拍两下回车（均选择默认）
+
+ls /root/.ssh/id_rsa.pub
+/root/.ssh/id_rsa.pub
+
+3)运行： 
+
+ssh-copy-id -i /root/.ssh/id_rsa.pub root@10.22.116.220
+
+或普通用户:
+
+ssh-copy-id NAME@IP
+
+4)再输入1220机器上的root密码
+
+此时，再ssh root@10.22.116.220 or ssh  10.22.116.220，则不需要密码了。相互之间scp，也不需要密码
+```
+
+```
+示例一：测试N个节点间allreduce通信模式效率，每个节点开启2个进程，获取不同消息粒度下的通信时间。
+
+ 
+/opt/intel/impi/2018.3.222/bin64/mpirun -genv I_MPI_DEBUG 5 -np <N*2> -ppn 2 -host <node0>,...,<nodeN> /opt/intel-mpi-benchmarks/2019/IMB-MPI1 -npmin 2 -msglog 19:21 allreduce         
+示例二：测试N个节点间alltoall通信模式效率，每个节点开启1个进程，获取不同消息粒度下的通信时间。
+
+/opt/intel/impi/2018.3.222/bin64/mpirun -genv I_MPI_DEBUG 5 -np <N> -ppn 1 -host <node0>,...,<nodeN> /opt/intel-mpi-benchmarks/2019/IMB-MPI1 -npmin 1 -msglog 15:17 alltoall
+```
+
+```
+mpirun  -np 2  -host 10.22.116.220,10.22.116.221 --mca btl_openib_if_include   mlx5_1  ./IMB-MPI1 -npmin 1 -msglog 15:17 alltoall
+```
+
+基于ucx   
+```
+mpirun  -np 2  -host 10.22.116.220,10.22.116.221  -x UCX_NET_DEVICES=mlx5_1:1  ./IMB-MPI1 -npmin 1 -msglog 15:17 alltoall
+```
+
+```
+--------------------------------------------------------------------------
+WARNING: No preset parameters were found for the device that Open MPI
+detected:
+
+  Local host:            node2
+  Device name:           mlx5_0
+  Device vendor ID:      0x02c9
+  Device vendor part ID: 4125
+
+Default device parameters will be used, which may result in lower
+performance.  You can edit any of the files specified by the
+btl_openib_device_param_files MCA parameter to set values for your
+device.
+
+NOTE: You can turn off this warning by setting the MCA parameter
+      btl_openib_warn_no_device_params_found to 0.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           node2
+  Local device:         mlx5_1
+  Local port:           1
+  CPCs attempted:       rdmacm, udcm
+--------------------------------------------------------------------------
+[1753684564.462789] [node2:2290969:0]     ucp_context.c:1774 UCX  WARN  UCP version is incompatible, required: 1.14, actual: 1.12 (release 1)
+#----------------------------------------------------------------
+#    Intel(R) MPI Benchmarks 2018, MPI-1 part
+#----------------------------------------------------------------
+# Date                  : Mon Jul 28 06:36:04 2025
+# Machine               : x86_64
+# System                : Linux
+# Release               : 5.15.0-138-generic
+# Version               : #148-Ubuntu SMP Fri Mar 14 19:05:48 UTC 2025
+# MPI Version           : 3.1
+# MPI Thread Environment: 
+
+
+# Calling sequence was: 
+
+# ./IMB-MPI1 -npmin 1 -msglog 15:17 alltoall
+
+# Minimum message length in bytes:   0
+# Maximum message length in bytes:   131072
+#
+# MPI_Datatype                   :   MPI_BYTE 
+# MPI_Datatype for reductions    :   MPI_FLOAT
+# MPI_Op                         :   MPI_SUM  
+#
+#
+
+# List of Benchmarks to run:
+
+# Alltoall
+
+#----------------------------------------------------------------
+# Benchmarking Alltoall 
+# #processes = 1 
+# ( 1 additional process waiting in MPI_Barrier)
+#----------------------------------------------------------------
+       #bytes #repetitions  t_min[usec]  t_max[usec]  t_avg[usec]
+            0         1000         0.03         0.03         0.03
+        32768         1000         0.94         0.94         0.94
+        65536          640         1.73         1.73         1.73
+       131072          320         3.69         3.69         3.69
+
+#----------------------------------------------------------------
+# Benchmarking Alltoall 
+# #processes = 2 
+#----------------------------------------------------------------
+       #bytes #repetitions  t_min[usec]  t_max[usec]  t_avg[usec]
+            0         1000         0.03         0.03         0.03
+        32768         1000        10.01        10.02        10.02
+        65536          640        18.44        18.63        18.53
+       131072          320        25.41        25.54        25.47
+
+
+# All processes entering MPI_Finalize
+
+[node2:2290964] 3 more processes have sent help message help-mpi-btl-openib.txt / no device params found
+[node2:2290964] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+[node2:2290964] 1 more process has sent help message help-mpi-btl-openib-cpc-base.txt / no cpcs for port
+```
 
 
 [集群机器搭建多节点MPI运行环境](https://cloud.tencent.com/developer/article/2156525)   

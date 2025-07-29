@@ -1,4 +1,9 @@
 
+# mpitutorial --  Wes Kendall   
+
+[MPI Reduce and Allreduce](https://mpitutorial.com/tutorials/mpi-reduce-and-allreduce/zh_cn/)   
+
+
 # os
 
 
@@ -6,6 +11,8 @@
 uname -r
 5.15.0-138-generic
 ```
+
+
 
 # make    
 
@@ -149,7 +156,7 @@ root@ubuntu:~/openMpi/mpi-benchmarks/src_c#
 ```
 
 #  多接点
-
+[集群机器搭建多节点MPI运行环境](https://cloud.tencent.com/developer/article/2156525) 
 ```
 在10.22.116.221机器上
 
@@ -168,18 +175,19 @@ ssh-copy-id -i /root/.ssh/id_rsa.pub root@10.22.116.220
 
 ssh-copy-id NAME@IP
 
-4)再输入1220机器上的root密码
+4)再输入220机器上的root密码
 
 此时，再ssh root@10.22.116.220 or ssh  10.22.116.220，则不需要密码了。相互之间scp，也不需要密码
 ```
 
+
+示例一：测试N个节点间allreduce通信模式效率，每个节点开启2个进程，获取不同消息粒度下的通信时间。     
+
 ```
-示例一：测试N个节点间allreduce通信模式效率，每个节点开启2个进程，获取不同消息粒度下的通信时间。
-
- 
-/opt/intel/impi/2018.3.222/bin64/mpirun -genv I_MPI_DEBUG 5 -np <N*2> -ppn 2 -host <node0>,...,<nodeN> /opt/intel-mpi-benchmarks/2019/IMB-MPI1 -npmin 2 -msglog 19:21 allreduce         
-示例二：测试N个节点间alltoall通信模式效率，每个节点开启1个进程，获取不同消息粒度下的通信时间。
-
+/opt/intel/impi/2018.3.222/bin64/mpirun -genv I_MPI_DEBUG 5 -np <N*2> -ppn 2 -host <node0>,...,<nodeN> /opt/intel-mpi-benchmarks/2019/IMB-MPI1 -npmin 2 -msglog 19:21 allreduce    
+```     
+示例二：测试N个节点间alltoall通信模式效率，每个节点开启1个进程，获取不同消息粒度下的通信时间。    
+```
 /opt/intel/impi/2018.3.222/bin64/mpirun -genv I_MPI_DEBUG 5 -np <N> -ppn 1 -host <node0>,...,<nodeN> /opt/intel-mpi-benchmarks/2019/IMB-MPI1 -npmin 1 -msglog 15:17 alltoall
 ```
 
@@ -279,5 +287,91 @@ support) will be disabled for this port.
 [node2:2290964] 1 more process has sent help message help-mpi-btl-openib-cpc-base.txt / no cpcs for port
 ```
 
+## test2
 
-[集群机器搭建多节点MPI运行环境](https://cloud.tencent.com/developer/article/2156525)   
+```
+#include <stdio.h>
+#include <mpi.h>
+
+int main(int argc, char* argv[]) {
+    int rank, size;
+
+    // Initialize MPI
+    MPI_Init(&argc, &argv);
+
+    // Get the rank and size
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    // Print a message from each process
+    printf("Hello, World! I am process %d of %d.\n", rank, size);
+
+    // Finalize MPI
+    MPI_Finalize();
+
+    return 0;
+}
+```
+
+```
+mpicc hello.c -o hello
+
+```
+
+```
+root@node:~/openMpi/mpi-benchmarks/demo# mpirun  --mca btl_openib_warn_no_device_params_found 0  -n 2 ./hello
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           node
+  Local device:         mlx5_1
+  Local port:           1
+  CPCs attempted:       rdmacm, udcm
+--------------------------------------------------------------------------
+Hello, World! I am process 0 of 2.
+Hello, World! I am process 1 of 2.
+[node:3622506] 1 more process has sent help message help-mpi-btl-openib-cpc-base.txt / no cpcs for port
+[node:3622506] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+root@node:~/openMpi/mpi-benchmarks/demo# mpirun  --mca btl_openib_warn_no_device_params_found 0  -n 3 ./hello
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           node
+  Local device:         mlx5_1
+  Local port:           1
+  CPCs attempted:       rdmacm, udcm
+--------------------------------------------------------------------------
+Hello, World! I am process 0 of 3.
+Hello, World! I am process 1 of 3.
+Hello, World! I am process 2 of 3.
+[node:3622520] 2 more processes have sent help message help-mpi-btl-openib-cpc-base.txt / no cpcs for port
+[node:3622520] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+root@node:~/openMpi/mpi-benchmarks/demo# 
+```
+
+
+```
+root@node:~/openMpi/mpi-benchmarks/demo#
+mpirun  -np 2  -host 10.22.116.220,10.22.116.221  --mca btl_openib_warn_no_device_params_found 0  -x UCX_NET_DEVICES=mlx5_1:1  ./hello -npmin 1 -msglog 15:17 alltoall
+--------------------------------------------------------------------------
+No OpenFabrics connection schemes reported that they were able to be
+used on a specific port.  As such, the openib BTL (OpenFabrics
+support) will be disabled for this port.
+
+  Local host:           node2
+  Local device:         mlx5_1
+  Local port:           1
+  CPCs attempted:       rdmacm, udcm
+--------------------------------------------------------------------------
+[1753757184.080841] [node2:2292458:0]     ucp_context.c:1774 UCX  WARN  UCP version is incompatible, required: 1.14, actual: 1.12 (release 1)
+Hello, World! I am process 0 of 2.
+Hello, World! I am process 1 of 2.
+[node:3622441] 1 more process has sent help message help-mpi-btl-openib-cpc-base.txt / no cpcs for port
+[node:3622441] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
+```
+
+  

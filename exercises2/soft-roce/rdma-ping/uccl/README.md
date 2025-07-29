@@ -658,6 +658,15 @@ testResult_t ncclAlltoAll_n(void* sendbuff, void* recvbuff, size_t count, ncclDa
 
 ## GDR
 
+[Notes about  deepseek IBGDA(InfiniBand GPUDirect Async)](https://liujunming.top/2025/05/11/Notes-about-IBGDA-InfiniBand-GPUDirect-Async/)    
+
+[Notes about GPUDirect Async family](https://liujunming.top/2025/07/05/Notes-about-GPUDirect-Async-family/)     
+
+ - cudaDeviceSynchronize：host等待所有device上的运算或者数据传输操作完成    
+ - cudaStreamSynchronize：使host等待特定stream中的操作全部完成或者使用非阻塞版本的cudaStreamQuery来测试是否完成    
+ - cudaEventSynchronize：可以用来实现更细粒度的同步   
+ 
+ 
 ```
 #ifdef USE_CUDA
     int cuda_sync_post_send_client(OmniContext* dctx_ptr, uint32_t num, uint32_t *current_offsets, 

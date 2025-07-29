@@ -660,7 +660,9 @@ testResult_t ncclAlltoAll_n(void* sendbuff, void* recvbuff, size_t count, ncclDa
 
 [Notes about  deepseek IBGDA(InfiniBand GPUDirect Async)](https://liujunming.top/2025/05/11/Notes-about-IBGDA-InfiniBand-GPUDirect-Async/)    
 
-[Notes about GPUDirect Async family](https://liujunming.top/2025/07/05/Notes-about-GPUDirect-Async-family/)     
+[Notes about GPUDirect Async family](https://liujunming.top/2025/07/05/Notes-about-GPUDirect-Async-family/)    
+
+[Portus](https://github.com/wutianyuan1/Portus/tree/a3c1712727e59d2eca689bf44d0cf8f5e1b3d9f1/client)    
 
  - cudaDeviceSynchronize：host等待所有device上的运算或者数据传输操作完成    
  - cudaStreamSynchronize：使host等待特定stream中的操作全部完成或者使用非阻塞版本的cudaStreamQuery来测试是否完成    
@@ -992,6 +994,10 @@ int main(int argc, char *argv[]) {
 
 
 ## pcie flush
+
+
+ncclIbGpuFlush     
+
 
 + ib_proxy.cpp
 ```

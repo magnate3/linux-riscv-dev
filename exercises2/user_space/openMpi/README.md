@@ -157,6 +157,7 @@ root@ubuntu:~/openMpi/mpi-benchmarks/src_c#
 
 #  多接点
 [集群机器搭建多节点MPI运行环境](https://cloud.tencent.com/developer/article/2156525) 
+[mpirun多机多进程-多节点运行nccl-tests](https://zhuanlan.zhihu.com/p/682530828)    
 ```
 在10.22.116.221机器上
 

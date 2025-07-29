@@ -664,6 +664,9 @@ testResult_t ncclAlltoAll_n(void* sendbuff, void* recvbuff, size_t count, ncclDa
 
 [Portus](https://github.com/wutianyuan1/Portus/tree/a3c1712727e59d2eca689bf44d0cf8f5e1b3d9f1/client)    
 
+
+[Demystifying NCCL: An In-depth Analysis of GPU Communication Protocols and Algorithms](https://zhuanlan.zhihu.com/p/1932137763840458794?share_code=fH9RYP1YXN8v&amp;utm_psn=1932192594412150834)     
+
  - cudaDeviceSynchronize：host等待所有device上的运算或者数据传输操作完成    
  - cudaStreamSynchronize：使host等待特定stream中的操作全部完成或者使用非阻塞版本的cudaStreamQuery来测试是否完成    
  - cudaEventSynchronize：可以用来实现更细粒度的同步   
@@ -1201,3 +1204,98 @@ void IbvProxy::ARCollContext::init_pcie_flush() {
 ```
 
 +  ibv_alloc_null_mr   
+
+
+# 多路径
+[Where is internal implementation of isend/irecv defined?](https://github.com/NVIDIA/nccl/issues/1339)     
+
+```
+NCCL_PARAM(NChannelsPerNetPeer, "NCHANNELS_PER_NET_PEER", -1);
+```
+
+Per-peer Multi-channel Connections (每对等体多信道连接)：为提高带宽利用率，IB 传输默认情况下为每个远程 GPU 和每个 NIC 实例化 2 个逻辑信道（由 NCHANNELS_PER_NET_PEER 参数控制）。主机端的网络代理在发出ncclNet->isend() 调用时，会在这两个信道间交替（轮询），从而将流量分散到不同的 QP 集合中，为支持 ECMP 的网络结构引入路径多样性 。 
+
+
+In ncclIbMultiSend, it will use multiple QPs to send data, ncclIbMultiSend uses round-robin to choose the specified QP to send data. However it seems that qp_index will not change in the code.
+
+![images](msend.png)
+
+```
+cclNet_t* ncclBootstrapNet = &ncclNetSocket;
+ncclResult_t ncclNetSocketIsend(void* sendComm, void* data, int size, int tag, void* mhandle, void** request) { 
+```   
+
+
+```
+ncclResult_t netSendConnect(struct ncclConnect* connectInfo, int nranks, int rank, struct ncclConnector* send) {
+  // Setup device pointers
+  struct netSendResources* resources = (struct netSendResources*)send->transportResources;
+
+  // Intermediate buffering on GPU for GPU Direct RDMA, but LL buffer is always on host
+  struct ncclRecvMem* recvMem = resources->useGdr ? resources->devRecvMem : resources->devHostRecvMem;
+  send->conn.buff = recvMem->buff;
+  send->conn.llBuff = resources->devHostRecvMem->llBuff;
+  send->conn.ll128Buff = recvMem->ll128Buff;
+  send->conn.direct |= resources->useGdr ? NCCL_DIRECT_NIC : 0;
+
+  // Head/Tail/Opcount/Fifos are always on host
+  send->conn.tail = &resources->devHostRecvMem->tail;
+  send->conn.opCountRem = &resources->devHostRecvMem->opCount;
+  send->conn.fifo = resources->devHostRecvMem->sizesFifo;
+  send->conn.head = &resources->devHostSendMem->head;
+  send->conn.opCountLoc = &resources->devHostSendMem->opCount;
+  for (int i=0; i<NCCL_STEPS; i++) send->conn.fifo[i] = -1;
+
+  // Connect to remote peer
+  struct netConnectInfo* info = (struct netConnectInfo*)connectInfo;
+  NCCLCHECK(ncclNetConnect(resources->netDev, info->netHandle, &resources->netSendComm));
+
+  NCCLCHECK(ncclNetRegMr(resources->netSendComm, recvMem->buff, resources->buffSize,
+        resources->useGdr ? NCCL_PTR_CUDA : NCCL_PTR_HOST, &resources->mhandle));
+  NCCLCHECK(ncclNetRegMr(resources->netSendComm, resources->devHostRecvMem->llBuff,
+        NCCL_LL_BUFF_SIZE, NCCL_PTR_HOST, &resources->llMhandle));
+  NCCLCHECK(ncclNetRegMr(resources->netSendComm, recvMem->ll128Buff, NCCL_LL128_BUFF_SIZE,
+        resources->useGdr ? NCCL_PTR_CUDA : NCCL_PTR_HOST, &resources->ll128Mhandle));
+
+  return ncclSuccess;
+}
+```
+
+```
+struct ncclTransport netTransport = {
+  "NET",
+  canConnect,
+  { sendSetup, sendConnect, sendFree, proxySharedInit, sendProxySetup, sendProxyConnect, sendProxyFree, sendProxyProgress, sendProxyRegBuffer, sendProxyDeregBuffer },
+  { recvSetup, recvConnect, recvFree, proxySharedInit, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress, recvProxyRegBuffer, recvProxyDeregBuffer }
+};
+```
+
+```
+struct ncclTransport* ncclTransports[NTRANSPORTS+1] = {
+  &p2pTransport,
+  &shmTransport,
+  &netTransport,
+  &collNetTransport,
+  &profilerTransport // Not really used for transport, only to create proxy ops polling on profiler counters.
+};
+
+```
+p2pTransport对应数组的索引是 0，netTransport对应 2，collNetTransport对应 3。    
+
+
+# cuda kernel
+ncclKerns定义如下，我们用的是第一个，即ncclSendRecvKernel_copy_i8   
+
+```
+#define NCCL_KERN_NAME(coll, op, dtype) \
+  coll##Kernel_##op##_##dtype
+ 
+static void* const ncclKerns[1+NCCL_NUM_FUNCTIONS*ncclNumOps*ncclNumTypes*NCCL_NUM_ALGORITHMS*NCCL_NUM_PROTOCOLS] = {
+  (void*)NCCL_KERN_NAME(ncclSendRecv, copy, i8),
+  NCCL_FUNCS2B(ncclBroadcast),
+  NCCL_FUNCS2A(ncclReduce),
+  NCCL_FUNCS2B(ncclAllGather),
+  NCCL_FUNCS2A(ncclReduceScatter),
+  NCCL_FUNCS2A(ncclAllReduce)
+};
+```

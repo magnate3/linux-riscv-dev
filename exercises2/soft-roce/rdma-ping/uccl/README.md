@@ -1285,6 +1285,12 @@ struct ncclTransport* ncclTransports[NTRANSPORTS+1] = {
 ```
 p2pTransport对应数组的索引是 0，netTransport对应 2，collNetTransport对应 3。    
 
+```
+        # NVLink optimization
+        env["NCCL_P2P_DISABLE"] = "0"  # Enable P2P for NVLink
+        env["NCCL_NET_GDR_DISABLE"] = "0"  # Enable GPU Direct RDMA
+        env["NCCL_TREE_THRESHOLD"] = "0"  # Use ring algorithm for small data
+```
 
 #  Receiver-driven traffic admission
 
@@ -1303,7 +1309,24 @@ To mitigate the congestion for 400G and beyond, we co-designed the collective li
 
 ![images](cts.webp)
 
-# cuda kernel
+# cuda
+
+```
+ apt-get install nvidia-cuda-toolkit
+```  
+```
+wget https://developer.download.nvidia.com/compute/cuda/repos/<distro>/<architecture>/cuda-keyring_1.0-1_all.deb
+ 
+sudo dpkg -i cuda-keyring_1.0-1_all.deb
+```
+```
+ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
+ dpkg -i cuda-keyring_1.0-1_all.deb 
+```
+
+
+
+## cuda kernel
 ncclKerns定义如下，我们用的是第一个，即ncclSendRecvKernel_copy_i8   
 
 ```

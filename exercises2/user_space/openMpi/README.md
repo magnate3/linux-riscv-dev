@@ -374,5 +374,29 @@ Hello, World! I am process 1 of 2.
 [node:3622441] 1 more process has sent help message help-mpi-btl-openib-cpc-base.txt / no cpcs for port
 [node:3622441] Set MCA parameter "orte_base_help_aggregate" to 0 to see all help / error messages
 ```
+# UNREACHABLE in file server/pmix_server.c
+```
+mpirun -np 16 hello_mpifh
+```
 
+```
+[scu-ce.gpu-0-0:13935] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2198
+[scu-ce.gpu-0-0:13935] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2198
+[scu-ce.gpu-0-0:13935] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2198
+[scu-ce.gpu-0-0:13935] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2198
+[scu-ce.gpu-0-0:13935] PMIX ERROR: UNREACHABLE in file server/pmix_server.c at line 2198
+......
+```
+我们添加运行参数   
+```
+mpirun --mca btl vader,self -np 16 hello_mpifh
+```
+成功运行。    
+
+我们发现，OpenMPI-4.1.1版本运行不再是老版本那样直接mpirun就可以运行了，需添加参数。但有时候我们对参数不清楚，或者有些计算软件是封包的，使用参数会报错，因此，我们用alias方法，把mpirun+参数简化为mpirun，方法如下：     
+在用户环境变量文件.bashrc，或者OpenMPI环境文件中添加如下一行    
+alias mpirun='mpirun --mca btl vader,self'   
+加载生效后，我们运行命令   
+mpirun -np 16 hello_mpifh   
+运行输出结果正确      
   

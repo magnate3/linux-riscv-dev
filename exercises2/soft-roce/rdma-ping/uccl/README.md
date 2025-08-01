@@ -1205,6 +1205,9 @@ void IbvProxy::ARCollContext::init_pcie_flush() {
 
 +  ibv_alloc_null_mr   
 
+#  ncclGroupEnd
+
+[ncclGroupStart/End ](https://github.com/NVIDIA/nccl/issues/781)    
 
 # 多路径
 [Where is internal implementation of isend/irecv defined?](https://github.com/NVIDIA/nccl/issues/1339)     
@@ -1222,6 +1225,8 @@ ncclIbMultiSend流程分析：
 
 2 采用创建的多个QP，均匀的将所要发送的数据大小进行切分，通过多个QP将数据发送出去。       
 ![images](msend.png)
+
+3 NCCL_PARAM(IbSplitDataOnQps, "IB_SPLIT_DATA_ON_QPS", 0); NCCL_IB_SPLIT_DATA_ON_QPS=2    
 
 ```
 cclNet_t* ncclBootstrapNet = &ncclNetSocket;

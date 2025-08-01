@@ -1,0 +1,68 @@
+<system version="1">
+    <cpu numaid="0" affinity="00000000,ffffffff,00000000,ffffffff" arch="x86_64"
+        vendor="GenuineIntel" familyid="6" modelid="143">
+        <pci busid="0000:16:00.0" class="0x030200" vendor="0x10de" device="0x26b9"
+            subsystem_vendor="0x10de" subsystem_device="0x1851" link_speed="16.0 GT/s PCIe"
+            link_width="16">
+            <gpu dev="0" sm="89" rank="0" gdr="1">
+                <nvlink target="0000:07:00.0" count="1" tclass="0x030200" />
+                <nvlink target="0000:27:00.0" count="1" tclass="0x030200" />
+                <nvlink target="0000:98:00.0" count="2" tclass="0x030200" />
+                <nvlink target="0000:a8:00.0" count="2" tclass="0x030200" />
+            </gpu>
+        </pci>
+        <pci busid="0000:27:00.0" class="0x030200" vendor="0x10de" device="0x26b9"
+            subsystem_vendor="0x10de" subsystem_device="0x1851" link_speed="16.0 GT/s PCIe"
+            link_width="16">
+            <gpu dev="0" sm="89" rank="0" gdr="1">
+                <nvlink target="0000:86:00.0" count="2" tclass="0x030200" />
+                <nvlink target="0000:98:00.0" count="2" tclass="0x030200" />
+                <nvlink target="0000:a8:00.0" count="1" tclass="0x030200" />
+                <nvlink target="0000:16:00.0" count="1" tclass="0x030200" />
+            </gpu>
+        </pci>
+        <pci busid="0000:38:00.0" class="0x020700" vendor="0x15b3" device="0x1021"
+            subsystem_vendor="0x15b3" subsystem_device="0x0022" link_speed="32.0 GT/s PCIe"
+            link_width="16">
+            <nic>
+                <net name="mlx5_0" dev="0" speed="200000" port="1" guid="0x6483a70003c288a0"
+                    maxconn="1" gdr="1" coll="1" latency="0.000000" />
+                <net name="mlx5_1" dev="1" speed="200000" port="2" guid="0x6483a70003c288a0"
+                    maxconn="1" gdr="1" coll="1" latency="0.000000" />
+            </nic>
+        </pci>
+    </cpu>
+    <cpu numaid="1" affinity="ffffffff,00000000,ffffffff,00000000" arch="x86_64"
+        vendor="GenuineIntel" familyid="6" modelid="143">
+        <pci busid="0000:98:00.0" class="0x030200" vendor="0x10de" device="0x26b9"
+            subsystem_vendor="0x10de" subsystem_device="0x1851" link_speed="16.0 GT/s PCIe"
+            link_width="16">
+            <gpu dev="2" sm="89" rank="0" gdr="1">
+                <nvlink target="0000:89:00.0" count="1" tclass="0x030200" />
+                <nvlink target="0000:a8:00.0" count="2" tclass="0x030200" />
+                <nvlink target="0000:16:00.0" count="1" tclass="0x030200" />
+                <nvlink target="0000:27:00.0" count="2" tclass="0x030200" />
+            </gpu>
+        </pci>
+        <pci busid="0000:a8:00.0" class="0x030200" vendor="0x10de" device="0x26b9"
+            subsystem_vendor="0x10de" subsystem_device="0x1851" link_speed="16.0 GT/s PCIe"
+            link_width="16">
+            <gpu dev="3" sm="89" rank="0" gdr="1">
+                <nvlink target="0000:06:00.0" count="2" tclass="0x030200" />
+                <nvlink target="0000:16:00.0" count="1" tclass="0x030200" />
+                <nvlink target="0000:27:00.0" count="2" tclass="0x030200" />
+                <nvlink target="0000:98:00.0" count="1" tclass="0x030200" />
+            </gpu>
+        </pci>
+        <pci busid="0000:b8:00.0" class="0x020700" vendor="0x15b3" device="0x1021"
+            subsystem_vendor="0x15b3" subsystem_device="0x0022" link_speed="32.0 GT/s PCIe"
+            link_width="16">
+            <nic>
+                <net name="mlx5_2" dev="2" speed="200000" port="1" guid="0xc089a70103c288a0"
+                    maxconn="1" gdr="1" coll="1" latency="0.000000" />
+                <net name="mlx5_3" dev="3" speed="200000" port="2" guid="0xc089a70103c288a0"
+                    maxconn="1" gdr="1" coll="1" latency="0.000000" />
+            </nic>
+        </pci>
+    </cpu>
+</system>

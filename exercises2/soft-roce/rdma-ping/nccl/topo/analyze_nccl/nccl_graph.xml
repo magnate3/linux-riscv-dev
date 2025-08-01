@@ -1,0 +1,40 @@
+<graphs version="1">
+    <graph id="0" pattern="4" crossnic="1" nchannels="2" speedintra="10" speedinter="10" latencyinter="0" typeintra="SYS" typeinter="SYS" samechannels="0">
+        <channel>
+            <net dev="0"/>
+            <gpu dev="0"/>
+            <gpu dev="1"/>
+            <gpu dev="2"/>
+            <gpu dev="3"/>
+            <net dev="3"/>
+        </channel>
+        <channel>
+            <net dev="3"/>
+            <gpu dev="2"/>
+            <gpu dev="3"/>
+            <gpu dev="1"/>
+            <gpu dev="0"/>
+            <net dev="0"/>
+        </channel>
+    </graph>
+    <graph id="1" pattern="1" crossnic="0" nchannels="2" speedintra="9" speedinter="7" latencyinter="0" typeintra="SYS" typeinter="SYS" samechannels="0">
+        <channel>
+            <net dev="0"/>
+            <gpu dev="0"/>
+            <gpu dev="1"/>
+            <gpu dev="2"/>
+            <gpu dev="3"/>
+            <net dev="0"/>
+        </channel>
+        <channel>
+            <net dev="2"/>
+            <gpu dev="3"/>
+            <gpu dev="2"/>
+            <gpu dev="1"/>
+            <gpu dev="0"/>
+            <net dev="2"/>
+        </channel>
+    </graph>
+    <graph id="2" pattern="3" crossnic="0" nchannels="0" speedintra="0" speedinter="0" latencyinter="0" typeintra="LOC" typeinter="LOC" samechannels="0"/>
+    <graph id="3" pattern="5" crossnic="0" nchannels="0" speedintra="0" speedinter="0" latencyinter="0" typeintra="LOC" typeinter="LOC" samechannels="0"/>
+</graphs>

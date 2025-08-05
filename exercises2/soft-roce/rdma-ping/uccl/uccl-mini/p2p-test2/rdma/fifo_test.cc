@@ -137,6 +137,7 @@ static void server_worker(void) {
     void* data =
         mmap(nullptr, size,
              PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    memset(data,0x42,size);
 #endif
     assert(data != MAP_FAILED);
     ep->uccl_regmr((UcclFlow*)conn_id.context, data,
@@ -167,8 +168,7 @@ static void client_worker(void) {
  void* datas;
  struct Mhandle* mhandle;
  char out_buf[64] = {0};
-
-
+ char buf[64] = {0};
     std::string dataplane_remote_ip = ip_to_str(remote_p2p_listen.ip);
     int dataplane_remote_port = remote_p2p_listen.port;
     printf("Client connecting to %s:%d \n", dataplane_remote_ip.c_str(), dataplane_remote_port);
@@ -207,10 +207,17 @@ static void client_worker(void) {
   printf("prepare_fifo_metadata successfully \n");
   client_basic(conn_id, mhandle, data);
 #else
+  memcpy(buf,data,63);
+  printf("buf data : %s \n",buf);
   while (!quit) {
   uccl::ucclRequest ureq;
   memset(&ureq, 0, sizeof(uccl::ucclRequest));
-  ep->uccl_read_one((static_cast<uccl::UcclFlow*>(conn_id.context)), mhandle, data, size, &ureq);
+  if(!ep->uccl_read_one((static_cast<uccl::UcclFlow*>(conn_id.context)), mhandle, data, size, &ureq))
+  {
+	  memcpy(buf,data,63);
+	  printf("recv data : %s \n",buf);
+	  break;
+  }
      std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 #endif

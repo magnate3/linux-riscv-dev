@@ -242,3 +242,42 @@ Client connecting to 172.22.116.221:37667
 Client connected to 172.22.116.221:37667 
 send buf data : AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA 
 ```
+
+
+## IBV_QPT_UD  ctrl_qp_ 发送 ack    
+
+
+
++ server     
+try_post_acks
+```
+(gdb) set args --logtostderr   --server=true  --perftype=basic --iterations=8
+(gdb) b flush_acks
+Breakpoint 1 at 0x11a20: file rdma_io.cc, line 440.
+(gdb) 
+```
+
+```
+(gdb) bt
+#0  uccl::SharedIOContext::flush_acks (this=0x5555556052f0) at rdma_io.cc:440
+#1  0x000055555558143c in uccl::RDMAContext::uc_rx_chunk (this=this@entry=0x7fffd8000e20, cq_ex=cq_ex@entry=0x5555556ca980) at transport.cc:3616
+#2  0x000055555556984f in uccl::SharedIOContext::_uc_poll_recv_cq_ex (this=this@entry=0x5555556052f0) at rdma_io.cc:690
+#3  0x000055555556d6cd in uccl::SharedIOContext::uc_poll_recv_cq (this=0x5555556052f0) at /root/rdma-bench/steven_uccl/rdma/rdma_io.h:822
+#4  uccl::UcclRDMAEngine::uc_handle_completion (this=this@entry=0x555555605150) at transport.cc:223
+#5  0x000055555557e9fa in uccl::UcclRDMAEngine::handle_completion (this=0x555555605150) at /root/rdma-bench/steven_uccl/rdma/transport.h:792
+```
+
+
++  client    
+
+```
+(gdb) set args  --logtostderr   --serverip=10.22.116.221 --perftype=basic --iterations=8
+(gdb) b _poll_ctrl_cq_ex
+Breakpoint 1 at 0x16090: file rdma_io.cc, line 456
+```
+```
+#0  uccl::SharedIOContext::_poll_ctrl_cq_ex (this=this@entry=0x5555556062f0) at rdma_io.cc:456
+#1  0x000055555556d6a5 in uccl::SharedIOContext::poll_ctrl_cq (this=0x5555556062f0) at /root/rdma-bench/steven_uccl/rdma/rdma_io.h:816
+#2  uccl::UcclRDMAEngine::uc_handle_completion (this=this@entry=0x555555606150) at transport.cc:212
+#3  0x000055555557ea1a in uccl::UcclRDMAEngine::handle_completion (this=0x555555606150) at /root/rdma-bench/steven_uccl/rdma/transport.h:792
+```

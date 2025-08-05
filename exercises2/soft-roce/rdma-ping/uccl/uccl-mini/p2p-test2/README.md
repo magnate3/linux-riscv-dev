@@ -5,12 +5,23 @@
 ![images](fifo1.png)
 
 
-# rc mode
+# rc mode test
 
-[refer to steven4354/uccl ](https://github.com/steven4354/uccl/tree/main)
+[refer to steven4354/uccl ](https://github.com/steven4354/uccl/tree/main)    
 
++ mode   
 ```
 UCCL_PARAM(RCMode, "RCMODE", true);
+```
+
++  my functions
+
+
+```
+  int submit_fifo_metadata(UcclFlow* flow, struct Mhandle** mhandles,
+                                        void const* data, size_t size, struct ucclRequest* ureq) ;
+
+  int uccl_read_one(UcclFlow* flow, Mhandle* local_mh, void* dst, size_t size,ucclRequest* ureq);
 ```
 
 +  server

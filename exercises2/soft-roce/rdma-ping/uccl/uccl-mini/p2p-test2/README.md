@@ -7,6 +7,8 @@
 
 # rc mode
 
+[refer to steven4354/uccl ](https://github.com/steven4354/uccl/tree/main)
+
 ```
 UCCL_PARAM(RCMode, "RCMODE", true);
 ```

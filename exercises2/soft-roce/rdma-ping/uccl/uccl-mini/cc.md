@@ -197,7 +197,7 @@ bool RDMAContext::senderCC_tx_message(struct ucclRequest* ureq) {
       DCHECK(ibv_post_send(qpw->qp, wr, &bad_wr) == 0);
 ```
 
-# use bitmap for tcp Sliding Window 
+# use bitmap for tcp Sliding Window ( SACK and not  NACK)
 
 
 ```
@@ -405,6 +405,186 @@ subflow->pcb.snd_ooo_acks = ucclsackh->sack_bitmap_count.value();
   inline void rto_retransmit_for_flow(void* context) {
     if (is_roce() || kTestLoss) {
       __retransmit_for_flow(context, true);
+    }
+  }
+```
+
+
+# 主动拥塞--eqds   
+receiverCC_tx_message    
+
++ 计算credit   compute_pull_target(subflow, chunk_size    
+## 申请 credit    
+
+eqds_->request_pull(&subflow->pcb.eqds_cc)    
+```
+void UcclRDMAEngine::handle_install_flow_on_engine(
+    Channel::CtrlMsg& ctrl_work) {
+  if (rdma_ctx_map_.find(ctrl_work.peer_id) == rdma_ctx_map_.end()) {
+    pending_install_flow_works_.push_back(ctrl_work);
+    return;
+  }
+
+  auto* rdma_ctx = rdma_ctx_map_[ctrl_work.peer_id];
+  auto* poll_ctx = ctrl_work.poll_ctx;
+  auto flow_id = ctrl_work.meta.install_flow.flow_id;
+  auto* flow = reinterpret_cast<UcclFlow*>(ctrl_work.meta.install_flow.context);
+  auto is_send = ctrl_work.meta.install_flow.is_send;
+
+  DCHECK(flow_id < MAX_FLOW) << flow_id << ", " << MAX_FLOW;
+
+  if (is_send) {
+    rdma_ctx->add_sender_flow(flow, flow_id);
+    io_ctx_.record_sender_ctx_mapping(ctrl_work.peer_id, flow_id, rdma_ctx);
+  } else {
+    rdma_ctx->add_receiver_flow(flow, flow_id);
+    if constexpr (kReceiverCCA == RECEIVER_CCA_EQDS) {
+      auto* subflow = flow->sub_flows_[engine_idx_ % ucclParamNUM_ENGINES()];
+
+      subflow->pcb.eqds_cc.set_fid(flow_id);
+      // All subflows belong to the same RDMAContext share the same
+      // PacerCreditQPWrapper.
+      subflow->pcb.eqds_cc.set_pacer_credit_qpw(&rdma_ctx->pc_qpw_);
+
+      subflow->pcb.eqds_cc.init_active_item();
+      subflow->pcb.eqds_cc.init_idle_item();
+
+      subflow->pcb.eqds_cc.highest_pull_target_.store(
+          eqds::EQDSCC::INIT_PULL_QUANTA);
+      subflow->pcb.eqds_cc.latest_pull_ = eqds::EQDSCC::INIT_PULL_QUANTA;
+
+      eqds_->request_pull(&subflow->pcb.eqds_cc);
+    }
+  }
+```
+执行 request_pull   --> jring_mp_enqueue_bulk(channel_.cmdq_, &msg, 1, nullptr)
+```
+  // [Thread-safe] Request pacer to grant credit to this flow.
+  inline void request_pull(EQDSCC* eqds_cc) {
+    EQDSChannel::Msg msg = {
+        .opcode = EQDSChannel::Msg::Op::kRequestPull,
+        .eqds_cc = eqds_cc,
+    };
+    while (jring_mp_enqueue_bulk(channel_.cmdq_, &msg, 1, nullptr) != 1) {
+    }
+  }
+```
+
+
+handle_pull_request --> jring_sc_dequeue_bulk(channel_.cmdq_, &msg, 1, nullptr) 
+触发grant_credit -->  send_pull_packet     
+
+
+
+
+```
+bool EQDS::send_pull_packet(EQDSCC* eqds_cc) {
+  uint64_t chunk_addr;
+  auto* pc_qpw = eqds_cc->pc_qpw_;
+
+  if (pc_qpw->pacer_credit_chunk_pool_->alloc_buff(&chunk_addr)) return false;
+
+  auto* pullhdr = reinterpret_cast<struct UcclPullHdr*>(chunk_addr);
+  pullhdr->fid = be16_t(eqds_cc->fid_);
+  pullhdr->pullno = be16_t(eqds_cc->latest_pull_);
+
+  struct ibv_sge sge = {
+      .addr = chunk_addr,
+      .length = CreditChunkBuffPool::kPktSize,
+      .lkey = pc_qpw->pacer_credit_chunk_pool_->get_lkey(),
+  };
+
+  struct ibv_send_wr wr, *bad_wr;
+  wr.num_sge = 1;
+  wr.sg_list = &sge;
+
+  wr.wr_id = chunk_addr;
+  wr.opcode = IBV_WR_SEND;
+  wr.send_flags = IBV_SEND_SIGNALED | IBV_SEND_INLINE;
+  wr.next = nullptr;
+
+  DCHECK(ibv_post_send(pc_qpw->credit_qp_, &wr, &bad_wr) == 0);
+
+  pc_qpw->poll_cq_cnt_++;
+
+  if (list_empty(&pc_qpw->poll_item.poll_link)) {
+    // Add to the poll list.
+    list_add_tail(&pc_qpw->poll_item.poll_link, &poll_cq_list_);
+  }
+
+  return true;
+}
+```
+
+##  处理 credit apply request   
+
+```
+  void EventOnRxData(SubUcclFlow* subflow, IMMData* imm_data) override {
+    auto* imm = reinterpret_cast<IMMDataEQDS*>(imm_data);
+    if (subflow->pcb.eqds_cc.handle_pull_target(imm->GetTarget())) {
+      VLOG(5) << "Request pull for new target: " << (uint32_t)imm->GetTarget();
+      eqds_->request_pull(&subflow->pcb.eqds_cc);
+    }
+  }
+
+```
+
+
+##   Receiving  credit   
+
+
+
+```
+int RDMAContext::poll_credit_cq(void) {
+  uint64_t chunk_addr;
+  int work = 0;
+  while (1) {
+    struct ibv_poll_cq_attr poll_cq_attr = {};
+    auto cq_ex = engine_credit_cq_ex_;
+    if (ibv_start_poll(cq_ex, &poll_cq_attr)) return work;
+
+    int cq_budget = 0;
+
+    while (1) {
+      if (cq_ex->status == IBV_WC_SUCCESS) {
+        // Completion for receiving ACKs.
+        chunk_addr = cq_ex->wr_id;
+        if (ibv_wc_read_opcode(cq_ex) == IBV_WC_RECV) {
+          rx_credit(chunk_addr);
+          credit_recv_wrs_.post_rq_cnt++;
+        }
+        engine_credit_chunk_pool_->free_buff(chunk_addr);
+      } else {
+        LOG(ERROR) << "Credit CQ state error: " << cq_ex->status;
+      }
+
+      if (++cq_budget == kMaxBatchCQ || ibv_next_poll(cq_ex)) break;
+    }
+
+    ibv_end_poll(cq_ex);
+
+    work += cq_budget;
+
+    if (cq_budget < kMaxBatchCQ) break;
+  }
+
+  return work;
+}
+```
+
+```
+  void EventOnRxCredit(SubUcclFlow* subflow, eqds::PullQuanta pullno) override {
+    subflow->pcb.eqds_cc.stop_speculating();
+
+    VLOG(5) << "Received credit: " << (uint32_t)pullno;
+    if (subflow->pcb.eqds_cc.handle_pull(pullno)) {
+      // TODO: trigger transmission for this subflow immediately.
+    }
+
+    if (subflow->in_rtx) {
+      // We have pending retransmission chunks due to lack of credits.
+      // Try to drain the retransmission queue.
+      drain_rtx_queue(subflow);
     }
   }
 ```

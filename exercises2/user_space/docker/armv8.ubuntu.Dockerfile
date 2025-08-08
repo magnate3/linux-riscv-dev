@@ -25,9 +25,12 @@ RUN apt-get update && apt-get -y install \
     libusb-1.0-0-dev \
     wget \
     libusb-dev
+
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
         build-essential \
+        libcurl4-openssl-dev \
+	libssl-dev \
         libbpf-dev \
         libnuma-dev \
         pkg-config \
@@ -42,13 +45,27 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         python3-pyelftools \
         # For MLX5 driver
         ibverbs-providers \
-        libibverbs-dev \
+        libibverbs-dev 
 
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends \
+    libboost-all-dev\
+    libasio-dev \
+    zlib1g-dev 
+
+
+#RUN mkdir /mnt/huge-1048576kB > /dev/null
+#COPY dpdk-stable-16.07.2 /root/dpdk/.
+#ENV HOME /root
+#ENV RTE_SDK /root/sw_package/dpdk-stable-16.07.2
+#ENV RTE_TARGET=x86_64-native-linuxapp-gcc
+#ENV PATH “$PATH:$RTE_SDK/$RTE_TARGET/app”
+#WORKDIR /root/dpdk/x86_64-native-linuxapp-gcc/app
 #RUN pip3 install meson ninja
 #RUN  ln -s /usr/bin/make /usr/bin/gmake
 RUN [ -e /usr/bin/gmake ] || ln -s /usr/bin/make /usr/bin/gmake
-#RUN rm -rf /app
 #RUN mkdir /app
+#RUN rm -rf /app
 #WORKDIR /app
 #RUN wget https://cmake.org/files/v3.5/cmake-3.5.2.tar.gz
 #RUN tar -zxf cmake-3.5.2.tar.gz -C /app && cd /app/cmake-3.5.2

@@ -56,4 +56,35 @@ Scanning dependencies of target soem
 [ 42%] Building C object CMakeFiles/soem.dir/soem/ethercatconfig.c.o
 [ 42%] Building C object CMakeFiles/soem.dir/soem/ethercatfoe.c.o
 ```
+
+
+#   鲲鹏 编译安装CMake
+下载CMake源码并解压。
+```
+wget https://cmake.org/files/v3.5/cmake-3.5.2.tar.gz
+tar -zxf cmake-3.5.2.tar.gz
+```
+编译安装。
+```
+cd cmake-3.5.2
+./bootstrap && make -j64 && make install -j64
+```
+清除系统的Hash，否则可能引用到旧版本CMake。
+```
+hash -r
+```
+检查CMake是否安装成功。
+```
+cmake --version
+```
+回显如下所示即为安装成功。
+
+
+
+## openssl
+
+
+```
+set(CMAKE_USE_OPENSSL OFF)
+```
  

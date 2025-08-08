@@ -28,3 +28,32 @@ root@ubuntux86:#
 ```
 
 ![images](proxy.png)
+
+
+# 鲲鹏
+
+[镜像库](https://docker.aityp.com/)  
+
+```
+[root@centos7 docker-kunpen]# groupadd docker
+
+[root@centos7 docker-kunpen]# usermod -a -G docker root
+[root@centos7 docker-kunpen]#  systemctl daemon-reload && systemctl restart docker
+[root@centos7 docker-kunpen]# 
+``` 
+
+```
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/arm64v8/ubuntu:18.04-linuxarm64
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/arm64v8/ubuntu:18.04-linuxarm64  docker.io/arm64v8/ubuntu:18.04
+``` 
+
+```
+docker  run -it -d --net=host --cap-add=NET_ADMIN --privileged=true  -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog  kunpeng-app
+docker exec -it 387318b58980  bash
+docker  run -it   --net=host --cap-add=NET_ADMIN --privileged=true  -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog  kunpeng-app  bash
+```
+
+
+```
+docker  run -it   --net=host --cap-add=NET_ADMIN --privileged=true  -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge  e-rpc bash
+```

@@ -1,0 +1,100 @@
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags:  
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: -c 
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: -Aa 
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: -D__CLASSIC_C__ 
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags:  
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: -c 
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: -Aa 
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Compiling the C compiler identification source file "CMakeCCompilerId.c" failed.
+Compiler: /usr/bin/cc 
+Build flags: 
+Id flags: -D__CLASSIC_C__ 
+
+The output was:
+1
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+
+
+Checking whether the C compiler is IAR using "" did not match "IAR .+ Compiler":
+cc: 致命错误：没有输入文件
+编译中断。
+Checking whether the C compiler is IAR using "" did not match "IAR .+ Compiler":
+cc: 致命错误：没有输入文件
+编译中断。
+Determining if the C compiler works failed with the following output:
+Change Dir: /root/project/study/thirdmemory/jemalloc-3.6.0/build/CMakeFiles/CMakeTmp
+
+Run Build Command:"/usr/bin/gmake" "cmTC_abb4e/fast"
+/usr/bin/gmake -f CMakeFiles/cmTC_abb4e.dir/build.make CMakeFiles/cmTC_abb4e.dir/build
+gmake[1]: 进入目录“/root/project/study/thirdmemory/jemalloc-3.6.0/build/CMakeFiles/CMakeTmp”
+Building C object CMakeFiles/cmTC_abb4e.dir/testCCompiler.c.o
+/usr/bin/cc    -o CMakeFiles/cmTC_abb4e.dir/testCCompiler.c.o   -c /root/project/study/thirdmemory/jemalloc-3.6.0/build/CMakeFiles/CMakeTmp/testCCompiler.c
+cc: error trying to exec 'cc1': execvp: 没有那个文件或目录
+gmake[1]: *** [CMakeFiles/cmTC_abb4e.dir/testCCompiler.c.o] 错误 1
+gmake[1]: 离开目录“/root/project/study/thirdmemory/jemalloc-3.6.0/build/CMakeFiles/CMakeTmp”
+gmake: *** [cmTC_abb4e/fast] 错误 2
+
+

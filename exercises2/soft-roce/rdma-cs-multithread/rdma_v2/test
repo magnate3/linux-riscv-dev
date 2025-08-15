@@ -1,0 +1,16 @@
+Client application file input format:
+
+opcode
+required information for opcode
+...
+
+List of opcodes:
+
+1: Disconnect
+2: Write - The first line is the relative point to start writing to.
+	Enter 0 for the beginning. Maximum offset can be seen by running the application normally.
+	The second line is the data to be written. Maxmimum length can be seen by running the application normally.
+3: Read - The first line is the relative point to start reading from.
+	Enter 0 for the beginning. Maximum offset can be seen by running the application normally.
+	The second line is the length of data to be read. Maxmimum length can be seen by running the application normally.
+	The data read will be printed to stdout.

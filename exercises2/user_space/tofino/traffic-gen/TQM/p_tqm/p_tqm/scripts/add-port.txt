@@ -1,0 +1,9 @@
+ucli
+pm
+port-add 11/- 100g rs
+port-add 12/- 100g rs
+port-enb -/-
+rate-period 1
+exit
+exit
+exit

@@ -1,0 +1,281 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index d95f35d..cdbd220 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -5,9 +5,15 @@ include(CMakeDependentOption)
+ 
+ set(CMAKE_CXX_STANDARD 11)
+ set(CMAKE_CXX_STANDARD_REQUIRED True)
+-set(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -Wextra -Werror -pedantic")
++set(CMAKE_CXX_FLAGS "-std=c++11 -march=native -Wall -Wextra -Werror -pedantic -lpthread")
++#set(CMAKE_CXX_FLAGS "-std=c++11  -Wall -Wextra -Werror -pedantic -lpthread -mcmodel=large")
++#set(CMAKE_CXX_FLAGS "-std=c++11  -Wall -Wextra -Werror -pedantic -lpthread -mcmodel=large")
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-conversion -Wold-style-cast -Wno-unused-function")
+ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types -Wno-keyword-macro -Wno-deprecated-declarations")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-address-of-packed-member -Wno-sign-conversion")
++#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_RTE_FORCE_INTRINSICS")
++set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRTE_FORCE_INTRINSICS")
++#find_package(Gflags REQUIRED)
+ 
+ # Parse the user-exposed options
+ if(PERF)
+@@ -30,9 +36,9 @@ add_subdirectory(third_party/HdrHistogram_c)
+ 
+ # Common sub-projects: GTest
+ set(INSTALL_GTEST OFF)
+-add_subdirectory(./third_party/googletest)
+-enable_testing()
+-include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
++#add_subdirectory(./third_party/googletest)
++#enable_testing()
++#include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
+ 
+ # Common sub-projects: asio
+ include_directories(SYSTEM third_party/asio/include)
+@@ -106,6 +112,7 @@ else(TESTING)
+   add_definitions(-DERPC_TESTING=false)
+ endif(TESTING)
+ 
++#add_compile_options(-fPIC)
+ set(SOURCES
+   src/nexus_impl/nexus.cc
+   src/nexus_impl/nexus_bg_thread.cc
+@@ -249,7 +256,9 @@ if(DPDK_NEEDED STREQUAL "true")
+     message(FATAL_ERROR "DPDK library not found")
+   endif()
+ 
+-  set(LIBRARIES ${LIBRARIES} -Wl,--whole-archive dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
++  #set(LIBRARIES ${LIBRARIES}   -Bsymbolic   -L/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/lib/ -Wl,--whole-archive  dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
++  #add_compile_options(-fPIC)
++  set(LIBRARIES ${LIBRARIES}   -Bsymbolic -fPIC  -no-pie  -L/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/lib/ -Wl,--whole-archive  dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
+ 
+   # DPDK include directory. Locating rte_config.h does not work on some systems.
+   # Example: it may be kept in /usr/include/x86_64-linux-gnu/, and symlinked
+@@ -276,6 +285,7 @@ endif()
+ # of liberpc. See the hello world example's Makefile for an example of
+ # compiling with liberpc.
+ add_executable(${APP} apps/${APP}/${APP}.cc ${APP_ADDITIONAL_SOURCES} ${SOURCES})
++#target_compile_options(${APP} PRIVATE "-fPIC -Bsymbolic")
+ if(PERF)
+   target_compile_options(${APP} PRIVATE "-flto")
+ endif()
+@@ -283,7 +293,7 @@ target_link_libraries(${APP} ${LIBRARIES})
+ 
+ # Compile the tests
+ if(TESTING)
+-  set(LIBRARIES ${LIBRARIES} gtest)
++	#set(LIBRARIES ${LIBRARIES} gtest)
+ 
+   # End-to-end tests with an RPC server and client
+   set(CLIENT_TESTS
+diff --git a/apps/smr/raft-install.sh b/apps/smr/raft-install.sh
+index b5aca28..484b6f7 100755
+--- a/apps/smr/raft-install.sh
++++ b/apps/smr/raft-install.sh
+@@ -11,7 +11,9 @@ git clone https://github.com/willemt/raft.git /tmp/raft
+ cd /tmp/raft
+ make CFLAGS='-Iinclude -Werror -Werror=return-type -Werror=uninitialized \
+   -Wcast-align -Wno-pointer-sign -fno-omit-frame-pointer -fno-common \
+-  -fsigned-char -I CLinkedListQueue/ -g -O3 -DNDEBUG -fPIC -march=native'
++  -fsigned-char -I CLinkedListQueue/ -g -O3 -DNDEBUG  '
++
++  #-fsigned-char -I CLinkedListQueue/ -g -O3 -DNDEBUG -fPIC -march=native'
+ 
+ sudo mkdir -p /usr/local/include/raft
+ sudo cp include/* /usr/local/include/raft/
+diff --git a/hello_world/Makefile b/hello_world/Makefile
+index bdda795..2e4df5f 100644
+--- a/hello_world/Makefile
++++ b/hello_world/Makefile
+@@ -16,19 +16,21 @@ raw:
+ 	g++ -g -std=c++11 -o client client.cc -I ../src -L ../build $(LIBS) -libverbs -DERPC_RAW=true
+ dpdk:
+ 	g++ -g -std=c++11 -o server server.cc \
++		-no-pie \
+ 		-Wno-deprecated-declarations \
+-		-DERPC_DPDK=true -march=native \
++		-DERPC_DPDK=true \
+ 		-I ../src -I /usr/include/dpdk \
+ 		-L ../build $(LIBS) \
+-		-Wl,--whole-archive -ldpdk -Wl,--no-whole-archive \
++		-Wl,--whole-archive  -L ../build/libdpdk -ldpdk  -Wl,--no-whole-archive \
+ 		-lnuma -ldl -libverbs -lmlx4 -lmlx5
+ 
+ 	g++ -g -std=c++11 -o client client.cc \
++		-no-pie \
+ 		-Wno-deprecated-declarations \
+-		-DERPC_DPDK=true -march=native \
++		-DERPC_DPDK=true \
+ 		-I ../src -I /usr/include/dpdk \
+ 		-L ../build $(LIBS) \
+-		-Wl,--whole-archive -ldpdk -Wl,--no-whole-archive \
++		-Wl,--whole-archive  -L ../build/libdpdk  -ldpdk -Wl,--no-whole-archive \
+ 		-lnuma -ldl -libverbs -lmlx4 -lmlx5
+ clean:
+ 	rm server client
+diff --git a/hello_world/client.cc b/hello_world/client.cc
+index 9772467..447f890 100644
+--- a/hello_world/client.cc
++++ b/hello_world/client.cc
+@@ -3,7 +3,7 @@ erpc::Rpc<erpc::CTransport> *rpc;
+ erpc::MsgBuffer req;
+ erpc::MsgBuffer resp;
+ 
+-void cont_func(void *, void *) { printf("%s\n", resp.buf); }
++void cont_func(void *, void *) { printf("%s\n", resp.buf_); }
+ 
+ void sm_handler(int, erpc::SmEventType, erpc::SmErrType, void *) {}
+ 
+diff --git a/hello_world/common.h b/hello_world/common.h
+index ff0ed84..679dfe5 100644
+--- a/hello_world/common.h
++++ b/hello_world/common.h
+@@ -1,8 +1,8 @@
+ #include <stdio.h>
+ #include "rpc.h"
+ 
+-static const std::string kServerHostname = "130.127.133.179";
+-static const std::string kClientHostname = "130.127.133.145";
++static const std::string kServerHostname = "192.168.16.251";
++static const std::string kClientHostname = "192.168.16.81";
+ 
+ static constexpr uint16_t kUDPPort = 31850;
+ static constexpr uint8_t kReqType = 2;
+diff --git a/hello_world/server.cc b/hello_world/server.cc
+index d496291..3eed2ee 100644
+--- a/hello_world/server.cc
++++ b/hello_world/server.cc
+@@ -2,9 +2,9 @@
+ erpc::Rpc<erpc::CTransport> *rpc;
+ 
+ void req_handler(erpc::ReqHandle *req_handle, void *) {
+-  auto &resp = req_handle->pre_resp_msgbuf;
++  auto &resp = req_handle->pre_resp_msgbuf_;
+   rpc->resize_msg_buffer(&resp, kMsgSize);
+-  sprintf(reinterpret_cast<char *>(resp.buf), "hello");
++  sprintf(reinterpret_cast<char *>(resp.buf_), "hello");
+ 
+   rpc->enqueue_response(req_handle, &resp);
+ }
+diff --git a/src/transport_impl/dpdk/dpdk_daemon.cc b/src/transport_impl/dpdk/dpdk_daemon.cc
+index b2e5f14..61e3d18 100644
+--- a/src/transport_impl/dpdk/dpdk_daemon.cc
++++ b/src/transport_impl/dpdk/dpdk_daemon.cc
+@@ -49,7 +49,8 @@ int main(int argc, char **argv) {
+   const std::string memzone_name = erpc::DpdkTransport::get_memzone_name();
+   const rte_memzone *memzone = rte_memzone_reserve(
+       memzone_name.c_str(), sizeof(erpc::DpdkTransport::ownership_memzone_t),
+-      FLAGS_numa_node, RTE_MEMZONE_2MB);
++      FLAGS_numa_node, RTE_MEMZONE_512MB);
++  //FLAGS_numa_node, RTE_MEMZONE_2MB);
+   erpc::rt_assert(memzone != nullptr,
+                   "eRPC DPDK daemon: Failed to create memzone");
+   erpc::ERPC_WARN(
+diff --git a/src/transport_impl/dpdk/dpdk_transport.h b/src/transport_impl/dpdk/dpdk_transport.h
+index 9456738..cad8dd0 100644
+--- a/src/transport_impl/dpdk/dpdk_transport.h
++++ b/src/transport_impl/dpdk/dpdk_transport.h
+@@ -5,7 +5,6 @@
+ #pragma once
+ 
+ #ifdef ERPC_DPDK
+-
+ #include "transport.h"
+ #include "transport_impl/eth_common.h"
+ #include "util/barrier.h"
+diff --git a/src/util/barrier.h b/src/util/barrier.h
+index 8cf5434..07bff3e 100644
+--- a/src/util/barrier.h
++++ b/src/util/barrier.h
+@@ -2,6 +2,7 @@
+ 
+ namespace erpc {
+ 
++#ifdef __x86_64__
+ static void memory_barrier() { asm volatile("" ::: "memory"); }
+ 
+ static void lfence() { asm volatile("lfence" ::: "memory"); }
+@@ -20,5 +21,20 @@ static void cpuid(unsigned int* eax, unsigned int* ebx, unsigned int* ecx,
+                : "=a"(*eax), "=b"(*ebx), "=c"(*ecx), "=d"(*edx)
+                : "0"(*eax), "2"(*ecx));
+ }
++#elif defined(__aarch64__)
++static void memory_barrier() {   asm volatile("" : : : "memory"); }
++
++static void lfence() { asm volatile("dsb sy" : : : "memory");  }
++
++static void sfence() {  asm volatile("dsb sy" : : : "memory");} 
++
++static void mfence() {  asm volatile("dsb sy" : : : "memory"); }
++
++static void pause() {    __asm__ volatile("yield" ::: "memory"); }
++static void cpuid(unsigned int* eax, unsigned int* ebx, unsigned int* ecx,
++                  unsigned int* edx) {
++  *eax = *ebx  = *ecx = *edx = 0;
++}
++#endif
+ 
+ }  // namespace erpc
+diff --git a/src/util/math_utils.h b/src/util/math_utils.h
+index fc90358..95c3655 100644
+--- a/src/util/math_utils.h
++++ b/src/util/math_utils.h
+@@ -32,13 +32,22 @@ static inline size_t lsb_index(int x) {
+ 
+ /// Return the index of the most significant bit of x. The index of the 2^0
+ /// bit is 1. (x = 0 returns 0, x = 1 returns 1.)
++#ifdef __x86_64__
++
++
++
+ static inline size_t msb_index(int x) {
+   assert(x < INT32_MAX / 2);
+   int index;
+   asm("bsrl %1, %0" : "=r"(index) : "r"(x << 1));
+   return static_cast<size_t>(index);
+ }
+-
++#elif defined(__aarch64__)
++ static inline size_t msb_index(int x) {
++  if (x==0) return 0;
++  return 32 - __builtin_clz(x<<1)-1;
++ }
++#endif
+ /// C++11 constexpr ceil
+ static constexpr size_t ceil(double num) {
+   return (static_cast<double>(static_cast<size_t>(num)) == num)
+diff --git a/src/util/timer.h b/src/util/timer.h
+index 03c1a58..c85f193 100644
+--- a/src/util/timer.h
++++ b/src/util/timer.h
+@@ -12,6 +12,7 @@
+ 
+ namespace erpc {
+ 
++#ifdef __x86_64__
+ /// Return the TSC
+ static inline size_t rdtsc() {
+   uint64_t rax;
+@@ -19,6 +20,22 @@ static inline size_t rdtsc() {
+   asm volatile("rdtsc" : "=a"(rax), "=d"(rdx));
+   return static_cast<size_t>((rdx << 32) | rax);
+ }
++#elif defined(__aarch64__)
++static inline size_t rdtsc() {
++  unsigned long long val;
++
++  /*
++ *    * According to ARM DDI 0487F.c, from Armv8.0 to Armv8.5 inclusive, the
++ *       * system counter is at least 56 bits wide; from Armv8.6, the counter
++ *          * must be 64 bits wide.  So the system counter could be less than 64
++ *             * bits wide and it is attributed with the flag 'cap_user_time_short'
++ *                * is true.
++ *                   */
++  asm volatile("mrs %0, cntvct_el0" : "=r"(val));
++
++  return val;
++}
++#endif
+ 
+ /// An alias for rdtsc() to distinguish calls on the critical path
+ static const auto &dpath_rdtsc = rdtsc;

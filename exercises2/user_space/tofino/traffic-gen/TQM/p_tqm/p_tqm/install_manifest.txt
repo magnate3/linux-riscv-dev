@@ -1,0 +1,6 @@
+/root/bf-sde-9.7.0/install/share/p4/targets/tofino/p_tqm.conf
+/root/bf-sde-9.7.0/install/share/tofinopd/p_tqm/bf-rt.json
+/root/bf-sde-9.7.0/install/share/tofinopd/p_tqm/pipe/context.json
+/root/bf-sde-9.7.0/install/share/tofinopd/p_tqm/pipe/tofino.bin
+/root/bf-sde-9.7.0/install/share/tofinopd/p_tqm/events.json
+/root/bf-sde-9.7.0/install/share/tofinopd/p_tqm/source.json

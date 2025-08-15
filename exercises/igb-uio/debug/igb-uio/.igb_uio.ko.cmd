@@ -1,0 +1,1 @@
+cmd_/root/programming/kernel/igb-uio/igb_uio.ko := ld -EL -r -maarch64linux -T ./scripts/module-common.lds --build-id  -o /root/programming/kernel/igb-uio/igb_uio.ko /root/programming/kernel/igb-uio/igb_uio.o /root/programming/kernel/igb-uio/igb_uio.mod.o ;  true

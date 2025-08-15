@@ -1,0 +1,53 @@
+{
+  "p4_src": "p4src/conga.p4",
+  "cli": true,
+  "pcap_dump": true,
+  "enable_log": true,
+    "exec_scripts": [
+    {
+      "cmd": "python routing-controller.py",
+      "reboot_run": true
+    }
+  ],
+  "topology": {
+    "assignment_strategy": "l3",
+    "default":
+    {
+        "bw": 2
+    },
+    "links": [["h1", "s1"], ["h2", "s1"], ["h3", "s1"], ["h4", "s1"], ["h5", "s6"], ["h6", "s6"], ["h7", "s6"], ["h8", "s6"],
+      ["s1", "s2"], ["s1", "s3"], ["s1", "s4"], ["s1", "s5"], ["s2", "s6"], ["s3", "s6"], ["s4", "s6"], ["s5", "s6"]],
+    "hosts": {
+      "h1": {
+      },
+      "h2": {
+      },
+      "h3": {
+      },
+      "h4": {
+      },
+      "h5": {
+      },
+      "h6": {
+      },
+      "h7": {
+      },
+      "h8": {
+      }
+    },
+    "switches": {
+      "s1": {
+      },
+      "s2": {
+      },
+      "s3": {
+      },
+      "s4": {
+      },
+      "s5": {
+      },
+      "s6": {
+      }
+    }
+  }
+}

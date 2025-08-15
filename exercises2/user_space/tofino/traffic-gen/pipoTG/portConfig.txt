@@ -1,0 +1,10 @@
+ucli
+pm
+port-add 29/- 100G NONE
+port-enb 29/-
+an-set 29/- 2 
+port-dis 29/-
+port-enb 29/-
+show
+exit
+exit

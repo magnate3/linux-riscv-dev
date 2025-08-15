@@ -1,0 +1,966 @@
+---
+layout: post
+title:  DCN Lec8-Programmable Data Plane
+date:   2025-03-06
+description: You’ll find this post in your `_posts` directory. Go ahead and edit it and re-build the site to see your changes. # Add post description (optional)
+img: post-8.png # Add image post (optional)
+tags: [Blog, DCN]
+author: # Add name author (optional)
+---
+# 本讲内容
+
+---
+
+## 传统高速交换机
+
+### Fixed function switch
+传统高速（100s of Gbps to multi-Tbps）交换机是“fixed-function”:
+- 即，交换芯片硬连线以执行一组特定的功能（例如 IP 转发）
+- 不可编程Not programmable：无法修改以实施新协议
+- 为了性能而牺牲了可编程性: 正如传统观点所说，很难同时实现两者.
+
+<figure style="text-align: center;">
+  <img src="./img/l8p1.png" alt="Packet processing pipeline" width="600">
+  <figcaption>Packet processing pipeline on fixed function switch</figcaption>
+</figure>
+
+上图展示了一个典型的数据包处理流水线（pipeline），涉及从数据包进入（Packet In）到数据包输出（Packet Out）的整个处理流程。下面详细解析各个组件的功能：
+
+1. 数据包输入（Packet In）
+   - 数据包从外部网络接口进入处理管道。
+2. 解析器（Parser）
+    - 解析器提取数据包的头部字段（Header fields）,如以太网头、IP头等, 提取关键信息（如源/目的MAC地址、IP地址、协议类型等）, 和有效载荷（Payload）。
+    - 头部字段（如 MAC 地址、IP 地址等）被送入后续处理阶段，而有效载荷保持不变。    
+3. 处理阶段 (Stages)
+    处理过程由多个阶段组成：
+    - L2 Stage（第二层处理阶段）/L2表查询
+       - 主要进行以太网（Ethernet）层的处理，例如 MAC 地址学习、VLAN 处理等。
+       - **表结构: L2: 128k x 48（128k条目，每条48位）。**
+       - **匹配方式: 精确匹配（Exact Match），基于目的MAC地址。**
+       - **动作：set L2D（设置第二层目标地址，如转发端口的MAC地址）。**
+
+        <figure style="text-align: center;">
+        <img src="./img/l8p2.png" alt="L2 Stage" width="600">
+        <figcaption>L2 Stage</figcaption>
+        </figure>
+
+    - L3 Stage（第三层处理阶段）/L3表查询
+       - 主要进行 IP 层处理，如路由查找、TTL 递减、NAT（网络地址转换）等。
+       - **表结构：L3: 16k x 32（16k条目，每条32位）。**
+       - **匹配方式：最长前缀匹配（Longest Prefix Match），基于目的IP地址。**
+       - **动作：**
+          - **set L3D：设置第三层目标地址（如下一跳IP地址）。**
+          - **dec TTL：减少IP头部生存时间（TTL），防止数据包无限循环。**
+
+        <figure style="text-align: center;">
+        <img src="./img/l8p3.png" alt="L3 Stage" width="600">
+        <figcaption>L3 Stage</figcaption>
+        </figure>
+
+    - ACL(Access Control List) Stage（访问控制列表阶段）
+      - 负责基于预定义的安全策略进行数据包过滤，决定数据包是否被允许通过或丢弃。
+      - **表结构：ACL: 4k（4k条目）。**
+      - **匹配方式：三元匹配（Ternary Match），支持通配符（如匹配源/目的IP、端口范围等）。**
+      - **动作：**
+        - **permit：允许数据包通过。**
+        - **deny：丢弃数据包（如安全策略不允许的流量）。**
+
+        <figure style="text-align: center;">
+        <img src="./img/l8p4.png" alt="ACL Stage" width="600">
+        <figcaption>ACL Stage</figcaption>
+        </figure>
+
+    |  组件  | 表类型    | 匹配方式            | 动作                         |
+    |:------:|-----------|---------------------|------------------------------|
+    | L2 表  | 128k x 48 | 精确匹配（Exact）   | 设置目标MAC地址（set L2D）   |
+    | L3 表  | 16k x 32  | 最长前缀匹配（LPM） | 设置目标IP地址、减少TTL      |
+    | ACL 表 | 4k        | 三元匹配（Ternary） | 允许（permit）或拒绝（deny） |
+
+    这些阶段通过并行流水线方式传递处理结果，提高处理速度。
+
+4. 反解析器（Deparser）
+    - 在所有处理完成后，根据处理结果重新组装数据包头部（如更新TTL、MAC地址等），生成最终输出的数据包格式。
+5. 队列（Queues）
+    - 数据包经过处理后，将处理后的数据包按优先级或流量类别放入不同队列，进行流量整形或调度（如保证高优先级流量优先转发）。
+6. 数据包输出（Packet Out）
+    - 经过所有处理后，数据包被转发到合适的端口，从队列中取出，通过指定物理端口发送到外部网络, 完成整个处理过程。
+
+这张图描述了一个典型的数据包处理流水线，依次经过解析、L2 处理、L3 处理、ACL 处理，最终重新封装并输出数据包。该结构常见于软件定义网络（SDN）交换机或高性能网络设备中，优化数据包转发效率，同时提供灵活的网络管理能力。
+
+### 但是……如果您需要灵活性怎么办？
+
+所谓灵活性**flexibility**包括：
+- 添加新表 table
+- 添加新标题字段 header field
+- 添加不同操作 action
+
+**SDN 强调对灵活性的需求。** 在SDN中，一个重要的概念就是数据平面和控制平面的分离。控制平面就是我们常说的控制器，如果采用openflow协议，数据平面就是支持openflow的交换机。控制平面与数据平面之间仅能通过openflow协议进行通讯。openflow协议有以下的特点：预先定义好的控制器与数据平面设备之间通信的报文格式; openflow是一种狭义的南向协议，是协议相关的，数据平面和控制平面都需要实现该协议。虽然openflow为SDN奠定了基础，但在实际开发中，openflow还存在着比较大的局限。它无法做到协议不相关，由于必须遵循openflow协议来进行编程，而无法根据自己的需要进行额外扩展，很不灵活。openflow只能在已经固化的交换机数据处理逻辑上，通过流表、组表等指导数据流处理，却无法重新定义交换机处理数据的逻辑。此外，在openflow的版本迭代速度比较快，字段的变化也非常多。在openflow 1.0版本中仅支持12个匹配字段，1.3版本中支持40个匹配字段，到了1.5版本则可以支持45个匹配字段。随着版本的更迭需要对字段进行更改，如果是软件层面的控制器可以比较方便的修改，但是对于数据平面，特别是支持openflow的硬件交换机来说，每次修改协议都需要重新编写数据包的处理逻辑。可以说，openflow的这种可扩展性非常差的设计大大阻碍了openflow的推广和使用。[参考][P4]
+
+[P4]: https://yeya24.github.io/post/p4/
+
+- SDN 为控制平面control plane提供编程控制
+- 要完全实现 SDN 的愿景, 我们需要在数据平面data plane中拥有同样的灵活性！
+
+### 现有的解决方案
+
+- Software？比fixed-function ASIC switches慢 100 倍
+- NPUs？比fixed-function ASIC switches慢 10 倍
+- FPGAs？比fixed-function ASIC switches慢 10 倍
+
+> An ASIC switch is a switch that uses an application-specific integrated circuit (ASIC) chip. ASICs are custom-made chips that are designed to perform specific functions. 
+
+> ASIC 交换机是一种使用专用集成电路 (ASIC) 芯片的交换机。ASIC 是专门为执行特定功能而设计的定制芯片。
+
+我们需要一个Programmable Switch ASIC！
+
+---
+
+## RMT(Reconfigurable Match Table) Design 可重构匹配表
+
+**RMT（Reconfigurable Match Table，可重构匹配表）** 是一种灵活的网络数据包处理架构，核心特点如下：
+
+1. Reconfigurable 可自定义
+   - **parse custom header fields** 解析自定义：支持用户定义数据包的头部字段解析规则（如协议类型、字段结构）。
+   - **create custom match tables** 匹配表自定义：允许用户创建专用匹配表（如路由表、ACL表）
+   - **custom actions** 动作自定义: 指定每条表项的匹配条件与对应动作（如转发、丢弃、修改字段）。
+2. Two key abstractions 两个关键抽象模型:
+   - Parse Graph 解析图: 定义数据包头部字段的解析流程，逐层提取所需信息（如以太网头→IP头→TCP头）。
+   - Table Graph 表图: 描述匹配表之间的逻辑关系与动作执行顺序（如先查L2表→再查L3表→最后执行ACL过滤）。
+3. Can be programmed using a domain-specific language called P4
+   - 通过领域专用语言**P4** (**P**rogramming **P**rotocol-Independent **P**acket **P**rocessors) 实现编程。
+   - 声明式特性：用户只需声明“要做什么”（如解析哪些字段、如何匹配和动作），无需关注底层硬件实现细节。
+
+### 解析图（Parse Graph）--自定义字段
+
+解析图（Parse Graph）是RMT（可重构匹配表）模型中的一个核心抽象，用于定义数据包头部字段的解析流程。它决定了数据包从进入系统开始，如何逐层提取和处理不同协议层的头部信息。
+
+<figure style="text-align: center;">
+<img src="./img/l8p20.png" alt="Parse Graph" width="300"><img src="./img/l8p21.png" alt="Parse Graph" width="300"><img src="./img/l8p22.png" alt="Parse Graph" width="300">
+<figcaption>Parse Graph</figcaption>
+</figure>
+
+1. 解析图的基本定义
+
+- 功能定位：解析图位于数据包处理流程的最前端，负责将原始数据包的二进制流转换为结构化、可操作的头部字段信息。
+- 核心任务：根据用户定义的规则，识别并提取数据包中各协议层的头部（如以太网头、IP头、TCP头等），为后续的匹配和动作执行提供输入。
+
+2. 解析图的组成元素
+
+解析图通常由以下要素构成：
+
+- 节点（Nodes）：每个节点代表一个协议层（如以太网、IPv4、TCP）或自定义头部字段（如VXLAN、MPLS）。
+- 边（Edges）：边表示解析的顺序和依赖关系，例如必须先解析以太网头才能确定下一层是否为IP头。
+- 解析逻辑（Parsing Logic）：每个节点包含具体的解析规则，例如字段长度、偏移量、数据类型（如16位整数、字符串）等。
+
+3. 用户自定义解析规则
+
+通过P4语言，用户可以灵活定义解析图的结构和逻辑：
+
+- 协议无关性：支持任意自定义协议，无需依赖硬件预定义的协议栈。例如，可以解析传统协议（如IPv6）或私有协议（如物联网设备专用头部）。
+- 动态字段提取：根据数据包内容动态判断下一层协议类型。例如：
+  - 解析以太网头后，根据EtherType字段（如0x0800代表IPv4，0x86DD代表IPv6）决定下一层解析逻辑。
+  - 在IP头中，根据Protocol字段（如6代表TCP，17代表UDP）确定传输层协议。
+
+示例代码片段（P4语言）：解析器可以实现为**有限状态机(finite state machine)**
+
+<figure style="text-align: center;">
+<img src="./img/l8p23.png" alt="Programming Parser in P4" width="600">
+<figcaption>Programming Parser in P4</figcaption>
+</figure>
+
+对应parse graph:
+
+<figure style="text-align: center;">
+<img src="./img/l8p26.png" alt="对应parse graph" width="400">
+<figcaption>对应parse graph</figcaption>
+</figure>
+
+4. 动态调整能力
+
+解析图的设计支持运行时重构，以适应网络协议的变化：
+
+- 灵活扩展：用户可随时通过修改P4代码添加新协议解析逻辑，无需更换硬件。例如，在现有网络中引入新的隧道协议（如Geneve）。
+- 条件分支解析：根据数据包内容动态选择解析路径。例如，在VLAN标签存在时解析VLAN头，否则跳过。
+
+5. 实际应用示例
+
+假设一个数据包携带以下头部结构：**以太网头 → VLAN标签 → IPv4头 → TCP头**
+
+解析图工作流程：
+
+- 初始状态：从**start**状态进入以太网头解析。
+- 解析以太网头：提取目的MAC、源MAC和**EtherType**字段。
+- 判断下一层协议：
+  - 若**EtherType=0x8100**（VLAN标签），则解析VLAN头，更新EtherType字段。
+  - 若**EtherType=0x0800**（IPv4），跳转到IPv4解析。
+- 解析IPv4头：提取源IP、目的IP和**Protocol**字段。
+- 判断传输层协议：若**Protocol=6**（TCP），继续解析TCP头（源端口、目的端口、序列号等）。
+- 完成解析：所有相关头部字段被提取并存储，供后续匹配和动作阶段使用。
+
+6. 解析图的优势与重要性
+
+- 高效性：仅解析需要的字段，避免对无关数据的处理，减少资源消耗。
+- 可维护性：协议变更仅需调整解析图定义，无需修改硬件逻辑。
+- 兼容性：支持混合协议环境（如传统IPv4与新兴IPv6共存）。
+
+解析图是RMT模型中实现协议无关性和灵活数据处理的核心机制。通过用户自定义的解析规则，它能够适应复杂多变的网络环境，为后续的匹配表查询和动作执行提供精确的输入数据。这种设计使得网络设备（如交换机、路由器）能够通过软件编程（如P4）快速响应新协议需求，是软件定义网络（SDN）和可编程数据平面的关键技术之一。
+
+### 表图（Table Graph）--可重构表
+
+表图（Table Graph）是RMT（可重构匹配表）模型中的另一个核心抽象，用于定义数据包在匹配和动作执行阶段的逻辑流程。它描述了匹配表之间的依赖关系、动作执行顺序以及条件分支逻辑，确保数据包根据用户定义的策略高效处理。
+
+1. 表图的基本定义
+
+- 功能定位：表图位于解析图之后，负责指导数据包通过一系列匹配表（Match Tables），并根据匹配结果执行相应的动作（Actions）。
+- 核心任务：
+  - 定义多个匹配表的执行顺序（如先查L2表→再查L3表→最后查ACL表）。
+  - 通过条件逻辑（如匹配成功/失败）控制流程跳转（例如匹配失败时丢弃数据包或跳转到其他表）。
+
+2. 表图的组成元素
+
+表图由以下关键组件构成：
+
+- 匹配表（Match Tables）：用户自定义的规则集合，每条规则包含：
+  - 匹配字段（Match Keys）：如目的MAC地址（L2表）、目的IP前缀（L3表）。
+  - 匹配类型（Match Types）：如精确匹配（Exact）、最长前缀匹配（LPM）、范围匹配（Range）、三元匹配（Ternary）。
+  - 动作（Actions）：匹配成功后执行的操作（如转发、修改TTL、添加VLAN标签）。
+- 动作块（Action Blocks）：
+
+  每个匹配表关联一个或多个动作，动作可以是：
+  - 基础动作：内置操作（如forward、drop）。
+  - 自定义动作：用户通过P4定义的复杂逻辑（如修改多个字段、调用外部函数）。
+- 跳转逻辑（Transition Logic）：
+
+  通过条件语句（如if-else）或优先级规则，控制数据包在不同表之间的流转路径。例如：
+  - 若L2表匹配成功，则执行动作并跳转到L3表；
+  - 若L3表匹配失败，则直接丢弃数据包。
+
+3. 用户自定义表图（通过P4语言）
+
+用户通过P4的**控制逻辑（Control Plane）**定义表图的结构。以下是一个简化的P4代码示例：
+
+<figure style="text-align: center;">
+<img src="./img/l8p24.png" alt="Programming Match Table in P4" width="600">
+<figcaption>Programming Match Table in P4</figcaption>
+</figure>
+
+解析以下表图:    
+<figure style="text-align: center;">
+<img src="./img/l8p6.png" alt="Reconfigurable Tables : Table Graph" width="600">
+<figcaption>Reconfigurable Tables : Table Graph</figcaption>
+</figure>
+
+3.1 组件定义
+
+| 组件        | 说明                                                                                                |
+|-------------|---------------------------------------------------------------------------------------------------------|
+| VLAN        | 虚拟局域网，用于在二层网络中划分独立的广播域，隔离不同用户或业务流量。                                          |
+| ETHERTYPE   | 以太网类型字段（2字节），指示数据帧载荷中封装的协议类型（如0x0800代表IPv4，0x86DD代表IPv6）。                   |
+| MAC FORWARD | MAC地址转发逻辑，交换机或路由器根据目的MAC地址决定数据帧的转发端口。                                            |
+| IPV4-DA     | IPv4目的地址，用于三层路由决策（最长前缀匹配）。                                                                |
+| IPV6-DA     | IPv6目的地址，功能类似IPv4-DA，但地址空间更大且支持更灵活的路由策略。                                           |
+| RCP         | 可能为路由控制协议（Routing Control Protocol），用于动态路由信息交换（如OSPF、BGP）。需结合上下文确认具体协议。 |
+| ACL         | 访问控制列表，基于规则（如源/目的IP、端口号）过滤流量，允许或拒绝数据包通过。                                   |
+
+3.2 依赖关系分析
+
+箭头表示输入依赖，即下游组件的处理需要上游组件提供数据。具体流程如下：
+
+- VLAN → ETHERTYPE
+    - 依赖逻辑：
+        在解析数据帧时，首先读取ETHERTYPE字段：
+        - 若ETHERTYPE=0x8100，表示数据帧包含VLAN标签，需先提取VLAN ID，再进行后续处理。
+        - 若未携带VLAN标签，则直接进入MAC转发阶段。
+    - 作用：VLAN划分依赖于ETHERTYPE字段的判断。
+- MAC FORWARD → IPV4-DA / IPV6-DA
+    - 依赖逻辑：
+    在二层转发（MAC FORWARD）完成后，若需进行三层路由，需提取IP头部的目的地址：
+    - 若为IPv4数据包，使用IPV4-DA查询路由表。
+    - 若为IPv6数据包，使用IPV6-DA查询路由表。
+    - 作用：IP目的地址是三层路由决策的关键输入。
+- RCP → IPV4-DA / IPV6-DA
+    - 依赖逻辑：
+    动态路由协议（如OSPF、BGP）需要基于IP目的地址生成或更新路由表：
+    - IPv4和IPv6地址分别对应不同的路由表项和协议处理逻辑。
+    - 作用：路由控制协议依赖IP地址信息维护网络拓扑和路径选择。
+- ACL → 所有上游组件
+    - 依赖逻辑：
+    ACL规则可能基于以下字段进行匹配：
+    - 二层：VLAN ID、源/目的MAC地址。
+    - 三层：源/目的IPv4/IPv6地址。
+    - 四层：TCP/UDP端口号。
+    - 作用：ACL是流量过滤的最后一步，依赖所有前期解析的字段执行安全策略。
+
+3.3 完整处理流程示例
+
+- 从VLAN表开始，处理虚拟局域网相关信息;
+- 然后流向ETHERTYPE表，识别以太网帧类型;
+- ETHERTYPE根据不同的以太网类型将流量分配到三个不同方向：
+  - MAC FORWARD表：处理MAC地址转发
+  - IPV4-DA表：处理IPv4目标地址
+  - IPV6-DA表：处理IPv6目标地址
+- 这三个表的输出都汇集到RCP(路由控制协议)表;
+- 最后流向ACL(访问控制列表)表，进行访问控制.
+
+3.4 关键依赖总结
+
+VLAN与ETHERTYPE：VLAN划分需优先解析以太网类型字段。
+MAC FORWARD与IP地址：三层路由依赖MAC转发后的IP头部信息。
+RCP与IP地址：动态路由协议需基于IP地址更新路由表。
+ACL的全局依赖：ACL规则综合所有层级字段实现细粒度过滤。
+
+4. 表图的动态特性
+
+- 运行时可重构：
+  
+  用户可通过P4动态修改匹配表的规则和动作，无需重启设备。例如：
+  - 添加新的ACL规则以阻止特定IP流量。
+  - 调整路由表的优先级以优化路径选择。
+- 条件分支优化：
+  表图支持复杂的逻辑分支，例如：
+  - 根据数据包类型（如TCP/UDP）选择不同的处理路径。
+  - 在匹配失败时触发备用表或默认策略。
+
+5. 实际应用示例
+
+假设一个数据包需要经过以下处理流程：**L2表（MAC转发） → L3表（IP路由） → ACL表（安全过滤）**
+
+表图工作流程：
+
+- L2表查询：
+  - 匹配目的MAC地址，若命中则执行set_l2_forward动作（确定输出端口）。
+  - 若未命中，直接丢弃数据包。
+- L3表查询：
+  - 匹配目的IP地址的最长前缀，若命中则执行set_next_hop和decrement_ttl。
+  - 若未命中，丢弃数据包。
+- ACL表查询：
+  - 根据源IP、目的端口等字段进行三元匹配，若命中且动作为permit，则转发数据包；
+  - 若动作为deny，则丢弃。
+
+6. 表图的优势
+
+- 逻辑清晰：通过图形化的表关系，直观展示数据包处理流程，便于调试和优化。
+- 灵活扩展：支持插入新表或调整现有表顺序，适应网络策略变化（如新增安全检测模块）。
+- 高效执行：通过条件跳转避免冗余查询，例如ACL表仅在特定流量条件下触发。
+
+7. 表图与解析图的协同
+
+- 数据传递：解析图提取的头部字段（如MAC地址、IP地址）作为输入，传递给表图中的匹配表。
+- 端到端流程：
+  - 解析图：结构化数据包头部 →
+  - 表图：按顺序查询表并执行动作 →
+  - 反解析器（Deparser）：重组数据包并发送。
+
+表图是RMT模型中实现智能流量控制和策略执行的核心机制。通过用户自定义的匹配表与动作逻辑，它能够精确指导数据包的处理路径，满足复杂网络场景的需求（如多租户隔离、动态路由调整、细粒度安全策略）。结合解析图，表图构建了一个完整的可编程数据平面，为软件定义网络（SDN）和网络功能虚拟化（NFV）提供了强大的底层支持。
+
+但解析和表格图只是模型的抽象,没有展示如何构建交换机.
+
+### Match-Action Forwarding Model 匹配-动作转发模型
+
+<figure style="text-align: center;">
+<img src="./img/l8p7.png" alt="Match-Action Forwarding Model" width="500"><img src="./img/l8p8.png" alt="Match-Action Forwarding Model" width="500">
+<figcaption>Match-Action Forwarding Model</figcaption>
+</figure>
+
+### RMT Logical to Physical Table Mapping RMT 逻辑到物理表映射
+
+物理存储类型与匹配方式:
+
+RMT 将逻辑表映射到两种物理存储结构，分别针对不同的匹配需求：
+
+- **SRAM**: Used for **exact matching**
+  - i.e., every bit must be either 0 or 1
+- **TCAM**: Used for **ternary matching**, i.e.,can match “wildcard” bits
+  - e.g., 128.84.*.* (Here * represents wildcard bits, i.e., they could be 0 or 1)
+  - Typically used for Longest Prefix Matching for IP forwarding (Lecture 2)
+
+> 静态随机存取存储器（Static Random-Access Memory，SRAM）是随机存取存储器的一种。所谓的“静态”，是指这种存储器只要保持通电，里面储存的数据就可以恒常保持。相对之下，动态随机存取存储器（DRAM）里面所储存的数据就需要周期性地更新。
+> TCAM (ternary content addressable memory)是一种三态内容寻址存储器，主要用于快速查找ACL、路由等表项。TCAM 表内所有条目都可以并行访问，比如，如果你有100条ACL，TCAM能一次就能对比这100条ACL进行对比操作，过去如果有100条ACL的话，需要第一条ACL对比完后再对比第二条，然后第三条，直至N条，效率很明显没有TCAM高。TCAM成本比较高，存储空间的单位价格高于普通的SRAM，而且耗能也远远高于SRAM。
+| **存储类型** |     **匹配方式**    |                               **特点**                              |            **典型应用场景**           |
+|:------------|:-------------------|:-------------------------------------------------------------------|:-------------------------------------|
+| **SRAM**     | 精确匹配（Exact）   | - 要求所有匹配位严格为0或1 <br> - 速度快、功耗低，但容量有限            | MAC地址表、精确IP地址匹配（如流表）   |
+| **TCAM**     | 三元匹配（Ternary） | - 支持通配符（*），允许部分位为“无关” <br> - 容量小、成本高，但灵活性强 | 最长前缀匹配（LPM）、ACL规则、QoS策略 |
+
+解析示例:
+<figure style="text-align: center;">
+<img src="./img/l8p9.png" alt="RMT Logical to Physical Table Mapping" width="600">
+<figcaption>RMT Logical to Physical Table Mapping</figcaption>
+</figure>
+
+左侧部分：协议关系与匹配条件
+  - 协议层次关系
+    - 以太网（ETH）是基础层，IPv4 和 IPv6 依赖于 ETH 解析后进行匹配。
+    - TCP 依赖于 IPv4 或 IPv6 解析后进行匹配。
+  - 匹配方式
+    - 目标 MAC 地址精确匹配
+    - 目标 IPv4 地址的三元匹配, 目标 IPv6 地址的三元匹配
+    - 目标 TCP 端口的匹配采用 Exact Match（精确匹配），意味着查找时不会进行范围匹配，而是直接基于哈希表或特定地址索引。
+
+右侧部分：逻辑表到物理表的映射
+  - 物理表按照 Stage（阶段） 组织，每个阶段可以存储不同的逻辑表。
+    - 主要存储结构：
+      - TCAM（Ternary Content Addressable Memory，三态内容可寻址存储器）
+        - 用于存储复杂匹配规则，例如 IPv4 和 IPv6 查找。
+        - 存储宽度为 640b。
+      - SRAM HASH
+        - 用于存储基于哈希的精确匹配，如 ETH 和 TCP 端口匹配。
+        - 也存储 640b。
+    - 逻辑表映射
+      - Physical Stage 1：
+        - SRAM HASH：存储 Logical ETH Table，用于以太网（Ethernet）头部的精确匹配操作。
+      - Physical Stage 2：
+        - TCAM：存储 Logical IPv4 Table 和 Logical IPv6 Table，即 IPv4/IPv6 地址匹配逻辑。
+      - Physical Stage n：
+        - SRAM HASH：Logical TCP Table 存储在后续阶段，表示 TCP 端口匹配依赖于 IPv4/IPv6 查找结果。
+    - 依赖关系/Dependency arrow
+      - Logical TCP Table 依赖于 Logical IPv4 Table 或 Logical IPv6 Table，即 TCP 匹配发生在 IP 匹配之后。
+
+注意点:
+  - 不同阶段的匹配表不能放在同一阶段的映射
+  - 一个匹配表可以占用有多个阶段
+  - 不同阶段的匹配表之间没有重合
+
+关键结论
+  - 管道化匹配过程：
+    - 以太网头解析后进行 IPv4/IPv6 查找。
+    - IPv4/IPv6 查找完成后，才能进行 TCP 端口匹配。
+  - TCAM 适用于多前缀匹配，SRAM 适用于哈希匹配：
+    - IPv4/IPv6 查找 使用 TCAM，因为 IP 地址匹配通常涉及掩码（前缀匹配）。
+    - 以太网和 TCP 端口匹配 使用 SRAM HASH，因为这些匹配通常是精确匹配，适合哈希查找。
+
+该图描述了 RMT 交换机中的逻辑表如何映射到物理硬件，展示了协议层次、匹配方式以及依赖关系。它反映了数据包在交换机中匹配转发规则时的管道化结构，优化了查找效率，同时支持可编程性。在 RMT 架构中，物理阶段的资源分配取决于具体的设计需求。将 Logical ETH Table 分配到 Physical Stage 1 的 SRAM HASH 中，符合以太网头部需要精确匹配的特点。
+
+### Action Processing Model 动作处理模型
+
+该模型常用于 P4 语言的可编程交换机，帮助网络管理员定义自定义数据处理逻辑，比如流量计数、负载均衡、封包修改等。
+
+<figure style="text-align: center;">
+<img src="./img/l8p10.png" alt="Action Processing Model" width="600">
+<figcaption>Action Processing Model</figcaption>
+</figure>
+
+模型组成
+
+1. Header In（输入头部）
+   - 代表输入到 ALU（算术逻辑单元）的数据，主要是 数据包的头部字段，例如 MAC 地址、IP 地址、TCP 端口等。
+   - 这些头部字段会作为 ALU 计算的输入之一。
+2. MUX（多路复用器）
+   - 选择 ALU 的输入来源，可以是：数据包头部字段（Header In）; 其他数据（如 SRAM 存储的自定义数据，例如计数器）
+3. Data（数据）
+   -  存储在交换机寄存器（SRAM）中的 匹配结果，例如：计数器（packet counter）, 统计信息, 其他自定义数据
+4. Instruction（指令）
+   - 规定 ALU 如何操作输入数据，包括：
+     - 加法（Add）
+     - 减法（Subtract）
+     - 位移运算（Bit Shift Left/Right）
+   - 但不支持复杂运算，如乘法（Multiply）和除法（Divide）, 因为保证性能是第一位目标。
+5. ALU(Arithmetic Logic Unit/算术逻辑单元)
+   - 负责执行指令操作，对输入数据（Header In 或 SRAM 数据）进行计算，最终输出修改后的数据。
+
+运作流程
+
+1. 匹配阶段：
+   - 交换机先查找数据包的匹配项（例如，根据 IP 地址匹配路由表）。
+   - 如果匹配成功，则可能从 SRAM 读取存储的数据（例如，统计计数器）。
+2. 指令执行阶段：
+   - ALU 根据 Instruction（指令） 执行简单计算，例如：
+     - 计数器递增（Add 1）
+     - 计算 TTL（生存时间）减少（Subtract 1）
+     - 标志位的左移/右移（Bit Shift Left/Right）
+   - 但不支持复杂计算（如乘法或除法）。
+3. 输出阶段：
+   - 经过 ALU 计算后，数据可能被修改，并写回到 包头字段 或 交换机寄存器，然后进入后续的 转发/丢弃 逻辑。
+   - ALU 的输出是（修改后的）数据包头字段
+
+可编程数据平面中具有并行处理的能力，主要用于网络设备（如 P4 交换机）的数据包处理。因为交换机的一个处理阶段（Stage）中 可以包含多个 ALU, 这些 ALU 同时处理多个数据包头字段（Header Fields）。VLIW 指令（Very Long Instruction Word）, 超长指令字, 控制多个 ALU 同时执行不同的计算。通过 单个 VLIW 指令，可以让多个 ALU 在同一时钟周期内执行不同操作。数据包在匹配阶段（Match）后，查找到相关的条目，并生成 匹配结果。这个结果 传递给 VLIW 指令，用于控制多个 ALU 的运算逻辑。**ALUs are cheap!** 例如现代网络芯片（如 Tofino）设计中，ALU 的硬件成本低廉，可以大规模并行部署。
+
+<figure style="text-align: center;">
+<img src="./img/l8p11.png" alt="Multiple ALUs Per Stage" width="600">
+<figcaption>Multiple ALUs Per Stage</figcaption>
+</figure>
+
+### RMT Switch Specifications
+
+- 64 x 10Gb ports
+  - 960M packets/second
+  - 1 GHz pipeline
+- Programmable Parser
+- 32 Match-Action Stages
+- Huge TCAM: 10x current chips
+  - 64K TCAM words x 640b
+- SRAM hash tables for exact match
+  - 128K words x 640b
+- 224 action processors per stage
+- All OpenFlow Statistics counters
+
+<figure style="text-align: center;">
+<img src="./img/l8p25.png" alt="RMT Chip Comparison against Fixed-Function Switches" width="600">
+<figcaption>RMT Chip Comparison against Fixed-Function Switches</figcaption>
+</figure>
+
+---
+
+## Packet Scheduling: PIEO
+RMT 的一个局限性在于 RMT 仅专注于使数据包处理可编程, 也就是RMT把我们塞给他处理的东西全部当作是“packet”, 并不考虑别的, 比如packet排队/调度. 因此要决定先发哪个包后发哪个包, 需要新的方法.
+
+> [PIEO: A Fast, Scalable, and Programmable Packet Scheduler][PIEO]
+
+[PIEO]: https://web.ics.purdue.edu/~vshriva/courses/papers/pieo_2019.pdf
+
+### Packet scheduling 数据包调度
+
+数据包调度是网络管理中的一个关键机制，它决定数据包何时以及以何种顺序传输到网络（“到线”）。
+
+**核心组件**
+1. **数据包队列**：
+   - 在安排数据包进行传输之前临时存储它们。
+   - 可能存在多个队列以对不同流量类型进行优先级排序（例如，VoIP 与文件下载）。
+
+2. **调度算法**：
+   - 决定下一个从队列发送的数据包。
+   - 常用算法：
+     - **公平排队 (FQ)**：确保在各个流之间公平分配带宽。
+     - **加权公平排队 (WFQ)**：为队列分配优先级权重。
+     - **速率限制/策略**：丢弃或延迟超过预定义速率的数据包。
+     - **步调**：平滑流量突发以避免拥塞。
+
+3. **输出端口**：
+   - 数据包离开设备（例如路由器、交换机）的物理/虚拟接口。
+
+**工作原理**
+   1. 数据包到达并根据规则（例如，优先级、源/目的地）分类到队列中。
+   2. **调度算法**选择下一个要传输的数据包，平衡公平性、优先级和速率约束。
+   3. 所选数据包被发送到**输出端口**并传输到线路上。
+
+<figure style="text-align: center;">
+<img src="./img/l8p13.png" alt="Packet Scheduling 101" width="600">
+<figcaption>Packet Scheduling 101</figcaption>
+</figure>
+
+### 现代数据包调度系统的理想特性
+
+1. 可编程性: 支持多种包调度算法（例如 FIFO、WFQ、优先级排队），以适应不同的网络要求（例如 VoIP 的低延迟、批量数据的公平性）。
+    > Express wide-range of packet scheduling algorithms
+2. 可扩展性挑战：以最小的内存/CPU 开销高效地跟踪和优先处理 10,000 多个流。
+    > Scale to 10s of thousands of flows
+3. 链路速度和性能：确保在**可预测的超低延迟**内完成调度决策（例如，100Gbps 时每数据包 120 纳秒）。在 100Gbps 时，1500 字节 (MTU) 数据包需要约 120 纳秒才能传输。调度程序必须在当前数据包完成传输*之前*决定下一个数据包。
+    > Make scheduling decisions within deterministic few nanoseconds
+
+<figure style="text-align: center;">
+<img src="./img/l8p12.png" alt="Desirable Properties Trade-off" width="600">
+<figcaption>Desirable Properties Trade-off</figcaption>
+</figure>
+
+同时实现这三个特性（可编程性、可扩展性和性能）是一项挑战. 
+
+FIFO（First In First Out）调度算法
+
+定义: FIFO（First In, First Out，先进先出）调度算法是一种最简单的作业或进程调度算法，按照进程到达的先后顺序依次执行，先到达的先执行，后到达的必须等待前面的执行完毕后才能运行。
+
+工作原理
+-	进程按到达时间排序，先到的进程先执行。
+- 运行中的进程不会被抢占，必须执行完毕后，才会切换到下一个进程。
+- 该算法通常使用队列（Queue）数据结构来管理进程，队列的头部是最早到达的进程，尾部是最新到达的进程。
+
+特点
+- 非抢占式：一旦进程占有 CPU，它会一直运行到完成，不会被其他进程打断。
+- 公平性：所有进程按到达顺序依次执行，不存在优先级问题。
+- 实现简单：FIFO 只需要维护一个按照到达时间排序的队列，因此实现起来非常容易。
+
+优点：简单易实现，开销低; 公平性较好，所有进程都会按照先来先服务的原则执行。
+
+缺点：可能导致等待时间过长（Convoy Effect，队头阻塞效应）：如果最先到达的进程执行时间很长，那么后续短进程必须等待很久，造成资源利用率低; 不适用于实时系统：由于 FIFO 不能优先调度紧急任务，因此无法满足实时系统对任务响应时间的要求。
+
+示例: 假设有 3 个进程，它们的到达时间和执行时间如下：
+
+| **进程** | **到达时间** | **执行时间** |
+|:--------:|:------------:|:------------:|
+|    P1    |       0      |       5      |
+|    P2    |       1      |       3      |
+|    P3    |       2      |       2      |
+
+按照 FIFO 调度顺序：
+-	P1 先执行，从 0 开始运行，持续 5 个时间单位，结束时间为 5。
+- P2 在 1 到达，但必须等 P1 结束，故 P2 从 5 开始运行，持续 3 个时间单位，结束时间为 8。
+- P3 在 2 到达，但必须等 P2 结束，故 P3 从 8 开始运行，持续 2 个时间单位，结束时间为 10。
+
+| **进程** | **开始时间** | **结束时间** | **周转时间（结束时间-到达时间）** | **等待时间（开始时间-到达时间）** |
+|:--------:|:------------:|:------------:|:---------------------------------:|:---------------------------------:|
+|    P1    |       0      |       5      |                 5                 |                 0                 |
+|    P2    |       5      |       8      |                 3                 |                 4                 |
+|    P3    |       8      |      10      |                 2                 |                 6                 |
+
+PIFO（Push-In First-Out）调度算法
+
+定义: PIFO（Push-In First-Out）是一种基于优先级的调度算法，允许新进入的任务根据优先级插入到队列中的适当位置，而不是像 FIFO 那样只能追加到队列末尾。PIFO 主要用于高效的网络调度，比如数据包调度、计算任务调度等。
+
+工作原理
+-	任务（或数据包）进入队列时，会根据其优先级插入到正确的位置，而不是直接放到队尾。
+-	任务按照队头优先的方式出队，即优先级最高的任务总是先被调度。
+-	由于 PIFO 允许动态调整任务顺序，它可以支持更加灵活的调度策略，如公平队列（FQ）、最早截止时间优先（EDF）等。
+
+特点
+-	按优先级动态插入：与 FIFO 的“先进先出”不同，PIFO 允许新任务插入到队列的中间或前面。
+-	队头优先出队：始终从队列前端调度任务。
+-	支持多种调度策略：可以实现加权公平队列（WFQ）、最小化延迟等调度策略。
+
+优点：更灵活的调度能力，支持不同任务的优先级调整。更好的公平性，可以避免 FIFO 的“队头阻塞”问题。适用于高吞吐量场景，如网络流量调度、数据包调度等。
+
+缺点：实现复杂度较高，需要高效的数据结构来支持快速插入和出队操作。插入排序可能带来额外开销，尤其是在高并发环境下。
+
+UPS（Utility Proportional Scheduling）调度算法
+
+定义: UPS（Utility Proportional Scheduling，效用比例调度）是一种基于效用函数（Utility Function）的调度算法，主要用于在资源受限环境下优化任务分配，确保系统资源按照任务的重要性（或效用）进行公平分配。UPS 在计算资源调度、网络资源分配等领域有重要应用。
+
+工作原理
+-	每个任务（或进程）都有一个效用函数  U(x) ，描述任务获得资源  x  时的效用值。
+-	资源（如 CPU 时间、带宽等）按照任务的效用比进行分配，而不是简单的先来先服务（FIFO）或固定优先级调度。
+-	目标是最大化整体效用，即让系统资源的分配能够带来最大的整体收益。
+
+| **调度算法** |  **资源分配策略**  |          **适用场景**          |
+|:------------:|:------------------:|:------------------------------:|
+|   **FIFO**   | 先来先服务         | 批处理任务，简单任务队列       |
+|   **PIFO**   | 按优先级动态插入   | 网络调度、任务调度             |
+|    **UPS**   | 按效用比例动态分配 | 云计算、实时系统、网络流量管理 |
+
+**1. 可编程性**
+- **目标**：支持多种调度算法（例如，FIFO、PIFO、UPS）以满足不同的网络要求。
+- **软件方法**：
+  - **优先级队列抽象**：**PIFO**（先入先出）和**UPS**（基于紧急程度的调度程序）等框架支持灵活的算法实现（例如，加权公平排队、截止时间感知调度）。
+  - **动态配置**：软件定义的调度程序允许在运行时调整优先级规则。
+- **硬件支持**：
+  - 可编程交换机/ASIC 在硬件中实现优先级队列，在保持灵活性的同时实现低延迟决策。
+- **限制**：
+  - 复杂算法（例如，分层调度）可能会超出硬件资源限制。
+  - 表现力和计算开销之间的权衡。
+
+
+**2. 可扩展性**
+- **目标**：管理 **10,000+ 个并发流**（在云/数据中心中很常见）。
+- **硬件创新**：
+  - **基于哈希的流跟踪**：使用最少的内存高效地将数据包映射到流。
+  - **PIFO 结构**：通过将流分组为优先级层来扩展到大量流计数。
+- **软件技术**:
+  - **分层调度**: 通过将流聚合到类别中（例如，“高优先级”、“尽力而为”）来降低复杂性。
+- **限制**:
+  - 在极端规模下，为高级算法（例如，每流公平性）维护每个流的状态变得不切实际。
+
+**3. 性能**
+- **目标**: 在**确定性纳秒**内做出调度决策（例如，100Gbps 链路为 120 纳秒）。
+- **硬件加速**:
+  - **ASIC/FPGA**: 以线速执行调度决策，确保没有数据包丢失或增加延迟。
+  - **管道并行性**: 在硬件管道中同时处理多个数据包。
+- **软件优化**：
+  - **内核旁路**：DPDK 或 XDP 等工具可减少软件开销。
+- **限制**：
+  - 硬件解决方案（例如固定功能 ASIC）可能缺乏新算法的灵活性。
+
+<figure style="text-align: center;">
+<img src="./img/l8p14.png" alt="State-of-the-Art" width="600">
+<figcaption>State-of-the-Art</figcaption>
+</figure>
+
+那么如何构建一个同时可编程、可扩展、高速(Programmable, Scalable, High-speed)的数据包调度程序？
+
+### PIEO
+
+<figure style="text-align: center;">
+<img src="./img/l8p15.png" alt="PIEO" width="600">
+<figcaption>PIEO</figcaption>
+</figure>
+
+#### PIEO Scheduler Abstraction
+
+我们想要Scheduling Algorithms回答这样两个问题: 什么时候元素才有资格被调度？在符合条件的元素中按什么顺序进行调度？在PIEO中针对when使用t<sub>eligible</sub>值进行编码, 对what order使用rank值进行编码. 整个PIEO调度算法可以被简单地抽象为以下算法:
+
+- Whenever the link is idle:
+  -  Among all elements satisfying the eligibility predicate t<sub>current</sub> ≥ t<sub>eligible</sub> : Schedule the smallest ranked element
+
+<figure style="text-align: center;">
+<img src="./img/l8p34.png" alt="PIEO Scheduler Abstraction" width="600">
+<figcaption>PIEO Scheduler Abstraction</figcaption>
+</figure>
+
+PIEO 调度程序只考虑在任何给定时间调度rank最小的合格元素.
+
+> PIEO scheduler simply schedules the **smallest ranked eligible** element at **any given time**.
+
+**P**ush-**I**n-**E**xtract-**O**ut Primitive
+
+<figure style="text-align: center;">
+<img src="./img/l8p17.png" alt="Push-In-Extract-Out Primitive" width="600">
+<figcaption>Push-In-Extract-Out Primitive</figcaption>
+</figure>
+
+根据调度算法scheduling algorithm的选择进行编程, 对每个element赋给两个值:rank和t<sub>eligible</sub>. 然后将所有elements按照rank升序排列,得到一个ordered list. 根据算法:
+
+> Whenever the link is idle:
+>   Among all elements satisfying the eligibility predicate t<sub>current</sub> ≥ t<sub>eligible</sub> : Schedule the smallest ranked element
+
+入队: 对[18,1]作enqueue操作(“Push-In”): 将该element插入到其rank值指定的位置,即[13,4]和[19,6]之间, 如图所示.
+
+出队: 在t<sub>current</sub> = 7时作dequeue操作(“Extract-Out”): 使用filter : t<sub>current</sub> ≥ t<sub>eligible</sub> 筛选符合要求的元素, 即[13,4], [19,6], [21,2], 然后返回“rank最小的合格”元素, 即[13,4]. 如果不存在符合条件的元素，则返回NULL。
+
+指定dequeue出队: 可以直接提取特定的元素（根据 rank 值）。例如直接取出 rank = 19 对应的元素 [19,6]，不受 t<sub>eligible</sub> 约束。如果指定元素不存在，则返回NULL。
+
+PIEO的表达力
+
+PIEO 如何进行调度
+  - 每个元素都有 start_time（开始时间）和 finish_time（完成时间）。
+  - 在时间 x 进行调度时，选取 virtual_time(x) ≥ start_time 的元素，并调度 finish_time 最小的元素。
+  - 在 PIEO 结构中：
+    -	rank = finish_time（决定元素在队列中的优先级）。
+    -	t<sub>eligible</sub> = start_time（决定元素何时可以被考虑）。
+    -	调度规则：当 virtual_time(x) ≥ t<sub>eligible</sub>，即可进行任务选择。
+
+PIEO 能够表达的调度策略
+
+- 工作保护（Work conserving）
+  - 任务始终尽可能利用可用资源，不会浪费带宽或 CPU 时间。
+  - 示例：DRR（Deficit Round Robin）、WFQ（Weighted Fair Queueing）、WF²Q。
+
+- 非工作保护（Non-work conserving）
+  - 任务可能会延迟执行，即使资源可用，也可能限制执行速率。
+  - 示例：Token Bucket（令牌桶）、RCSP（Rate-Controlled Static Priority）。
+
+- 分层调度（Hierarchical scheduling）
+  - 任务在多个级别上进行调度，比如不同的优先级队列组合。
+  - 示例：HPFQ（Hierarchical Packet Fair Queueing）。
+
+- 异步调度（Asynchronous scheduling）
+  - 处理任务可能存在异步行为，比如防止任务长期饥饿。
+  - 示例：D³（动态延迟调度）、Starvation avoidance（避免饥饿）。
+
+- 优先级调度（Priority scheduling）
+  - 任务按照优先级执行，常见于实时系统。
+  - 示例：SJF（Shortest Job First），SRTF（Shortest Remaining Time First），LSTF（Least Slack Time First），EDF（Earliest Deadline First）。
+
+- 复杂调度策略（Complex scheduling policies）
+  - 可以混合任务整形（Shaping）和任务排序（Ordering）。
+  - 右下角示例：多个应用（APP）受到 Rate limit（速率限制） 约束，然后按照 优先级 进行调度。
+
+#### PIEO Hardware Design
+
+PIEO 原语依赖于**有序列表(ordered list)**数据结构: PIEO（Push-In-Extract-Out）原语需要使用有序列表（Ordered List）作为其底层数据结构，以便进行高效的元素插入（Push-In）和提取（Extract-Out）。其设计权衡：在速度（Speed） 和 可扩展性（Scalability） 之间需要找到平衡。
+
+<figure style="text-align: center;">
+<img src="./img/l8p28.png" alt="PIEO编程框架" width="600">
+<figcaption>PIEO编程框架</figcaption>
+</figure>
+
+**数据包调度原语**
+
+先进先出（FIFO）。FIFO是最基本的调度原语，它仅按元素到达的顺序对其进行调度。结果，FIFO原语不能表达广泛的分组调度算法。然而，基于FIFO的调度程序是硬件中最常见的数据包调度程序，因为它们的简单性可以实现快速和可扩展的调度。
+
+推入先出（PIFO）。PIFO原语为每个元素分配一个可编程的等级值，并在任何给定时间安排“最小等级”的元素。为了实现这种抽象，PIFO维护了元素的有序列表（以等级递增的顺序），并在有序列表的顶部支持两个基本操作-（i）enqueue（f），它将元素f插入有序列表中的位置由f的等级和（ii）dequeue（）决定，该元素在有序列表的开头提取元素。
+
+> PIFO的局限性。PIFO从根本上提供了优先级队列的抽象，该优先级队列可在任何给定时间调度整个列表中“最小排序”的元素。[37]表明，这种简单的抽象可以表达各种调度算法，这些算法可以指定何时或以什么顺序来调度每个元素。但是，PIFO的抽象不足以表达更通用的调度算法/策略类，该类既指定何时以及以什么顺序调度每个元素—此类算法/策略仅调度排名最小的元素，而仅从元素集合中调度当时有资格进行调度的对象，原则上可以是活动元素的任意子集4。因此，它们始终需要一个原语，该原语支持在出队时动态过滤元素的子集，然后从该子集中返回排名最小的元素，而PIFO原语不支持此功能。这种复杂的数据包调度策略在当今的多租户云网络中变得越来越普遍[38]，最经典的例子是最坏情况公平加权公平排队（WF2Q）[6]。WF2Q是已知的最准确的数据包公平排队算法，使其成为实施公平队列调度策略的理想选择。此外，WF2Q的非节省工作版本可以非常准确地实现诸如速率限制之类的整形原语[31]。
+
+硬件资源 vs. 时间复杂度
+
+硬件中最先进的分组调度器是基于两种调度基元之一(i) 先入先出(FIFO)，它简单地按照元素到达的顺序进行调度，和(ii) 推入先出(PIFO)，它提供了一个优先级队列抽象，通过保持一个有序的元素列表(基于可编程的排序函数)，并总是从有序列表的头部("最小排序"元素)进行调度。不幸的是，基于这些基元的数据包调度器要么在可扩展性上有所妥协(基于PIFO的调度器)，要么在表达广泛的数据包调度算法的能力上有所妥协(基于FIFO的调度器)。此外，即使像PIFO这样的通用调度基元也不足以表达某些关键类的分组调度算法。
+
+<figure style="text-align: center;">
+<img src="./img/l8p27.png" alt="通用数据包调度模型" width="600">
+<figcaption>通用数据包调度模型</figcaption>
+</figure>
+
+图中展示了不同数据结构在硬件资源占用（Flip-Flops & Comparators）与时间复杂度（Time Complexity）上的关系：
+  -	横轴（X 轴）：时间复杂度（Time Complexity）。
+  -	纵轴（Y 轴）：硬件资源消耗（Hardware Resource，如触发器 Flip-Flops 和比较器 Comparators）。
+
+要达到速度和规模化的平衡,PIFO是一个方法. PIFO的resource consumption是O(N): N次 Flip-Flops 和 N个comparators. 如果能减小这个数字,就可能规模化. 这就是问题关键所在.
+
+PIFO（Push-In First-Out）在 SIGCOMM 2016 会议提出
+  -	PIFO 结构使用 Flip-Flops 进行高速调度，但无法扩展到大规模数据，因为它的资源需求是 O(N)，难以在大规模队列中保持高效性。
+  -	PIFO 不能使用 SRAM，意味着它不能利用传统存储器结构进行扩展，因此难以扩展到大规模系统。
+
+| **方式**                                        | **时间复杂度** | **硬件资源消耗** | **优势** | **劣势** |
+|-------------------------------------------------|----------------|------------------|----------|----------|
+| **PIFO（Flip-Flops）**                          | O(1)           | O(N)             | 速度快   | 难以扩展 |
+| **数组或链表（Array / Linked-list in Memory）** | O(N)           | O(1)             | 易扩展   | 速度慢   |
+
+  -	PIFO：硬件资源占用高，时间复杂度为 O(1)，但无法扩展。
+  -	数组 / 链表（Array / Linked List in Memory）：占用较少硬件资源，但操作时间复杂度是 O(N)，影响调度效率。
+
+> PIEO原语维护元素的有序列表（“ PushIn”），在队列的顶部会在出队（“ Extract-Out”）时进行过滤和最小等级选择。但是，在硬件中同时实现快速和可扩展的有序列表具有挑战性，因为它在时间复杂度和硬件资源消耗之间提供了基本的权衡。例如，使用O（1）比较器和触发器，假设元素以数组1的形式存储在内存中，则需要O（N）时间才能将元素放入大小为N的有序列表中。另一方面，为了占用O（1）的时间，诸如PIFO 之类的设计通过将整个列表存储在触发器中并将比较器与经典并行之后的列表中的每个元素相关联，来利用硬件中的大规模并行性比较移位架构，因此需要O（N）个触发器和比较器，这限制了这种设计的可扩展性。在本文中，我们介绍了PIEO调度程序的有序列表的硬件设计（第5节），它既快速又可扩展。特别是，我们的设计在O（1）时间（四个时钟周期）内执行“推入”和“提取”原始操作，而只需要O（√N）触发器和比较器，而有序列表完全位于SRAM中。
+
+PIEO 依赖 有序列表（Ordered List） 作为数据结构。调度系统需要在 “速度（Speed）” 和 “可扩展性（Scalability）” 之间权衡。现有的 PIFO 设计虽然快，但不易扩展，而基于 数组或链表的设计可扩展，但速度较慢。未来的硬件设计 需要找到一个既能保持 O(1) 操作时间，又能扩展的解决方案，可能涉及 混合 SRAM / Flip-Flop 架构或新型数据结构。
+
+<figure style="text-align: center;">
+<img src="./img/l8p19.png" alt="PIEO Hardware Design" width="600">
+<figcaption>PIEO Hardware Design</figcaption>
+</figure>
+
+从根本上来说，是否有必要并行访问和比较 O(N) 个元素，以便在 O(1) 时间内维护一个（精确）有序列表（大小为 N）？比如向一个有序列表中插入一个新元素, 基本的想法是将这个新元素与列表中所有元素一一比较, 从而找到应该被插入的位置.
+
+PIFO不需要SRAM, 它只把整个列表储存在Flip-Flop中, 在其中进行比较, 因此在任意给定时间, 可以认为是N个Flip-Flop, 同样N个comparator. 而PIEO对Flip-Flop和SRAM两者都使用, SRAM很便宜, 所以关注于Flip-Flop上的解决逻辑: PIEO将Flip-Flop中的整个列表分解为多个小列表, 并将它们以√N*√N的格式储存在SRAM中, 其中每个sublist都是rank升序排列. 因此需要√N个SRAM Blocks, 且每个小列表的size都是√N, 每个子列表分布在多个 SRAM 块中, 所以对每个子列表都可以做并行操作(因为是不同的SRAM块来实施操作)。
+
+<figure style="text-align: center;">
+<img src="./img/l8p29.png" alt="PIEO break down the Flip-Flop" width="600">
+<figcaption>PIEO break down the Flip-Flop</figcaption>
+</figure>
+
+<figure style="text-align: center;">
+<img src="./img/l8p30.png" alt="PIEO 将sublists储存在SRAM中" width="600">
+<figcaption>PIEO 将sublists储存在SRAM中</figcaption>
+</figure>
+
+接下来在Flip-Flop中, 从SRAM取√N的列表存入, 这就是指向子列表的指针, 这些指针同样按照rank升序排列. 因此很显然Flip-Flop的大小是√N, 而不是原先的N. 那么我们已经了解了硬件设计的架构,如何做入队/出队操作呢? 基本的操作都使用四个时钟周期完成: 1. select: 选择哪个sublist需要移入或者移除(S); 2. 从SRAM中读取该选定的S; 3. 在S上做与在Flip-Flop中同样的Enq/Deq操作; 4. 将结果S写回SRAM.
+
+<figure style="text-align: center;">
+<img src="./img/l8p31.png" alt="Clock 1" width="600">
+<figcaption>Clock 1</figcaption>
+</figure>
+
+<figure style="text-align: center;">
+<img src="./img/l8p32.png" alt="Clock 2/3" width="600">
+<figcaption>Clock 2/3</figcaption>
+</figure>
+
+<figure style="text-align: center;">
+<img src="./img/l8p33.png" alt="Clock 4" width="600">
+<figcaption>Clock 4</figcaption>
+</figure>
+
+
+但是这个操作的消耗并不是√N, 而是2√N. 此处不介绍原因, 可以参考原论文. 我们还是假定其消耗是√N.
+
+文章提出了一种设计，可以在 O(1) 时间内维护一个（精确）有序列表，但只需并行访问和比较 O(√N) 个元素。
+
+> “All problems in computer science can be solved by another level of **indirection**.”       ——David Wheeler
+
+PIEO调度程序包括一个有序列表，该列表支持三个基本操作: enqueue（f），dequeue（）和dequeue（f）。但是，在硬件中实现有序列表会在时间复杂度和硬件资源消耗之间实现基本的权衡。为了跟上不断增加的链接速度，我们想在O（1）时间内在有序列表的顶部执行每个基本操作。但是，要实现这一点，最先进的设计（例如PIFO）需要使用经典的并行比较和移位架构对列表中的每个元素进行并行访问，因此必须存储整个列表。列出触发器（与更具扩展性的存储技术（例如SRAM）相对），并将比较器与每个元素相关联。因此，这样的设计需要O（N）个触发器和比较器来获得大小为N的列表，并且随着晶体管缩放的放缓，这限制了这种设计的可扩展性。
+
+有序列表的设计仍然可以在O（1）时间内执行原始操作，但是只需要并行访问和比较O（√N）个元素，而有序列表则完全位于SRAM中。更具体地说，有序列表存储为SRAM中子列表的数组（大小为2√N），其中每个子列表的大小为√N个元素。每个子列表中的元素都按升序排列（排名-子列表）和合格时间的递增顺序（合格-子列表）进行排序。在O（√N）个双端口SRAM块上划分每个子列表的元素，这使我们可以在一个时钟周期内访问两个完整的子列表。接下来，我们在触发器中维护一个数组（大小为2√N），该数组存储指向子列表的指针，该数组中的子列表通过增加每个子列表中最小等级的值来排序。因此，通过按子列表在指针数组中出现的顺序扫过子列表，可以按升序排列获得整个元素列表。
+
+入队和出队操作分两个步骤进行：首先，使用指针数组上的并行比较和优先级编码，找出要入队或出队的正确子列表，然后从SRAM中提取相应的子列表。其次，我们对提取的子列表使用并行比较和优先级编码，以找出子列表在元素中的入队/出队位置，然后将更新后的子列表写回SRAM。因此，通过这种设计，与PIFO中的O（N）不同，我们只需要O（√N）触发器和比较器，以执行几个基本操作。
+
+<figure style="text-align: center;">
+<img src="./img/l8p18.png" alt="PIEO Hardware Architecture" width="600">
+<figcaption>PIEO Hardware Architecture</figcaption>
+</figure>
+
+<figure style="text-align: center;">
+<img src="./img/l8p37.png" alt="PIEO调度程序硬件架构。优先级编码器将位向量作为输入，并返回包含1的最小索引" width="600">
+<figcaption>PIEO调度程序硬件架构。优先级编码器将位向量作为输入，并返回包含1的最小索引</figcaption>
+</figure>
+
+**四个时钟周期实施**
+
+**入队（f）**:示例进入大小为16的元素的PIEO排序列表（大小为4的8个子列表）
+> 注意:子列表的容量 ≠ 真实存储的元素数. 
+> 在 PIEO 结构中：
+	①	“大小为 16” 指的是当前实际存储的元素总数，即整个 PIEO 结构中当前有效的数据。
+	②	“大小为 4” 指的是子列表的最大容量，即每个子列表最多能存储 4 个元素，但不一定始终存满。
+	③	“8 个子列表” 指的是整个 PIEO 结构中划分的子列表数量，它们的总存储容量可能大于 16，但不会同时填满。
+
+<figure style="text-align: center;">
+<img src="./img/l8p35.png" alt="入队（f）示例" width="600">
+<figcaption>入队（f）示例</figcaption>
+</figure>
+
+- 周期 1：选择目标子列表
+	-	进行 并行比较操作，确定适合 f 插入的子列表：
+	  -	比较 Ordered-SublistArray[i].smallest_rank > f.rank，生成 位向量 。
+	-	将 位向量 送入 优先级编码器，输出索引 j。
+	-	选择 Ordered-SublistArray[j-1] 指向的 子列表 S 作为目标子列表，并准备入队。
+
+- 周期 2：读取子列表
+	-	从SRAM读取子列表 S：
+	-	如果 S 已满，入队操作会导致S中的尾部元素被推出。
+	-	为了存储被推出的元素，读取 紧随 S 的子列表 S’，前提是：
+    -	S' 仍有空位，或
+    -	S' 是一个新创建的空子列表。
+
+- 周期 3：确定插入位置 & 处理溢出
+	-	确定 f 在 S 中的插入位置：
+    -	通过 并行比较，查找满足 S.Rank-Sublist[i].rank > f.rank 的位置。
+    -	通过 Eligibility-Sublist 进一步检查 S.Eligibility-Sublist[i] > f.send_time 的插入合法性。
+	-	处理 S 的溢出（若 S 已满）：
+    -	S.Rank-Sublist 的 tail 元素 移动到 S'.Rank-Sublist 头部。
+    -	通过 并行比较 S'.Eligibility-Sublist[i] > S[tail].send_time，并使用 优先级编码 确定 S’ 内合适的位置。
+    -	若 S' 最初为空，可将其移至 S 右侧以保持 Ordered-Sublist-Array 有序。
+
+- 周期 4：执行入队/出队 & 更新结构
+	-	在上个周期计算出的目标位置执行入队/出队：
+	- 	S（和 S'）更新后写回 SRAM。
+	-	更新 Ordered-Sublist-Array 的元数据：
+    -	num（当前子列表中的元素数）。
+    -	Minimum_rank（从 RankSublist 读取）。
+    -	minimum_send_time（从 Eligibility-Sublist 读取）。
+
+PIEO 入队四个周期总结：
+  -	周期 1：通过 并行比较 和 优先级编码器 选择合适的 子列表 S 进行插入。
+  -	周期 2：从 SRAM 读取 S，若 S 已满，则读取 S’ 以存储被推出的元素。
+  -	周期 3：确定 f 在 S 的插入位置，若 S 满，则将溢出元素移至 S’ 并调整顺序。
+  -	周期 4：执行 入队/出队，写回 SRAM，并更新 Ordered-Sublist-Array 的元数据。
+
+**出队(f)** 操作旨在从 Global-Ordered-List 中返回 “排名最低的合格”元素。
+
+<figure style="text-align: center;">
+<img src="./img/l8p36.png" alt="出队（f）示例" width="600">
+<figcaption>出队（f）示例</figcaption>
+</figure>
+
+- 周期 1：选择包含“最小排名的合格”元素的子列表 S
+  - 进行 并行比较：检查 curr_time ≥ Ordered-SublistArray[i].smallest_send_time。
+  - 通过 优先级编码器，选择满足条件的 最小索引 i，即 S = Ordered-SublistArray[i]。
+  - 由于 Ordered-SublistArray 按 minimum_rank 排序，因此 S 保证包含整个列表中 排名最低的合格元素。
+
+- 周期 2：读取 S 并可能读取 S’
+  - 从 SRAM 读取 S，获取其 Rank-Sublist 和 Eligibility-Sublist。
+  - 处理 S 部分变空的情况：
+    - 若 S 在出队后可能部分变空，则查找 S 相邻的子列表 S’：
+      - S’ 可以是 S 左侧或右侧的子列表。
+      - 选择 未满 的子列表 S’（如果左右都有未满子列表，则可选两个）。
+      - 若 S’ 左右都满，则仅读取 S。
+	  -	目的是确保出队后 S 不会变成“部分满”状态，从而避免违反 不变量 1（即子列表应尽量保持满或空）。
+
+- 周期 3：确定出队元素位置 & 可能调整 S 和 S’
+  - 确定要出队的元素：
+    - 通过 优先级编码器 在 S.Rank-Sublist 中找到满足 curr_time ≥ S.Rank-Sublist[i].send_time 的最小索引 idx。
+    - S.Rank-Sublist[idx] 即为 “最小排名合格”元素，它将作为 出队（dequeue）操作的最终输出。
+  - 处理 S 已满的情况：
+    - 若 S 在出队前是满的，则需要 从 S’ 移动一个元素到 S，以确保 S 在出队后仍然满。
+    - 如何确定要移动的元素？
+      - 在 S'.Eligibility-Sublist 中，通过 并行比较 S'.Eligibility-Sublist[i] == e.send_time 找到 e 在 S’ 中的位置。
+      - 在 S.Eligibility-Sublist 中，通过 并行比较 S.Eligibility-Sublist[i] > e.send_time 找到 e 在 S 的插入位置。
+	  -	如何移动？
+      - 如果 S’ 在 S 左侧，则将 S’ 的 头部元素 移到 S 的尾部。
+      - 如果 S’ 在 S 右侧，则将 S’ 的 尾部元素 移到 S 的头部。
+  - 调整 Ordered-Sublist-Array（如果需要）：
+    - 若 S 或 S’ 在出队后变空，则重新排列 Ordered-Sublist-Array，将空子列表移动到 逻辑分区的开头，保持结构整齐。
+
+- 周期 4：执行入队/出队 & 更新结构
+	- 在上个周期计算出的目标位置执行出队：
+  	- S（以及可能调整的 S'）的数据被修改。
+	- 将 S（和 S’）写回 SRAM，确保数据一致性。
+	- 更新 Ordered-Sublist-Array 的元数据：
+    -	num：当前子列表中的元素数。
+    -	Minimum_rank：从 RankSublist 读取，表示该子列表的最小排名值。
+    -	minimum_send_time：从 Eligibility-Sublist 读取，表示该子列表的最小发送时间。
+
+总结
+  -	周期 1：选择包含最小排名合格元素的子列表 S。
+  -	周期 2：从 SRAM 读取 S，若 S 可能部分变空，则读取 相邻未满子列表 S’ 以调整。
+  -	周期 3：确定出队元素的位置，若 S 满则从 S’ 移动元素填充 S，确保结构完整。
+  -	周期 4：执行入队/出队，写回 SRAM，并更新 Ordered-Sublist-Array 的元数据。
+
+<figure  style="text-align: center;">
+<img src="./img/l8p16.png" alt="PIEO: Conclusion" width="500">
+<figcaption>PIEO: Conclusion</figcaption>
+</figure>
+
+PIEO的两个关键贡献：
+
+- 一种用于数据包调度的新型**可编程**抽象和原语
+  - 比任何最先进的硬件数据包调度程序都更具表现力
+- 一种**快速**且**可扩展**的调度程序硬件设计
+  - 在 4 个时钟周期内做出调度决策
+  - 轻松扩展到数万个流
+
+
+注: 可以参考[该网址][pieo], 基本是该论文的中文翻译. Vishal Shrivastav在课上没有详细讲.
+
+[pieo]: https://cloud.tencent.com/developer/article/1639553

@@ -1,0 +1,306 @@
+
+#  TIMELY Algorithm 
+
+```
+https://radhikam.web.illinois.edu/timely-code-snippet.cc
+https://radhikam.web.illinois.edu/
+```
+
+```
+/***********************************************************
+TIMELY Algorithm to compute new rate
+************************************************************/
+/* 
+It is assumed this function is part of a 'sender' class, which declares the required instance variables and paramaters as detailed below.
+It takes as input the current rate at which data is being sent and the current rtt.
+It can be invoked when an ack/completion event is received.
+It returns the new rate that can be enforced by the 'sender'.
+*/
+
+/* Parameters used and their recommended values (these values may need finetuning based on experimental scenario) 
+ewma_alpha: recommended value = 0.02
+t_low: recommended value = 0 (if using per-packet pacing), 50us (if using per 64KB message pacing)
+t_high: recommended value = 1ms
+HAI_Thresh: recommended value = 5
+additiveIncrement: 10Mbps for 10Gbps line rate
+decreaseFactor: 0.8
+maxRate = line rate
+minRate = optional 
+*/
+
+/* Other instance variables used and their initialization
+prevRTT_: previous RTT (initialized to 0)
+negGradientCount_: negative gradient counter for HAI increase (initialized to 0)
+avgRTTDiff_: moving average of the RTT difference (initialized to 0)
+minRTT_ = fixed minimum network RTT value
+last_update_time_: initialized to 0
+*/
+
+
+double getNewRate(double rtt, double rate) {
+
+  if(prevRTT_ == 0) prevRTT_ = rtt;
+
+  double rtt_diff = rtt - prevRTT_;
+
+  if (rtt_diff < 0) {
+    negGradientCount_++;
+  } else {
+    negGradientCount_ = 0;
+  }
+
+
+  avgRTTDiff_ = ((1 - ewma_alpha) * avgRTTDiff_) + (ewma_alpha * rtt_diff);
+
+  double normalized_gradient = avgRTTDiff_ / minRTT_;
+
+  double delta_factor = (curTime() - last_update_time_) / minRTT_;
+  delta_factor = min(delta_factor, 1.0);
+
+  prevRTT_ = rtt;
+  last_update_time_ = curTime();
+ 
+  double new_rate;
+  if (rtt < t_low) { //additivive increase if rtt < t_low
+      new_rate = rate + (additiveIncrement * delta_factor);
+  } else {
+    if (rtt > t_high) { //multiplicative decrease if rtt > t_high
+      new_rate = rate * (1 - (delta_factor * decreaseFactor * (1 - (t_high / rtt))));
+    } else {
+      if (normalized_gradient <= 0) { //additive increase if avg gradient <= 0 
+        int N = 1;
+        if (negGradientCount_ >= HAI_thresh) N = 5;
+        new_rate = rate + (N * additiveIncrement * delta_factor);
+      } else { //multiplicative decrease if avg gradient > 0
+        new_rate = rate * (1.0 - (decreaseFactor * normalized_gradient));
+      }
+   }
+ }
+ //derease in rate capped by 0.5 times the old rate
+ new_rate = max(new_rate, rate * 0.5);
+ //enabling max and min cap on the new rate
+ new_rate = min(new_rate, maxRate);
+ new_rate = max(new_rate, minRate);
+ return new_rate;
+}
+```
+
+#  eRPC timely
+
+[refer to eRPC timely](https://github.com/PickingUpPieces/eRPC/tree/5242f49dadaeb4f9943884e0452b3b33615f731b/src/cc)   
+
+[eRPC-arm](https://github.com/Peter-JanGootzen/eRPC-arm/tree/afbacaccc6dfb8f326d6a6857bc6d9133bb38c17)   
+     
+
+
+```
+  /**
+   * @brief Perform a Timely rate update on receiving the explict CR or response
+   * packet for this triggering packet number
+   *
+   * @param sslot The request sslot for which a packet is received
+   * @param pkt_num The received packet's packet number
+   * @param Time at which the explicit CR or response packet was received
+   */
+  inline void update_timely_rate(SSlot *sslot, size_t pkt_num, size_t rx_tsc) {
+    size_t rtt_tsc =
+        rx_tsc - sslot->client_info_.tx_ts_[pkt_num % kSessionCredits];
+    // This might use Timely bypass
+    sslot->session_->client_info_.cc_.timely_.update_rate(rx_tsc, rtt_tsc);
+  }
+```
+
+## dpdk
+
+
+```
+[root@centos7 dpdk-stable-19.11.14]# export RTE_TARGET=arm64-armv8a-linuxapp-gcc
+[root@centos7 dpdk-stable-19.11.14]# export RTE_SDK=/root/dpdk-stable-19.11.1/
+[root@centos7 dpdk-stable-19.11.14]# make install T=arm64-armv8a-linuxapp-gcc  -j 64
+[root@centos7 arm64-armv8a-linuxapp-gcc]# pwd
+/root/dpdk-stable-19.11.14/arm64-armv8a-linuxapp-gcc
+[root@centos7 arm64-armv8a-linuxapp-gcc]# make clean -j64
+```
+设置配置  CONFIG_RTE_FORCE_INTRINSICS=y
+或者如下     
+```
+ vim config/defconfig_arm64-armv8a-linuxapp-gcc
+```
+
+### lib dpdk
+
+```
+set(LIBRARIES ${LIBRARIES} -Wl,--whole-archive dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
+```
+改成
+```
+set(LIBRARIES ${LIBRARIES}   -Bsymbolic -fPIC  -no-pie  -L/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/lib/ -Wl,--whole-archive  dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
+```
+
+## -march=native for arm64    
+
+删除 -march=native   
+
+## make
+
+
+
+### 依赖    
+```
+apt-get install -y zlib1g-dev
+root@centos7:~/prog/eRPC# whereis libz.so.1 
+libz.so: /usr/lib/aarch64-linux-gnu/libz.so /usr/lib/aarch64-linux-gnu/libz.so.1
+root@centos7:~/prog/eRPC# mkdir -p /usr/lib64/
+root@centos7:~/prog/eRPC# ln -sf  /usr/lib/aarch64-linux-gnu/libz.so.1  /usr/lib64/libz.so
+```
+
+关闭test，安装gtest gflags   
+```
+libgflags.so.2.2: cannot open shared object file: No such file or directory
+```
+```
+ fatal error: gflags/gflags.h: No such file or directory
+```
+```
+apt-get install libgflags2.2
+apt-get install libgtest-dev
+```
+
++ test
+
+关闭test，-DTESTING=off
+```
+ cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off
+```
+
+
+
+
+### 编译选项   
+
+I have tried to add -Wno-address-of-packed-member to CMAKE_CXX_FLAGS by modifying file CMakeLists.txt:
+
+```
+
+
++ Add additional compilation flags only after adding subprojects
+```
+
+```
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -march=native -Wall -Wextra -Werror -pedantic")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wsign-conversion -Wold-style-cast -Wno-unused-function")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types -Wno-keyword-macro -Wno-deprecated-declarations")
+```
++ add this line
+
+```
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-address-of-packed-member")
+```
+
+
+
+
+
+ 
++ DRTE_FORCE_INTRINSICS
+```
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-address-of-packed-member -Wno-sign-conversion")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCONFIG_RTE_FORCE_INTRINSICS")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DRTE_FORCE_INTRINSICS")
+ ```
+
+
+
+
+
+
+```
+/usr/bin/ld: ../build/libdpdk/librte_bus_dpaa.a(process.o): relocation R_AARCH64_ADR_PREL_PG_HI21 against symbol `stderr@@GLIBC_2.17' which may bind externally can not be used when making a shared object; recompile with -fPIC
+```
+
+加上 -no-pie
+
+
+
+### x86 and arm64 
+
+
+```
+#ifdef __x86_64__
+
+
+#elif defined(__aarch64__)
+```
+
+### cmake编译
+
+```
+root@centos7:~/prog/eRPC# cmake --version
+cmake version 3.30.0-rc4
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+root@centos7:~/prog/eRPC# 
+```
+
+```
+ cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off
+```
+
+
+
+## run
+
+```
+ cat /proc/meminfo  | grep -i huge
+AnonHugePages:         0 kB
+ShmemHugePages:        0 kB
+HugePages_Total:     256
+HugePages_Free:      252
+HugePages_Rsvd:        0
+HugePages_Surp:        0
+Hugepagesize:     524288 kB
+```
+
+RTE_MEMZONE_2MB改为RTE_MEMZONE_512MB   
+```
+  const std::string memzone_name = erpc::DpdkTransport::get_memzone_name();
+  const rte_memzone *memzone = rte_memzone_reserve(
+      memzone_name.c_str(), sizeof(erpc::DpdkTransport::ownership_memzone_t),
+      FLAGS_numa_node, RTE_MEMZONE_512MB);
+  //FLAGS_numa_node, RTE_MEMZONE_2MB);
+```
+
+
+```
+mount -t hugetlbfs nodev /mnt/huge
+```
+
+```
+ docker  run -it   --net=host --cap-add=NET_ADMIN --privileged=true  -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge  e-rpc bash
+```
+
+```
+root@centos7:~/prog/eRPC# ./build/erpc_dpdk_daemon 
+81:539967 WARNG: eRPC DPDK daemon: Managing DPDK port 0 on NUMA node 0
+82:581482 WARNG: eRPC DPDK daemon: Successfully initialized DPDK EAL
+82:581518 WARNG: eRPC DPDK daemon: Successfully initialized shared memzone erpc_daemon_memzone
+82:903531 WARNG: eRPC DPDK daemon: Successfully initialized DPDK port 0
+
+```
+
+## hello_world
+
+
+```
+ ln -sf /root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include /usr/include/dpdk
+ 
+ ln -sf /root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/lib/  /root/prog/eRPC/build/libdpdk
+```
+
+```
+root@centos7:~/prog/eRPC/hello_world# ls
+Makefile  client  client.cc  common.h  server  server.cc
+root@centos7:~/prog/eRPC/hello_world# ls ../build/
+erpc_dpdk_daemon  latency  libdpdk  liberpc.a
+root@centos7:~/prog/eRPC/hello_world# 
+```

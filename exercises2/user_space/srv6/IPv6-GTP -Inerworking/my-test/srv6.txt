@@ -1,0 +1,12 @@
+table_add fwd forward 12 => 13
+table_add fwd forward 13 => 12
+table_add fwd forward 14 => 15
+table_add fwd forward 15 => 14
+table_add fwd forward 16 =>  1
+table_add fwd forward  1 => 16
+table_add srv6_localsid srv6_End_M_GTP6_D2 2001:db8:1::1 => 2001:db8:1::1 2001:db8:1::11 2001:db8:1::2
+table_add srv6_localsid srv6_End0 2001:db8:1::11 =>
+table_add srv6_localsid srv6_End_DT6 2001:db8:1::2 =>
+table_add srv6_localsid srv6_T_Encaps_Red3 2001:db8:a::1 => 2001:db8:1::2 2001:db8:1::12 2001:db8:ff::64 2001:db8:b::1
+table_add srv6_localsid srv6_End1 2001:db8:1::12 =>
+table_add srv6_localsid srv6_End_M_GTP6_E 2001:db8:ff::64 => 2001:db8:ff::64

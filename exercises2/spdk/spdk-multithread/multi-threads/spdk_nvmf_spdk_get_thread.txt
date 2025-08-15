@@ -1,0 +1,138 @@
+
+
+
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x000055555562626f in poller_register (fn=0x5555555c7c40 <nvmf_ctrlr_keep_alive_poll>, arg=0x5555559af390, period_microseconds=10000000, 
+    name=0x5555556e6bac "nvmf_ctrlr_keep_alive_poll") at thread.c:1067
+#2  0x00005555555c7bf7 in nvmf_ctrlr_start_keep_alive_timer (ctrlr=0x5555559af390) at ctrlr.c:220
+#3  _nvmf_ctrlr_add_admin_qpair (ctx=0x7ffff57bc010) at ctrlr.c:267
+#4  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#5  thread_poll (now=13831651054886, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#6  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=13831651054886) at thread.c:740
+#7  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#8  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#9  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#10 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#11 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.
+[2023-07-12 12:50:50.114155] ctrlr.c:2389:nvmf_ctrlr_identify: *ERROR*: Identify command with unsupported CNS 0x06
+
+Thread 1 "reactor_0" hit Breakpoint 2, spdk_get_thread () at thread.c:824
+824     {
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x00005555555cab9a in spdk_nvmf_request_complete (req=0x7ffff57bc010) at ctrlr.c:3539
+#2  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#3  thread_poll (now=13884588345288, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#4  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=13884588345288) at thread.c:740
+#5  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#6  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#7  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#8  0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#9  0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+
+
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x00005555555d2ee1 in spdk_nvmf_qpair_disconnect (qpair=0x5555559b2ca0, cb_fn=cb_fn@entry=0x0, ctx=ctx@entry=0x0) at nvmf.c:1049
+#2  0x00005555555c6717 in _nvmf_ctrlr_disconnect_qpairs_on_pg (i=i@entry=0x5555559b06a0, include_admin=include_admin@entry=true) at ctrlr.c:149
+#3  0x00005555555c6782 in nvmf_ctrlr_disconnect_qpairs_on_pg (i=0x5555559b06a0) at ctrlr.c:163
+#4  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#5  thread_poll (now=13959452487862, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#6  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=13959452487862) at thread.c:740
+#7  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#8  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#9  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#10 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#11 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.
+[2023-07-12 12:51:27.177352] ctrlr.c: 598:_nvmf_ctrlr_add_io_qpair: *ERROR*: Inactive admin qpair (state 3, group (nil))
+
+Thread 1 "reactor_0" hit Breakpoint 2, spdk_get_thread () at thread.c:824
+824     {
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x00005555555cab9a in spdk_nvmf_request_complete (req=req@entry=0x7ffff57bc010) at ctrlr.c:3539
+#2  0x00005555555cadb8 in _nvmf_ctrlr_add_io_qpair (ctx=0x7ffff57bc010) at ctrlr.c:600
+#3  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599b330) at thread.c:553
+#4  thread_poll (now=14021284658738, max_msgs=0, thread=0x55555599b330) at thread.c:631
+#5  spdk_thread_poll (thread=thread@entry=0x55555599b330, max_msgs=max_msgs@entry=0, now=14021284658738) at thread.c:740
+#6  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#7  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#8  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#9  0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#10 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x0000555555626afe in spdk_poller_unregister (ppoller=<optimized out>) at thread.c:1153
+#2  0x00005555555c769f in _nvmf_ctrlr_destruct (ctx=0x5555559af390) at ctrlr.c:465
+#3  _nvmf_ctrlr_destruct (ctx=0x5555559af390) at ctrlr.c:453
+#4  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#5  thread_poll (now=14027343519492, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#6  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=14027343519492) at thread.c:740
+#7  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#8  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#9  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#10 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#11 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+
+
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x00005555556274ce in spdk_put_io_channel (ch=0x55555599ef90) at thread.c:1644
+#2  0x00005555555e2ee9 in nvmf_rdma_qpair_destroy (rqpair=0x5555559b2ca0) at rdma.c:924
+#3  0x00005555555e3298 in nvmf_rdma_close_qpair (qpair=0x5555559b2ca0, cb_fn=0x5555555d15b0 <_nvmf_transport_qpair_fini_complete>, cb_arg=0x5555559b1bf0)
+    at rdma.c:3562
+#4  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#5  thread_poll (now=14027343519492, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#6  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=14027343519492) at thread.c:740
+#7  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#8  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#9  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#10 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#11 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+
+
+
+
+
+
+
+
+
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x00005555555d2ee1 in spdk_nvmf_qpair_disconnect (qpair=qpair@entry=0x5555559b33a0, cb_fn=cb_fn@entry=0x0, ctx=ctx@entry=0x0) at nvmf.c:1049
+#2  0x00005555555e00d4 in nvmf_rdma_disconnect (evt=<optimized out>) at rdma.c:2789
+#3  0x00005555555e0c69 in nvmf_process_cm_event (transport=0x5555559b8790) at rdma.c:2941
+#4  nvmf_rdma_accept (transport=0x5555559b8790) at rdma.c:3156
+#5  0x00005555555d156c in nvmf_tgt_accept (ctx=<optimized out>) at nvmf.c:242
+#6  0x0000555555625c6d in thread_poll (now=14069340068050, max_msgs=0, thread=0x55555599b330) at thread.c:696
+#7  spdk_thread_poll (thread=thread@entry=0x55555599b330, max_msgs=max_msgs@entry=0, now=14069340068050) at thread.c:740
+#8  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#9  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#10 0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#11 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#12 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+
+
+
+(gdb) bt
+#0  spdk_get_thread () at thread.c:824
+#1  0x00005555555d2ee1 in spdk_nvmf_qpair_disconnect (qpair=qpair@entry=0x5555559b3720, cb_fn=cb_fn@entry=0x0, ctx=ctx@entry=0x0) at nvmf.c:1049
+#2  0x00005555555e00d4 in nvmf_rdma_disconnect (evt=<optimized out>) at rdma.c:2789
+#3  0x00005555555e0c69 in nvmf_process_cm_event (transport=0x5555559b8790) at rdma.c:2941
+#4  nvmf_rdma_accept (transport=0x5555559b8790) at rdma.c:3156
+#5  0x00005555555d156c in nvmf_tgt_accept (ctx=<optimized out>) at nvmf.c:242
+#6  0x0000555555625c6d in thread_poll (now=14069340068050, max_msgs=0, thread=0x55555599b330) at thread.c:696
+#7  spdk_thread_poll (thread=thread@entry=0x55555599b330, max_msgs=max_msgs@entry=0, now=14069340068050) at thread.c:740
+#8  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#9  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#10 0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#11 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#12 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c

@@ -1,0 +1,188 @@
+ssh root@10.51.49.237 -p 22
+0penBmc
+sol.sh
+C+c to go to root@localhost OR "exit" till root@localhost
+~/tools/p4_build.sh forward_l2.p4
+cd $SDE
+./run_switchd.sh -p forward_l2
+ucli (goes to bf-sde)
+pm
+show
+port-add 3/0 10G NONE (add 10G ports)
+port-add 3/1 10G NONE
+an-set 3/- 2
+show
+port-enb 3/- (enable ports)
+port-add 13/0 10G NONE // not used
+port-add 13/1 10G NONE // not used
+port-add 13/2 10G NONE
+port-add 13/3 10G NONE // not used
+an-set 13/- 4
+port-enb 13/-
+port-add 23/0 10G NONE
+port-add 23/1 10G NONE
+an-set 23/- 2
+port-enb 23/-
+show
+SHORT VERSION
+port-add 3/- 10G NONE
+port-add 13/- 10G NONE
+port-add 23/- 10G NONE
+an-set -/- 4
+port-enb -/-
+
+exit
+
+bfrt_python
+bfrt.forward_l2.pipe.Ingress.forward_l2.add_with_send_l2("64:9d:99:b1:64:3e",48)
+bfrt.forward_l2.pipe.Ingress.forward_l2.add_with_send_l2("64:9d:99:b1:60:ea",30)
+bfrt.forward_l2.pipe.Ingress.forward_l2.dump()
+
+bfrt.forward_l2.pipe.Ingress.ipv4_lpm.add_with_ipv4_forward("<IP>", "<MAC>","<PORT>")
+bfrt.forward_l2.pipe.Ingress.ipv4_lpm.add_with_ipv4_forward("192.168.100.100", "64:9d:99:b1:64:3e","48")
+bfrt.forward_l2.pipe.Ingress.ipv4_lpm.add_with_ipv4_forward("192.168.100.225", "64:9d:99:b1:60:ea","30")
+
+bfrt.forward_l2_edit.pipe.Ingress.check_ports.clear()
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.check_ports.add_with_set_direction("30", "30","0","511","0","0")
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.check_ports.add_with_set_direction("48", "48","0","511","0","0")
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.check_ports.add_with_set_direction("0", "511","30","30","0","1")
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.check_ports.add_with_set_direction("0", "511","48","48","0","1")
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.check_ports.dump
+
+Manuelt modify entry:
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.bloom_filter_1.dump
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.bloom_filter_1.mod(0,1) // Set entry 0 to 1
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.bloom_filter_1.operation_register_sync // refresh IMPORTANT
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.bloom_filter_1.dump
+
+Brug "table" og "print_zero" for kort dump overblik over aktive: (brug "?" i eg. "....dump?" for overblik over funktioner)
+bfrt_root>bfrt.forward_l2_edit.pipe.Ingress.check_ports.dump(table=1,print_zero=0)
+
+
+
+ON EOZA:
+ssh eoza@10.51.49.225 -p 22
+sudo arp -s 192.168.100.100 64:9d:99:b1:64:3e
+sudo route add -host 192.168.100.225 metric 100 dev ens4f0
+ifconfig
+route -n 
+SHOULD PRINT:
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.51.48.1      0.0.0.0         UG    100    0        0 eno1
+10.51.48.0      0.0.0.0         255.255.254.0   U     100    0        0 eno1
+192.168.100.0   0.0.0.0         255.255.255.0   U     0      0        0 ens4f0
+192.168.100.100 0.0.0.0         255.255.255.255 UH    0      0        0 ens4f0
+192.168.100.100 0.0.0.0         255.255.255.255 UH    100    0        0 ens4f0
+192.168.100.225 0.0.0.0         255.255.255.255 UH    100    0        0 ens4f0
+
+arp -a
+SHOULD PRINT:
+ftnk-d0128.clients.net.dtu.dk (10.51.49.74) at 34:17:eb:cc:ec:99 [ether] on eno1
+dtu-czc0188j67.win.dtu.dk (192.168.100.100) at 64:9d:99:b1:64:3e [ether] PERM on ens4f0
+ftnk-d0129.clients.net.dtu.dk (10.51.49.121) at 34:17:eb:d5:98:a1 [ether] on eno1
+? (10.51.49.138) at a0:36:9f:d7:52:7c [ether] on eno1
+dtu-czc94098vq.clients.net.dtu.dk (10.51.49.207) at 9c:7b:ef:ac:5a:4d [ether] on eno1
+vl453.byg340.legacy.router.net.dtu.dk (10.51.48.1) at 00:62:ec:89:90:f5 [ether] on eno1
+ckosc.clients.net.dtu.dk (10.51.49.231) at d0:ad:08:03:0d:91 [ether] on eno1
+fys-dinon-z440.clients.net.dtu.dk (10.51.49.196) at dc:4a:3e:7d:1d:68 [ether] on eno1
+dtu-62q2j42.clients.net.dtu.dk (10.51.49.170) at 98:90:96:bc:93:5a [ether] on eno1
+
+ping 192.168.100.100
+
+
+ON MINZA:
+ssh minza@10.51.49.233
+route -n 
+SHOULD PRINT before adding route:
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.51.48.1      0.0.0.0         UG    0      0        0 eno1
+10.51.48.0      0.0.0.0         255.255.254.0   U     0      0        0 eno1
+172.16.253.0    172.16.253.2    255.255.255.0   UG    0      0        0 tun1194
+172.16.253.2    0.0.0.0         255.255.255.255 UH    0      0        0 tun1194
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+
+sudo ip addr add 192.168.100.100/24 dev ens1f0
+sudo route add -host 192.168.100.225 metric 100 dev ens1f0
+sudo arp -s 192.168.100.225 64:9d:99:b1:60:ea
+route -n 
+SHOULD PRINT: 
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         10.51.48.1      0.0.0.0         UG    0      0        0 eno1
+10.51.48.0      0.0.0.0         255.255.254.0   U     0      0        0 eno1
+172.16.253.0    172.16.253.2    255.255.255.0   UG    0      0        0 tun1194
+172.16.253.2    0.0.0.0         255.255.255.255 UH    0      0        0 tun1194
+172.17.0.0      0.0.0.0         255.255.0.0     U     0      0        0 docker0
+192.168.100.0   0.0.0.0         255.255.255.0   U     0      0        0 ens1f0
+192.168.100.225 0.0.0.0         255.255.255.255 UH    100    0        0 ens1f0
+
+arp -a
+SHOULD PRINT:
+? (10.51.49.74) at 34:17:eb:cc:ec:99 [ether] on eno1
+? (10.51.49.190) at 68:21:5f:a8:c7:c0 [ether] on eno1
+? (10.51.49.170) at 98:90:96:bc:93:5a [ether] on eno1
+? (10.51.49.242) at 64:00:6a:77:2f:ce [ether] on eno1
+? (10.51.49.138) at a0:36:9f:d7:52:7c [ether] on eno1
+? (10.51.49.196) at dc:4a:3e:7d:1d:68 [ether] on eno1
+? (10.51.49.121) at 34:17:eb:d5:98:a1 [ether] on eno1
+? (10.51.49.161) at 04:f8:f8:76:5e:40 [ether] on eno1
+? (10.51.48.1) at 00:62:ec:89:90:f5 [ether] on eno1
+? (10.51.49.207) at 9c:7b:ef:ac:5a:4d [ether] on eno1
+? (10.51.49.231) at d0:ad:08:03:0d:91 [ether] on eno1
+? (192.168.100.225) at 64:9d:99:b1:60:ea [ether] PERM on ens1f0
+? (10.51.49.68) at dc:4a:3e:8b:f8:be [ether] on eno1
+
+ping 192.168.100.225
+
+
+IPERF HOW TO
+on minza:
+iperf -s -B 192.168.100.100
+on eoza:
+iperf -c 192.168.100.100 -B 192.168.100.225 -t 5
+
+Bandwith may be limited due to CPU power from client
+To reverse and get better throughput, use: 
+on eoza: 
+iperf -s -B 192.168.100.225
+on minza:
+iperf -c 192.168.100.225 -B 192.168.100.100 -t 5
+
+
+TRANSFER <filename> TO TOP LEVEL OS:
+scp <filename>.p4 root@10.51.49.239:/root/<>.p4
+
+
+SEARCH FOR STRINGS IN root@localhost:~/bf-sde-9.2.0/install/share/p4c/p4include#
+grep -r "your_string" .
+
+SEARCH FOR STRING WITH NANO:
+^W
+use alt+w for next occurrence
+use alt+q for previous occurrence
+
+
+filezilla guide til transfer af filer bidirectionally:
+host: 10.51.49.239
+username: root
+password: root
+port: 22
+
+Running tshark on client (eg. eoza) and capturing relevant info:
+sudo tshark -T fields -e ip.src -e ip.ttl -e ip.dst -e tcp.flags.str -e frame.protocols -e frame.time
+
+Se summary af compilation:
+/root/bf-sde-9.2.0/build/p4-build/forward_l2_edit/tofino/forward_l2_edit/pipe/logs
+Ming anbefaler summary.log
+
+To restart tofino:
+shutdown -r now
+(wait for restart (approx: 2 min))
+maybe run:
+wedge_power.sh status
+sudo $SDE_INSTALL/bin/bf_kdrv_mod_load $SDE_INSTALL
+now sol.sh
+
+

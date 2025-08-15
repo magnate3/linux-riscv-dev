@@ -1,0 +1,42 @@
+table_add set_queue_len_unit act_set_queue_len_unit 0 => 0x01
+
+table_add spine_get_cluster_num_valid_ds act_get_cluster_num_valid_ds 5 => 0x02
+
+table_add spine_forward_falcon act_forward_falcon 1 5 => 0x02
+table_add spine_forward_falcon act_forward_falcon 2 5 => 0x03
+table_add spine_forward_falcon_early act_forward_falcon 1 5 => 0x02
+table_add spine_forward_falcon_early act_forward_falcon 2 5 => 0x03
+
+table_add set_queue_len_unit act_set_queue_len_unit 1 => 0x04
+
+register_write switch_type 0 1
+
+register_write idle_count 5 2
+register_write idle_list 80 1
+register_write idle_list 81 2
+
+register_write queue_len_count 5 0
+
+register_write spine_iq_len_1 0 255
+register_write spine_iq_len_1 1 255
+register_write spine_iq_len_1 2 255
+register_write spine_iq_len_1 3 255
+register_write spine_iq_len_1 4 255
+register_write spine_iq_len_1 5 255
+register_write spine_iq_len_1 6 255
+register_write spine_iq_len_1 7 255
+
+table_add set_src_id act_set_src_id => 1
+
+mirroring_add 1 1
+mirroring_add 2 2
+mirroring_add 3 3
+mirroring_add 4 4
+
+table_add forward set_dmac 255.255.255.255 => ff:ff:ff:ff:ff:ff
+table_add ipv4_lpm broadcast 255.255.255.255/32 =>
+
+mc_node_create 1 2 3
+mc_mgrp_create 1
+mc_node_associate 1 0
+mc_node_associate 1 1

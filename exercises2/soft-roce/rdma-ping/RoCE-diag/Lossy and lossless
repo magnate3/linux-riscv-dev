@@ -1,0 +1,45 @@
+
+有4种RoCE应用模式
+
+1. ZTR (Zero Touch RoCE) 
+无需交换机配置，这个是目标，不过不容易大规模部署
+
+配置：
+Disable PFC and ECN on all nodes
+Enable Lossy Algorithms on NICs
+
+2. Full Lossy
+只需要配置三层ECN，会有三层的ECN拥塞控制作为反馈来调整网络丢包状态，能接受部分out_of_sequence的问题
+网卡测有DCQCN算法来根据CNP来调整每个Queue Pair的发送速率，所以是个不错的反馈，但是没有硬的二层流控，还是丢包会比lossless要多些。
+因此依赖网卡算法，算法控制的好的话，能在相对规模比较大的情况下还做到不错的性能
+
+配置：
+Enable ECN on all nodes (NICs and switches)
+Disable PFC on all nodes (NICs and switches)
+Enable Lossy Algorithms on NICs
+
+3. Lossless，ECN和PFC都配，这种最推荐，效果最好，但是配置要求比较高，端到端的所有节点都需要RoCE的二层PFC和三层ECN配置
+Enable ECN on all nodes (NICs and switches)
+Enable PFC on all nodes (NICs and switches)
+
+4. Lossy w/o Lossy Algorithms Long haul，这种比较随意，最好别这么干
+Disable PFC and ECN on all nodes
+Disable Lossy Algorithms on NICs
+Application should account for packet drop & handle re transmission
+
+
+备注（lossy算法的网卡配置）：
+
+Enable ROCE_ACCL features
+roce_adp_retrains
+roce_tx_window
+roce_slow_restart
+roce_slow_restart_idle (Trade off)
+mlxreg -d /dev/mst/mt4119_pciconf0 --reg_name ROCE_ACCL --set "roce_adp_retrans_en=0x1, roce_tx_window_en=0x1, roce_slow_restart_en=0x1, roce_slow_restart_idle_en=0x1"
+
+//查询
+mlxreg -d /dev/mst/mt4119_pciconf0 --reg_name ROCE_ACCL --get
+
+CX6 Dx额外支持selective repeat
+mlxconfig -d /dev/mst/mt4119_pciconf0 s RDMA_SELECTIVE_REPEAT_EN=0x1
+mlxfwreset -d /dev/mst/mt4119_pciconf0 r

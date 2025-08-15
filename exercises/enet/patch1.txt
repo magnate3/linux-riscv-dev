@@ -1,0 +1,136 @@
+Please don't take this patch set too seriously; I spent only a few
+days working on this, and I'm only posting it as RFC to inform others
+I've started doing this, before I spend too much time to risk colliding
+with someone else's active work.
+
+Compared to Vinicius' previous patches, this is basically a new
+implementation, with the following differences:
+
+- The MAC Merge (mm) and Frame Preemption (fp) settings are split like
+  they were in Vinicius' proposal to have fp as part of tc-taprio. But
+  in my proposal, the fp portion is still part of ethtool, like mm.
+
+- We have statistics, actually 2 kinds. First we have MAC merge layer
+  stats, which are exposed as protocol-specific stats:
+
+  ethtool --json --include-statistics --show-mm eno2
+  [ {
+          "ifname": "eno2",
+          "verify-status": "SUCCEEDED",
+          "verify-time": 10,
+          "supported": true,
+          "enabled": true,
+          "active": true,
+          "add-frag-size": 0,
+          "statistics": {
+              "MACMergeFrameAssErrorCount": 0,
+              "MACMergeFrameSmdErrorCount": 0,
+              "MACMergeFrameAssOkCount": 0,
+              "MACMergeFragCountRx": 0,
+              "MACMergeFragCountTx": 0,
+              "MACMergeHoldCount": 0
+          }
+      } ]
+
+  and then we also have the usual standardized statistics counters, but
+  replicated for the pMAC:
+
+  ethtool -S eno0 --groups pmac-rmon
+  Standard stats for eno0:
+  pmac-rmon-etherStatsUndersizePkts: 0
+  pmac-rmon-etherStatsOversizePkts: 0
+  pmac-rmon-etherStatsFragments: 0
+  pmac-rmon-etherStatsJabbers: 0
+  rx-pmac-rmon-etherStatsPkts64to64Octets: 0
+  rx-pmac-rmon-etherStatsPkts65to127Octets: 0
+  rx-pmac-rmon-etherStatsPkts128to255Octets: 0
+  rx-pmac-rmon-etherStatsPkts256to511Octets: 0
+  rx-pmac-rmon-etherStatsPkts512to1023Octets: 0
+  rx-pmac-rmon-etherStatsPkts1024to1522Octets: 0
+  rx-pmac-rmon-etherStatsPkts1523to9000Octets: 0
+  tx-pmac-rmon-etherStatsPkts64to64Octets: 0
+  tx-pmac-rmon-etherStatsPkts65to127Octets: 0
+  tx-pmac-rmon-etherStatsPkts128to255Octets: 0
+  tx-pmac-rmon-etherStatsPkts256to511Octets: 0
+  tx-pmac-rmon-etherStatsPkts512to1023Octets: 0
+  tx-pmac-rmon-etherStatsPkts1024to1522Octets: 0
+  tx-pmac-rmon-etherStatsPkts1523to9000Octets: 0
+
+  ethtool -S eno0 --groups eth-pmac-mac
+  Standard stats for eno0:
+  eth-pmac-mac-FramesTransmittedOK: 0
+  eth-pmac-mac-SingleCollisionFrames: 0
+  eth-pmac-mac-MultipleCollisionFrames: 0
+  eth-pmac-mac-FramesReceivedOK: 0
+  eth-pmac-mac-FrameCheckSequenceErrors: 0
+  eth-pmac-mac-AlignmentErrors: 0
+  eth-pmac-mac-OctetsTransmittedOK: 0
+  eth-pmac-mac-FramesWithDeferredXmissions: 0
+  eth-pmac-mac-LateCollisions: 0
+  eth-pmac-mac-FramesAbortedDueToXSColls: 0
+  eth-pmac-mac-FramesLostDueToIntMACXmitError: 0
+  eth-pmac-mac-CarrierSenseErrors: 0
+  eth-pmac-mac-OctetsReceivedOK: 0
+  eth-pmac-mac-FramesLostDueToIntMACRcvError: 0
+  eth-pmac-mac-MulticastFramesXmittedOK: 0
+  eth-pmac-mac-BroadcastFramesXmittedOK: 0
+  eth-pmac-mac-MulticastFramesReceivedOK: 0
+  eth-pmac-mac-BroadcastFramesReceivedOK: 0
+
+  ethtool -S eno0 --groups eth-pmac-ctrl
+  Standard stats for eno0:
+  eth-pmac-ctrl-MACControlFramesTransmitted: 0
+  eth-pmac-ctrl-MACControlFramesReceived: 0
+
+  What also exists but is not exported here are PAUSE stats for the
+  pMAC. Since those are also protocol-specific stats, I'm not sure how
+  to mix the 2 (MAC Merge layer + PAUSE). Maybe just extend
+  ETHTOOL_A_PAUSE_STAT_TX_FRAMES and ETHTOOL_A_PAUSE_STAT_RX_FRAMES with
+  the pMAC variants?
+
+- Finally, the hardware I'm working with (here, the test vehicle is the
+  NXP ENETC from LS1028A, although I have patches for the Felix switch
+  as well, but those need a bit of a revolution in the driver to go in
+  first). This hardware is not without its flaws, but at least allows me
+  to concentrate on the UAPI portions for this series.
+
+I also have a kselftest written, but it's for the Felix switch (covers
+forwarding latency) and so it's not included here.
+
+Are there objections in exposing the UAPI for this new feature in this way?
+
+Also, there is no documentation associated with this patch set, other
+than the code. Life is too short to write documentation for an RFC, sorry.
+I may get kdoc related kernel bot warnings because I copy-pasted ethtool
+structure definitions from here and there, but I didn't fill in the
+descriptions of all their fields. All those fields are as truthful to
+the standards as possible rather than my own variables or names, so
+please refer to those specs for now.
+
+Vladimir Oltean (7):
+  net: ethtool: netlink: introduce ethnl_update_bool()
+  net: ethtool: add support for Frame Preemption and MAC Merge layer
+  net: ethtool: stats: make stats_put_stats() take input from multiple
+    sources
+  net: ethtool: stats: replicate standardized counters for the pMAC
+  net: enetc: parameterize port MAC stats to also cover the pMAC
+  net: enetc: expose some standardized ethtool counters
+  net: enetc: add support for Frame Preemption and MAC Merge layer
+
+ .../ethernet/freescale/enetc/enetc_ethtool.c  | 399 +++++++++++++++---
+ .../net/ethernet/freescale/enetc/enetc_hw.h   | 132 +++---
+ include/linux/ethtool.h                       |  68 +++
+ include/uapi/linux/ethtool.h                  |  15 +
+ include/uapi/linux/ethtool_netlink.h          |  86 ++++
+ net/ethtool/Makefile                          |   3 +-
+ net/ethtool/fp.c                              | 295 +++++++++++++
+ net/ethtool/mm.c                              | 228 ++++++++++
+ net/ethtool/netlink.c                         |  38 ++
+ net/ethtool/netlink.h                         |  34 ++
+ net/ethtool/stats.c                           | 218 +++++++---
+ 11 files changed, 1338 insertions(+), 178 deletions(-)
+ create mode 100644 net/ethtool/fp.c
+ create mode 100644 net/ethtool/mm.c
+
+-- 
+2.34.1

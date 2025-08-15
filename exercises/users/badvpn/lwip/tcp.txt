@@ -1,0 +1,254 @@
+[root@centos7 badvpn]# ./install/bin/badvpn-tun2socks  --tundev tun0 --netif-ipaddr 10.0.0.2 --netif-netmask  255.255.255.0 --socks-server-addr 127.0.0.1:1080 
+NOTICE(tun2socks): initializing BadVPN tun2socks 1.999.128
+NOTICE(tun2socks): entering event loop
+INFO(lwip): netif_set_ipaddr: netif address being changed
+
+INFO(lwip): netif: IP address of interface 
+INFO(lwip): netif: netmask of interface 
+INFO(lwip): netif: GW address of interface 
+INFO(lwip): netif: added interface ho IP addr 
+INFO(lwip): 10.0.0.2
+INFO(lwip):  netmask 
+INFO(lwip): 255.255.255.0
+INFO(lwip):  gw 
+INFO(lwip): 0.0.0.0
+INFO(lwip): 
+
+INFO(lwip): netif: setting default interface ho
+
+WARNING(tun2socks): ################### src ip : 8.8.8.8, and dst ip : 8.8.8.8  
+
+ip_input: packet accepted on interface ho and netif ip 10.0.0.2 
+ INFO(lwip): ip_input: iphdr->dest 0x8080808 netif->ip_addr 0x200000a (0x80808, 0xa, 0x8000000)
+
+INFO(lwip): ip_input: 
+
+INFO(lwip): IP header:
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): | 4 | 5 |  0x10 |        60     | (v, hl, tos, len)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    65421      |010|       0   | (id, flags, offset)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   64  |    6  |    0x210e     | (ttl, proto, chksum)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   10  |    0  |    0  |    1  | (src)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    8  |    8  |    8  |    8  | (dest)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): ip_input: p->len 60 p->tot_len 60
+
+INFO(lwip): inet_chksum_pseudo(): checksumming pbuf 0x7030de0 (has next (nil)) 
+
+INFO(lwip): inet_chksum_pseudo(): pbuf chain lwip_chksum()=ffff
+
+INFO(lwip): tcp_input: packed for LISTENing connection.
+
+INFO(lwip): tcp_parseopt: MSS
+
+INFO(lwip): tcp_parseopt: other
+
+INFO(lwip): tcp_parseopt: other
+
+INFO(lwip): tcp_parseopt: NOP
+
+INFO(lwip): tcp_parseopt: other
+
+INFO(lwip): inet_chksum_pseudo(): checksumming pbuf 0x7031420 (has next (nil)) 
+
+INFO(lwip): inet_chksum_pseudo(): pbuf chain lwip_chksum()=19ec
+
+INFO(lwip): ip_output_if: ho0
+
+INFO(lwip): IP header:
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): | 4 | 5 |  0x00 |        44     | (v, hl, tos, len)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |        0      |000|       0   | (id, flags, offset)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |  255  |    6  |    0xa1bb     | (ttl, proto, chksum)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    8  |    8  |    8  |    8  | (src)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   10  |    0  |    0  |    1  | (dest)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): netif->output()
+WARNING(tun2socks): ################### src ip : 8.8.8.8, and dst ip : 8.8.8.8  
+
+ip_input: packet accepted on interface ho and netif ip 10.0.0.2 
+ INFO(lwip): ip_input: iphdr->dest 0x8080808 netif->ip_addr 0x200000a (0x80808, 0xa, 0x8000000)
+
+INFO(lwip): ip_input: 
+
+INFO(lwip): IP header:
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): | 4 | 5 |  0x10 |        40     | (v, hl, tos, len)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    65422      |010|       0   | (id, flags, offset)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   64  |    6  |    0x2121     | (ttl, proto, chksum)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   10  |    0  |    0  |    1  | (src)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    8  |    8  |    8  |    8  | (dest)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): ip_input: p->len 40 p->tot_len 40
+
+INFO(lwip): inet_chksum_pseudo(): checksumming pbuf 0x7030de0 (has next (nil)) 
+
+INFO(lwip): inet_chksum_pseudo(): pbuf chain lwip_chksum()=ffff
+
+INFO(lwip): +-+-+-+-+-+-+-+-+-+-+-+-+-+- tcp_input: flags 
+INFO(lwip): -+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+INFO(tun2socks): 00001 (8.8.8.8:22 10.0.0.1:54704): accepted
+INFO(lwip): tcp_receive: ACK for 6541, unacked->seqno 6540:6541
+
+INFO(lwip): tcp_receive: removing 6540:6541 from pcb->unacked
+
+ERROR(BConnection): connection failed
+ERROR(BSocksClient): connection failed
+INFO(tun2socks): 00001 (8.8.8.8:22 10.0.0.1:54704): SOCKS error
+INFO(lwip): inet_chksum_pseudo(): checksumming pbuf 0x7031420 (has next (nil)) 
+
+INFO(lwip): inet_chksum_pseudo(): pbuf chain lwip_chksum()=5dd4
+
+INFO(lwip): ip_output_if: ho0
+
+INFO(lwip): IP header:
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): | 4 | 5 |  0x00 |        40     | (v, hl, tos, len)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |        1      |000|       0   | (id, flags, offset)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |  255  |    6  |    0xa1be     | (ttl, proto, chksum)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    8  |    8  |    8  |    8  | (src)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   10  |    0  |    0  |    1  | (dest)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): netif->output()
+WARNING(tun2socks): ################### src ip : 8.8.8.8, and dst ip : 8.8.8.8  
+
+ip_input: packet accepted on interface ho and netif ip 10.0.0.2 
+ INFO(lwip): ip_input: iphdr->dest 0x8080808 netif->ip_addr 0x200000a (0x80808, 0xa, 0x8000000)
+
+INFO(lwip): ip_input: 
+
+INFO(lwip): IP header:
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): | 4 | 5 |  0x10 |        40     | (v, hl, tos, len)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    65423      |010|       0   | (id, flags, offset)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   64  |    6  |    0x2120     | (ttl, proto, chksum)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   10  |    0  |    0  |    1  | (src)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    8  |    8  |    8  |    8  | (dest)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): ip_input: p->len 40 p->tot_len 40
+
+INFO(lwip): inet_chksum_pseudo(): checksumming pbuf 0x7030de0 (has next (nil)) 
+
+INFO(lwip): inet_chksum_pseudo(): pbuf chain lwip_chksum()=ffff
+
+INFO(lwip): +-+-+-+-+-+-+-+-+-+-+-+-+-+- tcp_input: flags 
+INFO(lwip): -+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+INFO(lwip): tcp_receive: ACK for 6542, unacked->seqno 6541:6542
+
+INFO(lwip): tcp_receive: removing 6541:6542 from pcb->unacked
+
+INFO(lwip): tcp_receive: received FIN.
+
+INFO(lwip): inet_chksum_pseudo(): checksumming pbuf 0x7031420 (has next (nil)) 
+
+INFO(lwip): inet_chksum_pseudo(): pbuf chain lwip_chksum()=5dd4
+
+INFO(lwip): ip_output_if: ho0
+
+INFO(lwip): IP header:
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): | 4 | 5 |  0x00 |        40     | (v, hl, tos, len)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |        2      |000|       0   | (id, flags, offset)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |  255  |    6  |    0xa1bd     | (ttl, proto, chksum)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |    8  |    8  |    8  |    8  | (src)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): |   10  |    0  |    0  |    1  | (dest)
+
+INFO(lwip): +-------------------------------+
+
+INFO(lwip): netif->output()

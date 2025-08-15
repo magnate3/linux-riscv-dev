@@ -1,0 +1,91 @@
+.TH RDMA_RESOURCE_LAT "1" "Aug 2017" "" "User Commands"
+.SH NAME
+rdma_resource_lat \- simple RDMA resource registration latency monitoring tool
+.SH SYNOPSYS
+.SY rdma_resource_lat
+.OP \-d device
+.OP \-s size
+.OP \-l align
+.OP \-u huge
+.OP \-R resource
+.br
+.SY rdma_resource_lat
+.B -h
+|
+.B -v
+.br
+.SH DESCRIPTION
+This tool allocates and registers RDMA resource such as protection domain, or
+memory regions with RDMA devices and measures latency in real time.
+.SH OPTIONS
+.TP
+.BI \-l \ align
+Set \fIalign\fR size in bytes to align this memory registration to.
+.TP
+.BI \-s \ size
+Memory Region size (\fB4k\fR).
+.TP
+.BI \-h
+Display help message and exit.
+.TP
+.B \-v
+Display version and exit.
+.TP
+For options that expect "size" argument (\fB\-s\fR),
+default is bytes, unless you specify one of the following suffixes
+(case-insensitive):
+.TP
+.BR KiB ,\  k ,\  kb
+kilobytes (1 024 bytes)
+.TP
+.BR MiB ,\  m ,\  mb
+megabytes (1 048 576 bytes)
+.TP
+.BR GiB ,\  g ,\  gb
+gigabytes (1 073 741 824 bytes)
+.TP
+.BR TiB ,\  t ,\  tb
+terabytes (1 099 511 627 776 bytes)
+.PP
+For options that expect "number" argument (\fB-p\fR and \fB-c\fR) you
+can optionally specify one of the following suffixes (case-insensitive):
+.TP
+.B k
+kilo (thousands, 1 000)
+.TP
+.B m
+mega (millions, 1 000 000)
+.TP
+.B g
+giga (billions, 1 000 000 000)
+.TP
+.B t
+tera (trillions, 1 000 000 000 000)
+.SH EXIT STATUS
+Returns \fB0\fR on success. The following error codes are defined:
+.TP
+.B 1
+Invalid usage (error in command arguments).
+.TP
+.B other errors.
+Error during runtime.
+.SH EXAMPLES
+.TP
+.B rdma_resource_lat -d mlx5_0
+Show RDMA memory registration latency using default size 4k for device mlx5_0.
+.TP
+.B rdma_resource_lat -d mlx5_0 -s 4G -u
+Show RDMA memory registration latency using default size 4k for device mlx5_0.
+It perform 4G bytes memory registration with huge pages.
+.TP
+.SH HOMEPAGE
+.UR https://github.com/paravmellanox/rtool/
+.UE .
+.SH AUTHORS
+This program was written by Parav Pandit
+.MT parav@mellanox.com
+.ME .
+.br
+Man-page was written by Parav Pandit
+.MT parav@mellanox.com
+.ME .

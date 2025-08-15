@@ -1,0 +1,5 @@
+rans_incast_client.c
+common.c
+
+- read_exact_until function: that keeps reading until the request is not complete or the exact bytes have not been read
+- a similar write_exact_until function is yet to be written

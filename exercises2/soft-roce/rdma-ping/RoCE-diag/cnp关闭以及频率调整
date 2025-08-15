@@ -1,0 +1,11 @@
+
+#CNP报文是网卡收到ECN就会发送，也有功能在没有ECN的时候，由于buffer不够触发cnp
+#使用 mlxconfig -d /dev/mst/mt4115_pciconf0 -y s ROCE_CC_PRIO_MASK_P1=0x0并没有关闭CNP
+#关闭CNP的方法：对每个队列，都要关闭roce_np
+for i in {0..7}; do  echo "0" > /sys/class/net/ens2f0np0/ecn/roce_np/enable/$i; done
+
+调整cnp发送的频率，可以通过这个参数：
+/sys/class/net/ens2f0np0/ecn/roce_np/min_time_between_cnps
+
+
+其中ens2f0np0是网卡名，用自己系统里的网卡名替换

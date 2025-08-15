@@ -1,0 +1,14 @@
+Utils := ReadFile \
+		WriteFile
+
+main:$(Utils)
+	@for File in $(Utils); do echo "Compiling   $${File} ";done
+
+clean:
+	rm $(Utils)
+	
+ReadFile: ReadFile.c
+	gcc $^ -o $@
+
+WriteFile: WriteFile.c
+	gcc $^ -o $@

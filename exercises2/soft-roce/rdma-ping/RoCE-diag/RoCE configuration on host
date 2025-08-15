@@ -1,0 +1,76 @@
+
+#RoCE官网配置方法比较多，但是很多分支其实并不会用，这里只介绍host端配置
+#这个是最简单的RoCE配置，但是一般够用
+#建议遵循以下常规配置方式，如有定制和更多RoCE业务需求，可以参考官网OFED手册或community.mellanox.com的帖子修改配置
+
+#打开mst，也可以不执行，执行之后会对每个设备生成sysfs的设备对应名称，如果不执行，下面所有命令的/dev/mst/mt4119_pciconf0都可以改成pcie地址BDF也可以用
+mst start
+
+#这个命令不一定需要运行，后面的pfc命令也会执行这个操作，在这执行是给个参考，可以看到打开dscp后的dscp和卡上TC优先级的映射关系
+
+#在此说明，RoCE的配置可以是基于vlan的pcp字段，也可以是基于三层IP的TOS字段，通过ToS中包含的dscp来区分不同优先级
+#网卡和交换机通过配置这个字段到优先级的对应关系，来把RoCE的报文端到端映射到对应的优先级，然后可以选择对设定的优先级队列做RoCE的PFC流控和DCQCN的三层流控
+mlnx_qos -i enp175s0f0 --trust=dscp
+
+执行结果类似：
+#dscp2prio mapping:
+#        prio:0 dscp:07,06,05,04,03,02,01,00,
+#        prio:1 dscp:15,14,13,12,11,10,09,08,
+#        prio:2 dscp:23,22,21,20,19,18,17,16,
+#        prio:3 dscp:31,30,29,28,27,26,25,24,
+#        prio:4 dscp:39,38,37,36,35,34,33,32,
+#        prio:5 dscp:47,46,45,44,43,42,41,40,
+#        prio:6 dscp:55,54,53,52,51,50,49,48,
+#        prio:7 dscp:63,62,61,60,59,58,57#,56,
+#Receive buffer size (bytes): 0,156096,0,0,0,0,0,0,
+#Cable len: 7
+# .....
+# .....
+
+#把CNP的配置DSCP配置为48，这相当于是把CNP的报文配置到prio 6了，不和RoCE报文在一起
+#这个一般网卡默认是48，所以这个配置就是double check一下
+mlxconfig -y -d /dev/mst/mt4119_pciconf0 s CNP_DSCP_P1=48 CNP_DSCP_P2=48
+
+#打开DCQCN，配置在priority 3上，常规配置在priority 3上，当然可以手动改成别的，但通常没必要。如果手动改，就要注意dscp和优先级的对应关系也要手动改
+#通过固件配置这个参数，重启配置也不会丢
+mlxconfig -y -d /dev/mst/mt4119_pciconf0 s ROCE_CC_PRIO_MASK_P1=8 ROCE_CC_PRIO_MASK_P2=8
+
+
+#前面两个配置，重启或者执行mlxfwreset -d /dev/mst/mt4119_pciconf0 生效，建议重启
+
+#设置RoCE CM的DSCP为26, （tos=105）
+# 这个对应关系
+cma_roce_tos -d mlx5_0 -t 105
+
+# 仅作参考，可以不设：非RDMA CM的业务可以使用如下命令
+echo 105 > /sys/class/infiniband/mlx5_0/tc/1/traffic_class
+
+#设置RoCEv2，默认就是，一般不用改
+#cma_roce_mode -d mlx5_0 -p 1 -m 2
+
+#打开端口的dscp映射，在priority 3打开pfc
+mlnx_qos -i enp175s0f0 --trust=dscp --pfc=0,0,0,1,0,0,0,0
+mlnx_qos -i enp175s0f1 --trust=dscp --pfc=0,0,0,1,0,0,0,0
+
+#测试带宽，tc对应于之前配置的105（DSCP 26）
+ib_write_bw --duration=10 -d mlx5_0 --gid-index=3 --size=8 --qp=4  --tclass=105 -F --report_gbits --disable_pcie_relaxed
+
+#基本troubleshooting用命令：
+
+#看一下RoCE的流量是不是跑在了预期的prio3
+ethtool -S ens175s0f0 | grep prio3
+
+#查看是否有pause
+watch -n 1 -d 'ethtool -S enp175s0f0 | grep pause'
+#查看是否有cnp报文
+watch -n 1 -d 'for F in `ls /sys/class/infiniband/mlx5_0/ports/1/hw_counters/* | egrep "cnp|ecn"`; do echo -n "$F: "; cat $F; done'
+
+
+#可以watch包含cnp和ecn的更多统计信息
+watch -d -n 1 'for F in /sys/class/infiniband/mlx5_bond_0/ports/1/hw_counters/* ; do echo -n "$F: " ; cat $F; done '
+
+#查看网口的pause包增长情况
+mlnx_perf -i enp129s0f0  | egrep 'dis|err|out|buff|pause'
+
+
+#通常来讲，pause和cnp报文越少越好

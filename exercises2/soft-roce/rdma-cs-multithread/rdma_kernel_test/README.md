@@ -1,0 +1,3 @@
+
+struct ib_fast_reg_page_list
+ib_alloc_fast_reg_mr

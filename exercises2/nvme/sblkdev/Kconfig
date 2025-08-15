@@ -1,0 +1,22 @@
+# SPDX-License-Identifier: GPL-2.0
+
+config SBLKDEV
+	tristate "Simple block device in RAM"
+	depends on BLOCK
+	help
+	  Creates simple virtual block devices. An area in RAM is allocated
+	  for data storage.
+
+config SBLKDEV_REQUESTS_BASED
+	bool "Use request-based scheme"
+	help
+	  Use a modern request-based scheme, otherwise a traditional bio-based
+	  scheme used.
+
+config SBLKDEV_BLOCK_SIZE
+	int "block size"
+	default 512
+	help
+	  Traditionally, block devices with a block size of 512 bytes (1 sector)
+	  are used, but recently more and more devices are increasing this size
+	  to the size of 4096 bytes (1 page).

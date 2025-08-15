@@ -1,0 +1,68 @@
+type: PACKET_IN, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, port_in: 1
+type: PARSER_START, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, parser_id: 0 (parser)
+type: PARSER_EXTRACT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 2 (ethernet)
+type: PARSER_EXTRACT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 4 (ipv4)
+type: PARSER_EXTRACT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 5 (udp)
+type: PARSER_EXTRACT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 10 (intl4_shim)
+type: PARSER_EXTRACT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 11 (int_header)
+type: PARSER_EXTRACT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 20 (int_data)
+type: PARSER_DONE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, parser_id: 0 (parser)
+type: PIPELINE_START, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, pipeline_id: 0 (ingress)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 0 (node_2), result: False
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 2 (node_5), result: True
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 3 (node_6), result: True
+type: TABLE_HIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 1 (MyIngress.l3_forward.ipv4_lpm), entry_hdl: 2
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 7 (MyIngress.l3_forward.ipv4_forward)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 4 (node_8), result: True
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 2 (MyIngress.process_int_source_sink.tb_set_source)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 1 (NoAction)
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 3 (MyIngress.process_int_source_sink.tb_set_sink)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 2 (NoAction)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 5 (node_11), result: False
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 6 (node_13), result: False
+type: PIPELINE_DONE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, pipeline_id: 0 (ingress)
+type: PIPELINE_START, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, pipeline_id: 1 (egress)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 7 (node_17), result: True
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 8 (node_18), result: False
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 7 (tbl_act)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 52 (act)
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 8 (MyEgress.process_int_transit.tb_int_insert)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 16 (MyEgress.process_int_transit.init_metadata)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 9 (node_22), result: True
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 10 (node_24), result: False
+type: TABLE_HIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 10 (MyEgress.process_int_transit.tb_int_inst_0003), entry_hdl: 15
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 32 (MyEgress.process_int_transit.int_set_header_0003_i15)
+type: TABLE_HIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 11 (MyEgress.process_int_transit.tb_int_inst_0407), entry_hdl: 15
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 48 (MyEgress.process_int_transit.int_set_header_0407_i15)
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 12 (tbl_int_transit400)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 55 (int_transit400)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 11 (node_28), result: True
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 13 (tbl_int_transit404)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 54 (int_transit404)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 12 (node_30), result: True
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 14 (tbl_int_transit407)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 56 (int_transit407)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 13 (node_32), result: True
+type: TABLE_MISS, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, table_id: 15 (tbl_int_transit410)
+type: ACTION_EXECUTE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, action_id: 57 (int_transit410)
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 14 (node_34), result: False
+type: CONDITION_EVAL, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, condition_id: 15 (node_36), result: False
+type: PIPELINE_DONE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, pipeline_id: 1 (egress)
+type: DEPARSER_START, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, deparser_id: 0 (deparser)
+type: CHECKSUM_UPDATE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, cksum_id: 0 (cksum)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 2 (ethernet)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 4 (ipv4)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 5 (udp)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 10 (intl4_shim)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 11 (int_header)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 12 (int_switch_id)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 13 (int_level1_port_ids)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 14 (int_hop_latency)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 15 (int_q_occupancy)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 16 (int_ingress_tstamp)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 17 (int_egress_tstamp)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 18 (int_level2_port_ids)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 19 (int_egress_tx_util)
+type: DEPARSER_EMIT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, header_id: 20 (int_data)
+type: DEPARSER_DONE, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, deparser_id: 0 (deparser)
+type: PACKET_OUT, switch_id: 0, cxt_id: 0, sig: 8563635352329905447, id: 356692, copy_id: 0, port_out: 2

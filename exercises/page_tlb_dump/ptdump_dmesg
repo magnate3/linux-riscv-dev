@@ -1,0 +1,7 @@
+#!/bin/bash
+
+sudo dmesg > /tmp/dmesg
+n=$(cat -n /tmp/dmesg | grep ' =============================================' |
+    tail -2 | head -1 | awk '{ print $1 }')
+n=$((n - 1))
+sed "1,${n}d" /tmp/dmesg

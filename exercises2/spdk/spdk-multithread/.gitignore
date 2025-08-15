@@ -1,0 +1,5 @@
+hello_world_pthreads
+hello_world_event/hello_world_event
+*.d
+*.o
+core

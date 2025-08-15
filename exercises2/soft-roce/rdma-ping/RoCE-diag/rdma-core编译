@@ -1,0 +1,40 @@
+
+1. 解压源码包，得到rdma-core源码
+进入ofed安装包的src目录，然后执行如下命令（用当前5.8版ofed驱动的文件名替换如下包的版本：
+tar xzvf MLNX_OFED_SRC-5.0-1.0.0.0.tgz
+rpm2cpio MLNX_OFED_SRC-5.0-1.0.0.0/SRPMS/rdma-core-50mlnx1-1.50100.0.src.rpm | cpio -idmv
+tar xzvf rdma-core-50mlnx1.tgz
+cd rdma-core-50mlnx1/
+
+2. 升级rdma-core
+
+打上发过去的patch，然后编译rdma-core，修改如下$HOME/rdma-core为上一步解压的rdma-core的源码目录
+
+yum install -y cmake libarchive libnl3 libnl3-devel libnl-route-3.0 pandoc rst2man python-docutils
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/rdma-core -DMLX5_DEBUG=TRUE
+make install
+
+如果make install失败，在rdma-core源码路径执行bash build.sh install
+
+3. 把新编译的rdma-core加到路径
+
+export LD_LIBRARY_PATH=<rdma_core_folder>/build/lib 
+export MLX5_DEBUG_MASK=64
+
+4. 对于基于rdma-core的dpdk等程序，重新编译dpdk
+
+
+################
+#也有相对简单的编译方式，用rpmbuild直接编译
+#但是注意编译的时候可能会缺包（libpkgconf-devel和pkgconf)
+
+
+rpmbuild -bb rdma-core.spec
+rpm -Uvh *.rpm   
+#编译dpdk
+rpmbuild -bb mlnx-dpdk-ofed-58.spec
+rpm -Uvh mlnx-dpdk-*   
+#编译ovs-dpdk
+rpmbuild --with dpdk --with static -bb openvswitch-ofed-2.17.2-new.spec
+rpm -Uvh openvswitch-2.17.2-100.el7.x86_64.rpm openvswitch-devel-2.17.2-100.el7.x86_64.rpm
+

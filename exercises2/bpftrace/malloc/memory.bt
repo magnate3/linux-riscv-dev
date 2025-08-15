@@ -1,0 +1,15 @@
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:__libc_malloc /pid == 3038/
+{
+        printf("call malloc size: %d\n", arg0);
+}
+
+uretprobe:/lib/x86_64-linux-gnu/libc.so.6:__libc_malloc /pid == 3038/
+{
+        printf("alloc memory %p\n", retval);
+        @[retval] = 1;
+}
+
+uprobe:/lib/x86_64-linux-gnu/libc.so.6:__libc_free /pid == 3038/
+{
+        @[arg0] = 0;
+}

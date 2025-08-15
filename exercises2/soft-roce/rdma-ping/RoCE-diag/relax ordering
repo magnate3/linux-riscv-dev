@@ -1,0 +1,33 @@
+
+
+Improved RDMA performance with Broadwell and Haswell CPUs
+
+When using Broadwell and Haswell CPUs RDMA throughput may not reach the rates typically seen with other CPU architecture.  In order to achieve performance more in line with other CPU architecture, it is recommended to disable relaxed PCIE ordering.
+
+This concept is discussed in the following kernel patch:
+https://lore.kernel.org/patchwork/patch/820922/
+
+The following is the description provided for the kernel patch:
+"According to the Intel spec section 3.9.1 said:
+
+3.9.1 Optimizing PCIe Performance for Accesses Toward Coherent Memory and Toward MMIO Regions (P2P)
+
+In order to maximize performance for PCIe devices in the processors listed in Table 3-6 below, the soft- ware should determine whether the accesses are toward coherent memory (system memory) or toward MMIO regions (P2P access to other devices). If the access is toward MMIO region, then software can command HW to set the RO bit in the TLP header, as this would allow hardware to achieve maximum throughput for these types of accesses. For accesses toward coherent memory, software can command HW to clear the RO bit in the TLP header (no RO), as this would allow hardware to achieve maximum throughput for these types of accesses.
+Table 3-6. Intel Processor CPU RP Device IDs for Processors Optimizing"
+
+PCIe Performance
+ Processor                           CPU RP Device IDs
+
+Intel Xeon processors based on       6F01H-6F0EH
+Broadwell microarchitecture
+
+Intel Xeon processors based on       2F01H-2F0EH
+Haswell microarchitecture
+
+It means some Intel processors has performance issue when use the Relaxed Ordering Attribute, so disable Relaxed Ordering for these root port.
+
+
+This means that in RDMA performance tests the –disable_pcie_relaxed option should be used. For example:
+# ib_write_bw --disable_pcie_relaxed
+
+

@@ -1,0 +1,36 @@
+[submodule "exercises2/gpu/gpudma/gpudma"]
+	path = exercises2/gpu/gpudma/gpudma
+	url = https://github.com/karakozov/gpudma.git
+[submodule "exercises2/gpu/ssd-gpu-dma"]
+	path = exercises2/gpu/ssd-gpu-dma
+	url = https://github.com/enfiskutensykkel/ssd-gpu-dma.git
+[submodule "exercises2/tinyfs/simplefs"]
+	path = exercises2/tinyfs/simplefs
+	url = https://github.com/sysprog21/simplefs.git
+[submodule "exercises2/nat64/kmod-tayga"]
+	path = exercises2/nat64/kmod-tayga
+	url = https://github.com/rssnsj/kmod-tayga.git
+[submodule "exercises2/bpftrace/bpf-developer-tutorial"]
+	path = exercises2/bpftrace/bpf-developer-tutorial
+	url = https://github.com/eunomia-bpf/bpf-developer-tutorial.git
+[submodule "exercises2/donard/nvme_donard"]
+	path = exercises2/donard/nvme_donard
+	url = https://github.com/sbates130272/nvme_donard.git
+[submodule "exercises2/gpu/cubefs.wiki"]
+	path = exercises2/gpu/cubefs.wiki
+	url = https://github.com/cubefs/cubefs.wiki.git
+[submodule "exercises2/gpu/ssd2gpu"]
+	path = exercises2/gpu/ssd2gpu
+	url = https://github.com/matsuu/ssd2gpu.git
+[submodule "exercises2/gpu/nvidia_p2p_get_pages/bafs-driver"]
+	path = exercises2/gpu/nvidia_p2p_get_pages/bafs-driver
+	url = https://github.com/ZaidQureshi/bafs-driver.git
+[submodule "exercises2/user_space/tofino-example/tofino-example"]
+	path = exercises2/user_space/tofino-example/tofino-example
+	url = https://github.com/abhikbose/tofino-example.git
+[submodule "exercises2/user_space/tofino/sketch/dsketch"]
+	path = exercises2/user_space/tofino/sketch/dsketch
+	url = https://github.com/khooi8913/dsketch.git
+[submodule "exercises2/soft-roce/rdma-ping/rdma-core-mummy"]
+	path = exercises2/soft-roce/rdma-ping/rdma-core-mummy
+	url = https://github.com/RDMA-Rust/rdma-core-mummy.git

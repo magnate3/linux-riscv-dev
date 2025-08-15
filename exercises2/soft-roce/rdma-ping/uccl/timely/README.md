@@ -132,7 +132,9 @@ double getNewRate(double rtt, double rate) {
 ```
 set(LIBRARIES ${LIBRARIES} -Wl,--whole-archive dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
 ```
+
 改成
+
 ```
 set(LIBRARIES ${LIBRARIES}   -Bsymbolic -fPIC  -no-pie  -L/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/lib/ -Wl,--whole-archive  dpdk -Wl,--no-whole-archive numa dl ibverbs mlx4 mlx5)
 ```

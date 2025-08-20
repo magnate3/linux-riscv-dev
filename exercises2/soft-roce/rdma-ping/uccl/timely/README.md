@@ -127,6 +127,15 @@ double getNewRate(double rtt, double rate) {
  vim config/defconfig_arm64-armv8a-linuxapp-gcc
 ```
 
+```
+[root@centos7 helloworld]# export RTE_SDK=/root/dpdk-stable-19.11.1/
+[root@centos7 helloworld]# make
+  CC main.o
+  LD helloworld
+  INSTALL-APP helloworld
+  INSTALL-MAP helloworld.map
+```
+
 ### lib dpdk
 
 ```
@@ -282,6 +291,7 @@ mount -t hugetlbfs nodev /mnt/huge
 ```
 
 ```
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/lib/
 root@centos7:~/prog/eRPC# ./build/erpc_dpdk_daemon 
 81:539967 WARNG: eRPC DPDK daemon: Managing DPDK port 0 on NUMA node 0
 82:581482 WARNG: eRPC DPDK daemon: Successfully initialized DPDK EAL

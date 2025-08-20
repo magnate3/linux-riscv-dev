@@ -68,6 +68,18 @@ docker import eRpc.tar  erpc:1.0
 
 ```
 
+# seccomp or mbind error    
+
+```
+docker  run -it  --rm  --name erpc  --net=host -u root  --security-opt seccomp=seccomp.json -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge  erpc:2.0 /root/prog/eRPC-arm/hello_world/server
+```
+
+## gdb and trace
+
+```
+docker  run -it  --rm  --name erpc  --net=host -u root --cap-add=SYS_PTRACE   --security-opt seccomp=unconfined -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge  erpc:2.0 gdb /root/prog/eRPC-arm/hello_world/server
+```
+
 # dockerfile基础镜像
 
 ```
@@ -277,3 +289,4 @@ curl: (56) Proxy CONNECT aborted
 ```
 
 关闭/etc/systemd/system/docker.service.d/http-proxy.conf代理
+

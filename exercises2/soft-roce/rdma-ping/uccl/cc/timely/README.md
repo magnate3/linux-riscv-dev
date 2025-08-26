@@ -89,7 +89,9 @@ double getNewRate(double rtt, double rate) {
 
 [refer to eRPC timely](https://github.com/PickingUpPieces/eRPC/tree/5242f49dadaeb4f9943884e0452b3b33615f731b/src/cc)   
 
-[eRPC-arm](https://github.com/Peter-JanGootzen/eRPC-arm/tree/afbacaccc6dfb8f326d6a6857bc6d9133bb38c17)   
+[eRPC-arm](https://github.com/Peter-JanGootzen/eRPC-arm/tree/afbacaccc6dfb8f326d6a6857bc6d9133bb38c17)
+
+[timely and Carousel](https://zhuanlan.zhihu.com/p/693128127)        
      
 
 
@@ -112,6 +114,21 @@ double getNewRate(double rtt, double rate) {
 
 ## dpdk
 
+```
+# assemble DPDK make arguments
+DPDK_MAKE_ARGS := -C $(DPDK_SOURCE) -j $(JOBS) \
+	T=$(DPDK_TARGET) \
+	RTE_CONFIG_TEMPLATE=../custom-config \
+	EXTRA_CFLAGS="$(DPDK_EXTRA_CFLAGS)" \
+	EXTRA_LDFLAGS="$(DPDK_EXTRA_LDFLAGS)" \
+	CPU_CFLAGS="$(DPDK_CPU_CFLAGS)" \
+	DESTDIR=$(I) \
+        $(DPDK_MAKE_EXTRA_ARGS)
+```
+
+```
+ make install T=arm64-armv8a-linuxapp-gcc  -j 64  DPDK_CPU_CFLAGS="-pie -fPIC"    DPDK_EXTRA_LDFLAGS="-g"
+```
 
 ```
 [root@centos7 dpdk-stable-19.11.14]# export RTE_TARGET=arm64-armv8a-linuxapp-gcc
@@ -257,6 +274,7 @@ root@centos7:~/prog/eRPC#
  cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off
 ```
 
+ 
 
 
 ## run

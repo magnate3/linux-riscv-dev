@@ -1,0 +1,10 @@
+Server setup:
+To run incast_server with connections # >= 1024,
+
+sudo vim /etc/security/limits.conf
+
+add the following lines:
+
+yfle0707           soft    nofile          4096
+yfle0707           hard    nofile          63536
+

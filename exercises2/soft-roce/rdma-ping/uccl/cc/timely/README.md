@@ -186,7 +186,7 @@ apt-get install libgtest-dev
 
 关闭test，-DTESTING=off
 ```
- cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off
+ cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off -DLOG_LEVEL=info
 ```
 
 
@@ -259,7 +259,7 @@ root@centos7:~/prog/eRPC#
 ```
 
 ```
- cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off
+ cmake . -DTRANSPORT=dpdk -DDPDK_LIB=/root/dpdk-stable-19.11.1/lib  -DDPDK_INCLUDE_DIR=/root/dpdk-stable-19.11.1/arm64-armv8a-linuxapp-gcc/include -DTESTING=off -DLOG_LEVEL=info
 ```
 
  
@@ -321,4 +321,80 @@ Makefile  client  client.cc  common.h  server  server.cc
 root@centos7:~/prog/eRPC/hello_world# ls ../build/
 erpc_dpdk_daemon  latency  libdpdk  liberpc.a
 root@centos7:~/prog/eRPC/hello_world# 
+```
+
+```
+ip n add 192.168.16.251   dev enahisic2i2 lladdr 44:a1:91:a4:9c:0c
+```
+
+# hugepage size_t
+
+```
+#define HUGE_PAGESIZE (1 << 29)
+```
+
+
+```
+#define HUGE_PAGESIZE (1 << 29)
+void free_names(char **dir_names)
+{
+    int i;
+    for (i = 0; dir_names[i] != NULL; ++i)
+        free(dir_names[i]);
+    free(dir_names);
+}
+void test_mbind()
+{
+    int shm_key, shm_id, ret;
+    const unsigned long nodemask = (1ul << (unsigned long)0);
+    shm_key = 99999999;
+    unsigned int size = SIZE;
+    //size = (size + HUGE_PAGESIZE) & ~(HUGE_PAGESIZE - 1);
+    shm_id = shmget(shm_key, size, IPC_CREAT | IPC_EXCL | 0666 | SHM_HUGETLB);
+    char *shm_buf = (char *)shmat(shm_id, NULL, 0);
+    shmctl(shm_id, IPC_RMID, NULL);
+    ret = mbind(shm_buf, size, MPOL_BIND, &nodemask, 2, 0);
+    if (0 != ret )
+       printf("hugeAlloc: mbind() failed. Key %d \n" ,shm_key);
+}
+```
+发生如下错误
+
+```
+hugeAlloc: mbind() failed. Key 99999999
+```
+添加如下代码解决
+
+```
+size = (size + HUGE_PAGESIZE) & ~(HUGE_PAGESIZE - 1);
+```
+
+参考如下    
+```
+static void *huge_malloc(BLASLONG size){
+  int shmid;
+  void *address;
+
+#ifndef SHM_HUGETLB
+#define SHM_HUGETLB 04000
+#endif
+
+  if ((shmid =shmget(IPC_PRIVATE,
+		     (size + HUGE_PAGESIZE) & ~(HUGE_PAGESIZE - 1),
+		     SHM_HUGETLB | IPC_CREAT |0600)) < 0) {
+    printf( "Memory allocation failed(shmget).\n");
+    exit(1);
+  }
+
+  address = shmat(shmid, NULL, SHM_RND);
+
+  if ((BLASLONG)address == -1){
+    printf( "Memory allocation failed(shmat).\n");
+    exit(1);
+  }
+
+  shmctl(shmid, IPC_RMID, 0);
+
+  return address;
+}
 ```

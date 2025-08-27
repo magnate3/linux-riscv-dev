@@ -290,3 +290,96 @@ curl: (56) Proxy CONNECT aborted
 
 关闭/etc/systemd/system/docker.service.d/http-proxy.conf代理
 
+
+# dpdk run in docker
+
+
+```
+docker  run -it  --rm  --name erpc  --net=host -u root --cap-add=SYS_PTRACE   --security-opt seccomp=unconfined -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge -v /sys/bus/pci/drivers:/sys/bus/pci/drivers -v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages -v /sys/devices/system/node:/sys/devices/system/node -v /dev:/dev  erpc:2.0 bash
+root@centos7:/# cd ~/dpdk-stable-19.11.1/examples/helloworld2
+root@centos7:~/dpdk-stable-19.11.1/examples/helloworld2# ./build/helloworld 
+EAL: Detected 128 lcore(s)
+EAL: Detected 4 NUMA nodes
+EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
+EAL: Selected IOVA mode 'VA'
+EAL: No available hugepages reported in hugepages-2048kB
+EAL: Probing VFIO support...
+EAL:   cannot open VFIO container, error 1 (Operation not permitted)
+EAL: VFIO support could not be initialized
+EAL: PCI device 0000:05:00.0 on NUMA socket 0
+EAL:   probe driver: 19e5:200 net_hinic
+EAL: PCI device 0000:06:00.0 on NUMA socket 0
+EAL:   probe driver: 19e5:200 net_hinic
+EAL: Requested device 0000:06:00.0 cannot be used
+EAL: PCI device 0000:7d:00.0 on NUMA socket 0
+EAL:   probe driver: 19e5:a222 net_hns3
+EAL: PCI device 0000:7d:00.1 on NUMA socket 0
+EAL:   probe driver: 19e5:a221 net_hns3
+EAL: PCI device 0000:7d:00.2 on NUMA socket 0
+EAL:   probe driver: 19e5:a222 net_hns3
+EAL: PCI device 0000:7d:00.3 on NUMA socket 0
+EAL:   probe driver: 19e5:a221 net_hns3
+Number of Ports: 0
+Invalid port_id=0
+EAL: Error - exiting with code: 1
+  Cause: Error during getting device (port 0) info: No such device
+```
+
+```
+ cannot open VFIO container, error 1 (Operation not permitted)
+```
+
+解决方法    
+```
+Docker drops a number of privileges by default, including the ability to access most devices. You can explicitly grant access to a device using the --device flag, which would look something like:
+
+docker run --device /dev/vfio/35 ...
+Alternately, you can ask Docker not to drop any privileges:
+
+docker run --privileged ...
+You'll note that in both of the above examples it was not necessary to explicitly bind-mount /dev; in the first case, the device(s) you have exposed with --device will show up, and in the second case you see the host's /dev by default.
+```
+
+
+```
+docker  run -it  --rm  --name erpc  --net=host -u root --cap-add=SYS_PTRACE   --security-opt seccomp=unconfined -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge -v /sys/bus/pci/drivers:/sys/bus/pci/drivers -v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages -v /sys/devices/system/node:/sys/devices/system/node -v /dev:/dev --privileged  erpc:2.0 bash
+root@centos7:/#  cd ~/dpdk-stable-19.11.1/examples/helloworld2
+root@centos7:~/dpdk-stable-19.11.1/examples/helloworld2# ./build/helloworld 
+EAL: Detected 128 lcore(s)
+EAL: Detected 4 NUMA nodes
+EAL: Multi-process socket /var/run/dpdk/rte/mp_socket
+EAL: Selected IOVA mode 'VA'
+EAL: No available hugepages reported in hugepages-2048kB
+EAL: Probing VFIO support...
+EAL: VFIO support initialized
+EAL: PCI device 0000:05:00.0 on NUMA socket 0
+EAL:   probe driver: 19e5:200 net_hinic
+EAL: PCI device 0000:06:00.0 on NUMA socket 0
+EAL:   probe driver: 19e5:200 net_hinic
+EAL:   using IOMMU type 1 (Type 1)
+net_hinic: Initializing pf hinic-0000:06:00.0 in primary process
+net_hinic: Device 0000:06:00.0 hwif attribute:
+net_hinic: func_idx:1, p2p_idx:1, pciintf_idx:0, vf_in_pf:0, ppf_idx:0, global_vf_id:135, func_type:0
+net_hinic: num_aeqs:4, num_ceqs:4, num_irqs:32, dma_attr:2
+net_hinic: Get public resource capability:
+net_hinic: host_id: 0x0, ep_id: 0x1, intr_type: 0x0, max_cos_id: 0x7, er_id: 0x1, port_id: 0x1
+net_hinic: host_total_function: 0xf2, host_oq_id_mask_val: 0x8, max_vf: 0x78
+net_hinic: pf_num: 0x2, pf_id_start: 0x0, vf_num: 0xf0, vf_id_start: 0x10
+net_hinic: Get l2nic resource capability:
+net_hinic: max_sqs: 0x10, max_rqs: 0x10, vf_max_sqs: 0x4, vf_max_rqs: 0x4
+net_hinic: Initialize 0000:06:00.0 in primary successfully
+EAL: PCI device 0000:7d:00.0 on NUMA socket 0
+EAL:   probe driver: 19e5:a222 net_hns3
+EAL: PCI device 0000:7d:00.1 on NUMA socket 0
+EAL:   probe driver: 19e5:a221 net_hns3
+EAL: PCI device 0000:7d:00.2 on NUMA socket 0
+EAL:   probe driver: 19e5:a222 net_hns3
+EAL: PCI device 0000:7d:00.3 on NUMA socket 0
+EAL:   probe driver: 19e5:a221 net_hns3
+Number of Ports: 1
+hello from core 1
+hello from core 2
+hello from core 3
+hello from core 4
+hello from core 5
+```

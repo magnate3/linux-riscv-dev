@@ -115,25 +115,13 @@ double getNewRate(double rtt, double rate) {
 ## dpdk
 
 ```
-# assemble DPDK make arguments
-DPDK_MAKE_ARGS := -C $(DPDK_SOURCE) -j $(JOBS) \
-	T=$(DPDK_TARGET) \
-	RTE_CONFIG_TEMPLATE=../custom-config \
-	EXTRA_CFLAGS="$(DPDK_EXTRA_CFLAGS)" \
-	EXTRA_LDFLAGS="$(DPDK_EXTRA_LDFLAGS)" \
-	CPU_CFLAGS="$(DPDK_CPU_CFLAGS)" \
-	DESTDIR=$(I) \
-        $(DPDK_MAKE_EXTRA_ARGS)
-```
-
-```
- make install T=arm64-armv8a-linuxapp-gcc  -j 64  DPDK_CPU_CFLAGS="-pie -fPIC"    DPDK_EXTRA_LDFLAGS="-g"
+make install T=arm64-armv8a-linuxapp-gcc  -j 64   EXTRA_CFLAGS="-pie -fPIC -g"   
 ```
 
 ```
 [root@centos7 dpdk-stable-19.11.14]# export RTE_TARGET=arm64-armv8a-linuxapp-gcc
 [root@centos7 dpdk-stable-19.11.14]# export RTE_SDK=/root/dpdk-stable-19.11.1/
-[root@centos7 dpdk-stable-19.11.14]# make install T=arm64-armv8a-linuxapp-gcc  -j 64
+[root@centos7 dpdk-stable-19.11.14]# make install T=arm64-armv8a-linuxapp-gcc  -j 64   EXTRA_CFLAGS="-pie -fPIC -g" 
 [root@centos7 arm64-armv8a-linuxapp-gcc]# pwd
 /root/dpdk-stable-19.11.14/arm64-armv8a-linuxapp-gcc
 [root@centos7 arm64-armv8a-linuxapp-gcc]# make clean -j64

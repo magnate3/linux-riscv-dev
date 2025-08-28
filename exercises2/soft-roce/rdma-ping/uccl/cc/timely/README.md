@@ -87,6 +87,14 @@ double getNewRate(double rtt, double rate) {
 # kernel
 struct tcp_congestion_ops tcp_bbr_cong_ops   
 
+
+#  Hashed and hierarchical timing wheels
+[B4 Traffic Engineering Optimization 算法 (2013)](https://github.com/chanfung032/chanfung032.github.io/blob/ac3f7ba0f0a1291bd2532e366ac9e5e5fa490d82/src/b4.rst#L8)   
+[微秒级 TCP 时间戳](https://zhuanlan.zhihu.com/p/535077633)   
+[大历史下的 pacing：why & how](https://zhuanlan.zhihu.com/p/689176163)   
+Hashed and hierarchical timing wheels （哈希分层定时轮）是一种高效的数据结构，用于管理大量定时任务，由 George Varghese 和 Tony Lauck 于1996年提出。其核心思想是通过环形数据结构（类似时钟的刻度盘）将时间分割为多个槽位，每个槽位对应特定时间间隔，任务按到期时间被分配到对应槽位。 ‌    
+ ![images](wheel.png)
+
 #  eRPC timely
 
 [refer to eRPC timely](https://github.com/PickingUpPieces/eRPC/tree/5242f49dadaeb4f9943884e0452b3b33615f731b/src/cc)   
@@ -115,7 +123,7 @@ struct tcp_congestion_ops tcp_bbr_cong_ops
 ```
 ## docker
 
-```
+
 ```
 docker  run -it  --rm  --name erpc  --net=host -u root --cap-add=SYS_PTRACE   --security-opt seccomp=unconfined -v /root/dpdk-stable-19.11.1:/root/dpdk-stable-19.11.1 -v /root/prog:/root/prog -v /mnt/huge:/mnt/huge -v /sys/bus/pci/drivers:/sys/bus/pci/drivers -v /sys/kernel/mm/hugepages:/sys/kernel/mm/hugepages -v /sys/devices/system/node:/sys/devices/system/node -v /dev:/dev --privileged  erpc:2.0 bash
 ```

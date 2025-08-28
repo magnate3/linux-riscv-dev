@@ -1,6 +1,6 @@
 
 ![images](bbr3.png)
-
+[bbr3-2023](https://research.cec.sc.edu/files/cyberinfra/files/BBR%20-%20Fundamentals%20and%20Updates%202023-08-29.pdf)
 ```
 ./configure.sh
 ./run_tests.sh

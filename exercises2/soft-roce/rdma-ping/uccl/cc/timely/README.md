@@ -333,6 +333,7 @@ root@centos7:~/prog/eRPC/hello_world#
 
 ```
 ip n add 192.168.16.251   dev enahisic2i2 lladdr 44:a1:91:a4:9c:0c
+iperf  -u -c 192.168.16.251 -p 31850 -i 1 -t 600 -b 10G
 ```
 
 # hugepage size_t

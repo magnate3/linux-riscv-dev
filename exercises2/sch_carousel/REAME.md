@@ -7,7 +7,7 @@
     };
 ```
 
-#   思路转变：不再基于排队（queue），而是基于时间戳（EDT）
+#    不再基于排队（queue），而是基于时间戳（EDT）
 [使用 Cilium 给 K8s 数据平面提供强大的带宽管理功能](https://jishu.proginn.com/doc/625764781f33a4b93)    
 
 结合 流量控制（TC）五十年：从基于缓冲队列（Queue）到基于时间戳（EDT）的演进（Google, 2018）[2]， 这里只做几点说明：   
@@ -17,8 +17,4 @@ TCP 的发送模型是尽可能快（As Fast As Possible, AFAP）
 队列长度（queue length）和接收窗口（receive window）决定了传输中的数据速率（in-flight rate）  
 “多快”（how fast）取决于队列的 drain rate   
 
-
-两点核心转变：   
-
-每个包（skb）打上一个最早离开时间（Earliest Departure Time, EDT），也就是最早可以发送的时间戳；   
-用时间轮调度器（timing-wheel scheduler）替换原来的出向缓冲队列（qdisc queue）  
+ 

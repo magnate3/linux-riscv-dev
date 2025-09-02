@@ -31,7 +31,9 @@ setup_htb_and_qdisc(d)
 # graph  
 
 ```
+tests="shallow" ./run_tests.sh 
 tests="shallow" ./graph_tests.sh 
+netperf -l 300 -H 192.168.3.100 -- -k THROUGHPUT -K cubic -P 10000
 ```
 
 def median函数bug修复   

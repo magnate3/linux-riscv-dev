@@ -1,6 +1,26 @@
 
 [google-bbr](https://github.com/google/bbr)    
 
+```
+root@ubuntux86:# sysctl net.ipv4.tcp_available_congestion_control
+net.ipv4.tcp_available_congestion_control = reno cubic
+root@ubuntux86:# lsmod | grep bbr
+root@ubuntux86:# modprobe tcp_bbr
+root@ubuntux86:# lsmod | grep bbr
+tcp_bbr                20480  0
+root@ubuntux86:# sysctl net.ipv4.tcp_available_congestion_control
+net.ipv4.tcp_available_congestion_control = reno cubic bbr
+root@ubuntux86:# 
+
+root@ubuntux86:# sysctl net.ipv4.tcp_congestion_control
+net.ipv4.tcp_congestion_control = cubic
+root@ubuntux86:# 
+```
+
+
+```
+ netperf -l 180 -H 10.11.12.82  -- -k THROUGHPUT -K bbr -P 10001
+```
 
 This open source distribution contains documentation, scripts, and
 other materials related to the BBR congestion control algorithm.
@@ -75,3 +95,62 @@ Information About BBR
 
 
 This is not an official Google product.
+
+
+# 更改TCP拥塞控制算法
+
+```
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+
+int main(int argc, char **argv)
+{
+    char buf[256];
+    socklen_t len;
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (sock == -1)
+    {
+        perror("socket");
+        return -1;
+    }
+
+    len = sizeof(buf);
+
+    if (getsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, buf, &len) != 0)
+    {
+        perror("getsockopt");
+        return -1;
+    }
+
+    printf("Current: %s\n", buf);
+
+    strcpy(buf, "reno");
+
+    len = strlen(buf);
+
+    if (setsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, buf, len) != 0)
+    {
+        perror("setsockopt");
+        return -1;
+    }
+
+    len = sizeof(buf);
+
+    if (getsockopt(sock, IPPROTO_TCP, TCP_CONGESTION, buf, &len) != 0)
+    {
+        perror("getsockopt");
+        return -1;
+    }
+
+    printf("New: %s\n", buf);
+
+    close(sock);
+    return 0;
+}
+```
+

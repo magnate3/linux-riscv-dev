@@ -6,7 +6,9 @@
 [Evaluating BBRv2 on the Dropbox Edge Network](https://dropbox.tech/infrastructure/evaluating-bbrv2-on-the-dropbox-edge-network) 
 [ the paper BBR's Sharing Behavior with CUBIC and Reno, accepted for presentation at the IFIP Networking 2025 conference](https://github.com/fatihsarpkaya/bbr-shared-bottleneck/tree/main)   
 [experiments/fairness/experiment_fairness_aqm.py](https://github.com/Aruuni/mininettestbed/blob/440ea30879f1668b297e900e6556fe307d3f340f/experiments/fairness/experiment_fairness_aqm.py)      
+[RTT_BDP](https://github.com/gomezgaona/bbr2/tree/master/RTT_BDP)   
 
+[imc22-bbr-fluid-model](https://github.com/simonschdev/imc22-bbr-fluid-model)
   
 +  export PYTHONPATH，不需要./install.sh ,   
 ```
@@ -14,6 +16,29 @@ export PYTHONPATH=/work/test/nsperf/mininet-tcp-cubic-bbr
 python3 run_mininet.py example2.conf 
 python2 analyze.py -d test/0901_193344_example2/
 ```
+
+
+```
+root@ubuntux86:# python2 analyze.py -d test/0905_114916_example1/
+Found 1 valid sub directories.
+1/1 Processing test/0905_114916_example1/
+  Found 147944 frames.
+Connections:
+  [SYN] 10.1.0.0:51464 -> 10.2.0.0:9000
+  [SYN] 10.1.0.1:54076 -> 10.2.0.1:9000
+  [SYN] 10.1.0.2:35822 -> 10.2.0.2:9000
+  [SYN] 10.1.0.3:47860 -> 10.2.0.3:9000
+  [SYN] 10.1.0.4:55456 -> 10.2.0.4:9000
+  [FIN] 10.1.0.0:51464 -> 10.2.0.0:9000
+  [FIN] 10.1.0.1:54076 -> 10.2.0.1:9000
+  [FIN] 10.1.0.3:47860 -> 10.2.0.3:9000
+  [FIN] 10.1.0.4:55456 -> 10.2.0.4:9000
+  100.00%%          
+Writing to CSV and compressing with gzip
+Creating Complete plot
+  *  Complete plot created      
+```
+
 
 + 拥塞算法控制  
 

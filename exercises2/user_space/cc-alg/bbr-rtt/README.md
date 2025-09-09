@@ -96,3 +96,4 @@ mkdir out
 python2 main-bbr.py  --dir  out
 python2 plot-bbr.py  bbr.txt 
 ```
+![images](bbr1.png)

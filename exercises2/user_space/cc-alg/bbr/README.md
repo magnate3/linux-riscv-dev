@@ -12,5 +12,6 @@ inflight 同样收敛到公平，4 条流 inflight 之和等于 C * R = 100 * 2�
 ![images](fig/inflt.png)
 
 # references
+[bbr 的 c 实现和收敛行为仿真](https://zhuanlan.zhihu.com/p/715565437)   
 
 [satellite-link-simulation bbr kernel module](https://github.com/ponedo/satellite-link-simulation/tree/master)   

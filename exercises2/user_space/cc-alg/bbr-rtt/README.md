@@ -4,6 +4,7 @@
 
 [如何解决TCP BBR的RTT不公平性问题](https://zhuanlan.zhihu.com/p/399639987)    
 [BBR 和 CUBIC 对长肥管道的不同反应](https://zhuanlan.zhihu.com/p/31704683339)   
+[长肥管道(LFT)中TCP的艰难处境与打法](https://blog.csdn.net/dog250/article/details/113020804)   
 
 
 #  tc
@@ -54,6 +55,7 @@ for f in `ls *xpl`; do echo $f ... ; xplot.org $f ; done
 bbr:(bw:2.5Gbps,mrtt:10,pacing_gain:1.25,cwnd_gain:2) send 5.4Gbps 
 
 ```
+ss -tin sport = :22
 ss -t -i -p
 State                Recv-Q                 Send-Q                                  Local Address:Port                                  Peer Address:Port                 Process                
 ESTAB                0                      52                                     172.22.116.220:ssh                                  172.22.117.78:54592                 users:(("sshd",pid=3886398,fd=4))

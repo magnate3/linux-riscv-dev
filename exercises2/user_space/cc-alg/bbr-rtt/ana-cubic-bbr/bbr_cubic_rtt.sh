@@ -1,3 +1,4 @@
+tc qdisc del dev enp61s0f1np1 root
 # 为打向 5201 端口的流打标签 10
 iptables -A OUTPUT -t mangle -p tcp --dport 5201 -j MARK --set-mark 10
 # 为打向 5202 端口的流打标签 20
@@ -14,6 +15,7 @@ tc filter add dev enp61s0f1np1 protocol ip parent 1:0 prio 1 handle 10 fw flowid
 tc filter add dev enp61s0f1np1 protocol ip parent 1:0 prio 1 handle 20 fw flowid 1:20
 
 # 标签 10 的 5201 流时延 2ms，丢包 1%
-tc qdisc add dev enp61s0f1np1 parent 1:10 handle 10: netem delay 2ms loss 1%
+tc qdisc add dev enp61s0f1np1 parent 1:10 handle 10: netem delay 10ms loss 1
 # 标签 20 的 5202 流时延 20ms，丢包 1%
-tc qdisc add dev enp61s0f1np1 parent 1:20 handle 20: netem delay 20ms loss 1%
+tc qdisc add dev enp61s0f1np1 parent 1:20 handle 20: netem delay 10ms loss 1
+#tc qdisc add dev enp61s0f1np1 parent 1:20 handle 20: netem delay 10ms  15ms 50%  loss 3

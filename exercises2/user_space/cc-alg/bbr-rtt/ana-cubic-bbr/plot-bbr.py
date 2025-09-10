@@ -67,7 +67,8 @@ ax.plot(timev,mrttv,c="red")
 for mode in modes:
 	plt.axvline(mode, c='grey', label='status')
 ax.set_ylabel("ms")
-ax.set_ylim(1,20)
+#ax.set_ylim(1,20)
+ax.set_yscale("log")
 
 ax = plt.subplot(222)
 ax.set_title("CWND")

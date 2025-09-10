@@ -54,6 +54,14 @@ for f in `ls *xpl`; do echo $f ... ; xplot.org $f ; done
 bbr:(bw:2.5Gbps,mrtt:10,pacing_gain:1.25,cwnd_gain:2) send 5.4Gbps 
 
 ```
+ss -t -i -p
+State                Recv-Q                 Send-Q                                  Local Address:Port                                  Peer Address:Port                 Process                
+ESTAB                0                      52                                     172.22.116.220:ssh                                  172.22.117.78:54592                 users:(("sshd",pid=3886398,fd=4))
+         dctcp-reno wscale:8,7 rto:236 rtt:33.178/17.845 ato:40 mss:1460 pmtu:1500 rcvmss:888 advmss:1460 cwnd:10 bytes_sent:149046 bytes_retrans:68 bytes_acked:148926 bytes_received:81634 segs_out:2499 segs_in:2786 data_segs_out:1266 data_segs_in:1888 dctcp:fallback_mode send 3.52Mbps lastsnd:12 lastrcv:12 lastack:12 pacing_rate 7.04Mbps delivery_rate 24.2Mbps delivered:1266 app_limited busy:46736ms unacked:1 retrans:0/1 dsack_dups:1 rcv_rtt:157872 rcv_space:64282 rcv_ssthresh:64076 minrtt:2.308
+```
+
+```
+ss -tie | grep bbr
 ss -iet dst  "10.22.116.221:5202"
 State                    Recv-Q                    Send-Q                                        Local Address:Port                                         Peer Address:Port                    Process                                                                                                                                                                                          
 ESTAB                    0                         3189620                                       10.22.116.220:53956                                       10.22.116.221:5202                     timer:(on,024ms,0) ino:65609310 sk:1001 cgroup:/user.slice/user-0.slice/session-3614.scope <->
@@ -97,3 +105,51 @@ python2 main-bbr.py  --dir  out
 python2 plot-bbr.py  bbr.txt 
 ```
 ![images](bbr1.png)
+
+
+# test2
+
+```
+#tc qdisc del dev enp61s0f1np1 root
+# 为打向 5201 端口的流打标签 10
+iptables -A OUTPUT -t mangle -p tcp --dport 5201 -j MARK --set-mark 10
+# 为打向 5202 端口的流打标签 20
+iptables -A OUTPUT -t mangle -p tcp --dport 5202 -j MARK --set-mark 20
+
+tc qdisc add dev enp61s0f1np1 root handle 1: htb
+tc class add dev enp61s0f1np1 parent 1: classid 1:1 htb rate 10gbit
+tc class add dev enp61s0f1np1 parent 1:1 classid 1:10 htb rate 5gbit
+tc class add dev enp61s0f1np1 parent 1:1 classid 1:20 htb rate 5gbit
+
+# filter 1 关联标签 10 
+tc filter add dev enp61s0f1np1 protocol ip parent 1:0 prio 1 handle 10 fw flowid 1:10
+# filter 2 关联标签 20
+tc filter add dev enp61s0f1np1 protocol ip parent 1:0 prio 1 handle 20 fw flowid 1:20
+
+# 标签 10 的 5201 流时延 2ms，丢包 1%
+tc qdisc add dev enp61s0f1np1 parent 1:10 handle 10: netem delay 10ms loss 1
+# 标签 20 的 5202 流时延 20ms，丢包 1%
+tc qdisc add dev enp61s0f1np1 parent 1:20 handle 20: netem delay 10ms  15ms 50%  loss 3
+```
+
+
+![images](bbr3.png)
+
+![images](bbr2.png)
+
+
+```
+cwnd = bw * min_rtt * gain = BDP * gain
+```
+
+```
+mport re
+
+text = "Price123 is the total cost."
+match = re.match(r'\w+\d+', text)
+
+if match:
+    print(f"Matched: {match.group()}")
+else:
+    print("No match found")
+```

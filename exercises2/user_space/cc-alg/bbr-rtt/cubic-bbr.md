@@ -210,9 +210,56 @@ delivery_rate 陡降到Mbs,pacing_rate 却是GBs
 ![images](img/bbr4.png)
 
 iperf3 with bbr 带宽在1.5G左右   
+- delivery rate:
+
+  1. inflight < BDP      
+     inflight  増加  delivery rate  ．   
+
+  2. inflight => BDP  
+     delivery rate  最大 ,inflight - BDP = bottleneck queue ．     
+
+  3. inflight > BDP + buffer size       
+       CUBIC (loss-based)     
+
+- RTT:
+
+  1. inflight < BDP      
+      RTT ~ RTprop  ．     
+
+  2. inflight => BDP  
+     bottleneck queue  ．     
+
+  3. inflight > BDP + buffer size   
+
+```
+def send(packet):
+    bdp = BtlBwFilter.currentMax * RTpropFilter.currentMin
+    # 若在途的数据包超过了约束值，则暂缓发送数据
+    if (inflight >= cwnd_gain * bdp):
+        # wait for ack or timeout
+        return
+    # 若已经进入了下一个发送时间点，则获取数据包并且进行发送
+    if (now >= nextSendTime):
+        packet = nextPacketToSend()
+        if (not packet):
+            # 在应用层数据包不够时就更新app_limited状态
+            app_limited_until = inflight
+            return
+         packet.app_limited = app_limited_until > 0
+         packet.sendtime = now
+         # 每个数据包都会携带有在发送时刻已经确认ACK的数据量
+         # 从而在接收该包ACK时可以计算send-ack这段时间内的新抵达数据量
+         # 用于计算发送速率
+         packet.delivered = delivered
+         packet.delivered_time = delivered_time
+         ship(packet)
+         # 协调下一次发送时间，确保不会超出瓶颈带宽太多
+         nextSendTime = now + packet.size / (pacing_gain * BtlBwFilter.currentMax)
+     timerCallbackAt(send, nextSendTime)
+```
 
 
-# test2
+# test2 (bufferbloat or high bdp)
 
 
 

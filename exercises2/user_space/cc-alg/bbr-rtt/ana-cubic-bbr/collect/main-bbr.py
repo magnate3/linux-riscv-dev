@@ -90,7 +90,58 @@ def start_tcpprobe(outfile="cwnd.txt"):
 def stop_tcpprobe():
     Popen("killall -9 cat", shell=True).wait()
 
-def start_qmon(iface, interval_sec=0.1, outfile="q.txt"):
+def monitor_qlen2(iface, interval_sec = 0.01, fname='%s/qlen.txt' % default_dir):
+    pat_queued = re.compile(r'backlog\s+([\d]+\w+)\s+\d+p')
+    pat_dropped = re.compile(r'dropped\s+([\d]+)') 
+    cmd = "tc -s qdisc show dev %s" % (iface)
+    f = open(fname, 'w')
+    f.write('time,root_pkts,root_drp,child_pkts,child_drp\n')
+    f.close()
+    while 1:
+        p = Popen(cmd, shell=True, stdout=PIPE)
+        output = p.stdout.read()
+        tmp = ''
+        output = output.decode('utf-8')
+        matches_queued = pat_queued.findall(output)
+        matches_dropped = pat_dropped.findall(output)
+        if len(matches_queued) != len(matches_dropped):
+            print("WARNING: Two matches have different lengths!")
+            print(output)
+        if matches_queued and matches_dropped:
+            tmp += '%f,%s,%s' % (time(), matches_queued[0],matches_dropped[0])
+            if len(matches_queued) > 1 and len(matches_dropped)> 1: 
+                tmp += ',%s,%s\n' % (matches_queued[1], matches_dropped[1])
+            else:
+                tmp += ',,\n'
+        f = open(fname, 'a')
+        f.write(tmp)
+        f.close
+        sleep(interval_sec)
+    return
+def monitor_qlen(iface, interval_sec = 0.01, fname='%s/qlen.txt' % default_dir):
+    pat_queued = re.compile(r'backlog\s[^\s]+\s([\d]+)p')
+    #pat_queued = re.compile(rb'backlog\s[^\s]+\s([\d]+)p')
+    cmd = "tc -s qdisc show dev %s" % (iface)
+    t0 = "%f" % time()
+    while 1:
+        p = Popen(cmd, shell=True, stdout=PIPE)
+        output = p.stdout.read()
+        tmp = ''
+        output = output.decode('utf-8')
+        matches= pat_queued.findall(output)
+        if matches and len(matches) > 1:
+            t1 = "%f" % time()
+            #t = float(t1)-float(t0)
+            y = int(matches[1])
+            #tmp = str(t)+','+str(y)+'\n'
+            tmp = str(t1)+','+str(y)+'\n'
+            #print(tmp)
+            f = open(fname, 'a')
+            f.write(tmp)
+            f.close
+        sleep(interval_sec)
+    return
+def start_qmon(iface, interval_sec=0.1, outfile="queue.txt"):
     monitor = Process(target=monitor_qlen,
                       args=(iface, interval_sec, outfile))
     monitor.start()
@@ -251,6 +302,8 @@ def start_cubic(dst, interval_sec=0.1, outfile="cubic.txt", runner=None):
     monitor.start()
     return monitor
 def start_bbrmon(dst, interval_sec=0.1, outfile="bbr.txt", runner=None):
+    #monitor = Process(target=monitor_bbr,
+    #                  args=(dst, interval_sec, outfile, runner))
     monitor = Process(target=monitor_bbr_v2,
                       args=(dst, interval_sec, outfile, runner))
     monitor.start()
@@ -266,8 +319,11 @@ if __name__ == "__main__":
     default_dir = args.dir
     p1 =start_bbrmon(dst="10.22.116.221:5202")
     p2 =start_cubic(dst="10.22.116.221:5201")
+    p3 =start_qmon(iface="enp61s0f1np1")
     #p1.start()
     processes.append(p1)
     processes.append(p2)
+    processes.append(p3)
     p1.join()
     p2.join()
+    p3.join()

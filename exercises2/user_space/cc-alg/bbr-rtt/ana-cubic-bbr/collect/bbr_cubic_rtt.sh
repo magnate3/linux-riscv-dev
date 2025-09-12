@@ -1,3 +1,6 @@
+#tc qdisc add dev  enp61s0f1np1 root pfifo limit 1000000
+# tc qdisc add dev  enp61s0f1np1 root fq_codel limit 1000000
+# tc qdisc add dev enp61s0f1np1 root netem delay 10ms 15ms distribution normal
 tc qdisc del dev enp61s0f1np1 root
 # 为打向 5201 端口的流打标签 10
 iptables -A OUTPUT -t mangle -p tcp --dport 5201 -j MARK --set-mark 10

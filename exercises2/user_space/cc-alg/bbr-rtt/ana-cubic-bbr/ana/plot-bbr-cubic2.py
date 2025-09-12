@@ -28,7 +28,7 @@ def deal_cubic():
     cubics = of.readlines()
     of.close()
     #global cubic_timev = range(0,len(cubics))
-    print('len cubic_timev {}'.format(len(cubic_timev)))
+    #print('len cubic_timev {}'.format(len(cubic_timev)))
     for line in cubics:
         #pass
         secs = line.strip("\n").split(":")
@@ -39,13 +39,13 @@ def deal_cubic():
         #else:
 
 
-    print('len cubic_timev {}, len cubic cwndv {}'.format(len(cubic_timev),len(cubic_cwndV)))
+    #print('len cubic_timev {}, len cubic cwndv {}'.format(len(cubic_timev),len(cubic_cwndV)))
 # Normalize bandwidth fields to Mbps
 def convert_to_mbps(value):
     try:
         value = str(value).strip().lower()
-        if value.endswith('Gbps'):
-            return float(value.replace('mbps', ''))*1000
+        if value.endswith('gbps'):
+            return float(value.replace('gbps', ''))*1000
         elif value.endswith('mbps'):
             return float(value.replace('mbps', ''))
         elif value.endswith('kbps'):
@@ -53,18 +53,19 @@ def convert_to_mbps(value):
     except Exception:
         return 0.0
 for line in lines:
-    print(line)
+    #print(line)
+    line.strip('\n')
     secs = line.split("|")
-    bw = convert_to_mbps(secs[0].strip(" ").split(" ")[1])
+    bw = convert_to_mbps(secs[0].strip().split()[1])
     btlbwv.append(bw)
-    pacing_rating = convert_to_mbps(secs[2].strip(" ").split(" ")[1])
+    pacing_rating = convert_to_mbps(secs[2].strip().split()[1])
     pacingRatev.append(pacing_rating)
-    deliver_rating = convert_to_mbps(secs[3].strip(" ").split(" ")[1])
+    deliver_rating = convert_to_mbps(secs[3].strip().split()[1])
     deliverRateV.append(deliver_rating)
-    bbr_cwnd = int(secs[4].strip(" ").split(" ")[1])
+    bbr_cwnd = int(secs[4].strip().split()[1])
     #print(bbr_cwnd)
     bbr_cwndV.append(bbr_cwnd)
-    #print('{}Mbps,{}Mbps,{}Mbps'.format(bw, pacing_rating, deliver_rating))
+    print('{}Mbps,{}Mbps,{}Mbps,{}'.format(bw, pacing_rating, deliver_rating,bbr_cwnd))
     n = n +1
 
 deal_cubic()
@@ -88,6 +89,7 @@ ax1.plot(timev, deliverRateV, label='deliverRate', color='green', linestyle='-')
 ax1.set_title("Multiple Curves of bbr")
 ax1.set_ylabel("Mbps")
 
+ax1.legend()
 cubic_timev = range(0,len(cubic_cwndV))
 
 
@@ -110,11 +112,13 @@ ax2.plot(cubic_timev, cubic_cwndV, label='cwnd', color='blue', linestyle='-.')
 #ax.xlabel("X-axis")
 ax2.set_ylabel("cwnd")
 ax2.set_title("cwnd Curves of cubic ")
+ax2.legend()
 
 ax3 = plt.subplot2grid((3, 3), (2, 0), colspan=3)
 ax3.plot(timev, bbr_cwndV, label='cwnd', color='blue', linestyle='-.')
 ax3.set_ylabel("cwnd")
 ax3.set_title("cwnd Curves of bbr")
+ax3.legend()
 #plt.legend()
 
 # Displaying the plot

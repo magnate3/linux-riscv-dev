@@ -1,6 +1,7 @@
 
 
 ```
+ python2 plot-bbr.py  bbr.txt 
 ./parse_ss_out.py 5202 -i 1.0
  python2 main-bbr.py 
 python3 plot_queue.py -f queue.txt -o qlen.png

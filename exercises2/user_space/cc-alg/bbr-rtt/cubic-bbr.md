@@ -8,6 +8,10 @@ python3 plot_queue.py -f queue.txt -o qlen.png
 ```
 
 
+```
+./ssit.py  "dst 10.22.116.221:5202  or dst 10.22.116.221:5201"
+```
+
 
 # 测试
 

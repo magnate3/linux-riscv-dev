@@ -54,6 +54,10 @@ for f in `ls *xpl`; do echo $f ... ; xplot.org $f ; done
 
 bbr:(bw:2.5Gbps,mrtt:10,pacing_gain:1.25,cwnd_gain:2) send 5.4Gbps 
 
+```
+ss -nt '( src :7000 or dst :7000 )'
+
+```
 
 ```
  while true; do     ss -tin | sed -n -e 's/.* cwnd:\([0-9]*\).* bbr:(\([^)]*\)).*/\1;;\2/p' -e 's/.* cwnd:\([0-9]*\).* ssthresh:\([0-9]*\).*/\1;\2;/p';     sleep 1; done | ts -s '%H:%M:%.S;'
@@ -126,6 +130,14 @@ tc qdisc add dev enp61s0f1np1 parent 1:10 handle 10: netem delay 10ms loss 0.1%
 # 标签 20 的 5202 流时延 20ms，丢包 1%
 tc qdisc add dev enp61s0f1np1 parent 1:20 handle 20: netem delay 10ms loss 1%
 ```
++  server 
+
+```
+iperf3  -p 5201 -s
+iperf3  -p 5202 -s
+```
+
++ client    
 
 ```
 iperf3 -c 10.22.116.221 -i 1 -t 60 -C cubic -p 5201

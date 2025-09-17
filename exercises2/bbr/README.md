@@ -161,6 +161,12 @@ int main(int argc, char **argv)
 ![images](bbr.png)
 
 
+ BBRcontrol the transmission rate by calculating three output
+parameters: ***pacing_rate, cwnd, and quantum*** based onthe configured network path model
+
+
+
+
 ```text
 BBR算法主要处理阶段包括:     
 

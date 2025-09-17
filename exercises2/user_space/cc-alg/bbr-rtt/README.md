@@ -86,6 +86,14 @@ done
 ```
 
 ```
+    ss_ip %= receiver_ip
+    ss_cmd = ('ip netns exec srv '
+              '%s -tinm "dport >= :%d and dport < :%d and dst %s" >> %s' % (
+                  SS_PATH,
+                  FIRST_PORT, FIRST_PORT + port_cnt, ss_ip, ss_log_path))
+```
+
+```
 
 ss --no-header -eipn dst 10.22.116.221:5202
 while [[ $(date -u +%s) -le $endtime ]]; do ss --no-header -eipn dst 192.168.3.1 or dst 192.168.4.1 | ts '%.s' | tee -a $i-$j-$b-trial-ss.txt > /dev/null;sleep 0.1; done

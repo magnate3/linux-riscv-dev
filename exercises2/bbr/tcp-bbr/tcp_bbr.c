@@ -179,7 +179,6 @@ static const u32 bbr_lt_bw_max_rtts = 48;
 static u32 bbr_tso_segs_goal(struct sock *sk);
 static u32 bbr_max_bw(const struct sock *sk);
 static u64 bbr_rate_bytes_per_sec(struct sock *sk, u64 rate, int gain);
-#if 0
 /* Calculate bdp based on min RTT and the estimated bottleneck bandwidth:
  *
  * bdp = ceil(bw * min_rtt * gain)
@@ -202,8 +201,11 @@ static u32 bbr_bdp(struct sock *sk, u32 bw, int gain)
 	 * case we need to slow-start up toward something safe: initial cwnd.
 	 */
 	if (unlikely(bbr->min_rtt_us == ~0U))	 /* no valid RTT samples yet? */
+#if 0
 		return bbr->init_cwnd;  /* be safe: cap at initial cwnd */
-
+#else
+            return TCP_INIT_CWND; 
+#endif
 	w = (u64)bw * bbr->min_rtt_us;
 
 	/* Apply a gain to the given value, remove the BW_SCALE shift, and
@@ -213,6 +215,7 @@ static u32 bbr_bdp(struct sock *sk, u32 bw, int gain)
 
 	return bdp;
 }
+#if 0
 /* To achieve full performance in high-speed paths, we budget enough cwnd to
  * fit full-sized skbs in-flight on both end hosts to fully utilize the path:
  *   - one skb in sending host Qdisc,
@@ -244,13 +247,15 @@ static u32 bbr_quantization_budget(struct sock *sk, u32 cwnd)
 
 	return cwnd;
 }
+#endif
+#if 1
 /* Find inflight based on min RTT and the estimated bottleneck bandwidth. */
 static u32 bbr_inflight(struct sock *sk, u32 bw, int gain)
 {
 	u32 inflight;
 
 	inflight = bbr_bdp(sk, bw, gain);
-	inflight = bbr_quantization_budget(sk, inflight);
+	//inflight = bbr_quantization_budget(sk, inflight);
 
 	return inflight;
 }
@@ -659,8 +664,10 @@ static u32 bbr_target_cwnd(struct sock *sk, u32 bw, int gain)
 	 * case we need to slow-start up toward something safe: TCP_INIT_CWND.
 	 */
 	if (unlikely(bbr->min_rtt_us == ~0U))	 /* no valid RTT samples yet? */
+        {
 		return TCP_INIT_CWND;  /* be safe: cap at default initial cwnd*/
-
+                pr_err("bbr min rtt is 0 and  target cwnd slow start ************** \n");
+        }
 	w = (u64)bw * bbr->min_rtt_us;
 
 	/* Apply a gain to the given value, then remove the BW_SCALE shift. */
@@ -746,13 +753,20 @@ static void bbr_set_cwnd(struct sock *sk, const struct rate_sample *rs,
 	if (bbr_full_bw_reached(sk))  /* only cut cwnd if we filled the pipe */
 		cwnd = min(cwnd + acked, target_cwnd);
 	else if (cwnd < target_cwnd || tp->delivered < TCP_INIT_CWND)
+        {
 		cwnd = cwnd + acked;
+                pr_err("bbr cwnd slow start ************** \n");
+        }
 	cwnd = max(cwnd, bbr_cwnd_min_target);
 
 done:
 	tp->snd_cwnd = min(cwnd, tp->snd_cwnd_clamp);	/* apply global cap */
 	if (bbr->mode == BBR_PROBE_RTT)  /* drain queue, refresh min_rtt */
+        {
 		tp->snd_cwnd = min(tp->snd_cwnd, bbr_cwnd_min_target);
+                pr_err("in probe rtt mode , so tcp cwnd = %u keep low and cwnd <= %d \n",tp->snd_cwnd,bbr_cwnd_min_target);
+        }
+        pr_err("tcp cwnd %u \n",tp->snd_cwnd);
 }
 
 /* End cycle phase if it's time and/or we hit the phase's in-flight target. */
@@ -811,7 +825,10 @@ static void bbr_update_cycle_phase(struct sock *sk,
 	struct bbr *bbr = inet_csk_ca(sk);
 
 	if (bbr->mode == BBR_PROBE_BW && bbr_is_next_cycle_phase(sk, rs))
+        {
+                pr_err("go to next phase \n");
 		bbr_advance_cycle_phase(sk);
+        }
 }
 
 static void bbr_reset_startup_mode(struct sock *sk)
@@ -975,6 +992,14 @@ static void bbr_update_bw(struct sock *sk, const struct rate_sample *rs)
 	struct bbr *bbr = inet_csk_ca(sk);
 	u64 bw;
 
+#if 1
+        struct minmax pre;
+        uint32_t pre_v;
+        uint32_t cur_v;
+#endif
+#if 1
+        pr_err("tp->delivered - rs->prior_delivered= %u, delivered %u,brr lt_use_bw :%s \n",tp->delivered - rs->prior_delivered, rs->delivered,bbr->lt_use_bw ? "yes":"no");
+#endif
 	bbr->round_start = 0;
 	if (rs->delivered < 0 || rs->interval_us <= 0)
 		return; /* Not a valid observation */
@@ -1009,7 +1034,17 @@ static void bbr_update_bw(struct sock *sk, const struct rate_sample *rs)
 	 */
 	if (!rs->is_app_limited || bw >= bbr_max_bw(sk)) {
 		/* Incorporate new sample into our max bw filter. */
+#if 1
+                memcpy(&pre, &bbr->bw, sizeof(bbr->bw));                                                                                
+#endif
 		minmax_running_max(&bbr->bw, bbr_bw_rtts, bbr->rtt_cnt, bw);
+         
+#if 1
+                pre_v = minmax_get(&pre);
+                cur_v = minmax_get(&bbr->bw);
+                if(pre_v != cur_v)
+                   pr_err("bw change pre %u ,cur %u \n",pre_v,cur_v);
+#endif
 	}
 }
 
@@ -1053,7 +1088,10 @@ static void bbr_check_drain(struct sock *sk, const struct rate_sample *rs)
 	if (bbr->mode == BBR_DRAIN &&
 	    tcp_packets_in_flight(tcp_sk(sk)) <=
 	    bbr_target_cwnd(sk, bbr_max_bw(sk), BBR_UNIT))
+        {
+                pr_err("enter probe bw mode \n");
 		bbr_reset_probe_bw_mode(sk);  /* we estimate queue is drained */
+        }
 }
 
 /* The goal of PROBE_RTT mode is to have BBR flows cooperatively and
@@ -1086,6 +1124,7 @@ static void bbr_update_min_rtt(struct sock *sk, const struct rate_sample *rs)
 			       bbr->min_rtt_stamp + bbr_min_rtt_win_sec * HZ);
 	if (rs->rtt_us >= 0 &&
 	    (rs->rtt_us <= bbr->min_rtt_us || filter_expired)) {
+                pr_err("bbr min rtt change  min_rtt_us %u, rs rtt_us %ld \n", bbr->min_rtt_us,rs->rtt_us);
 		bbr->min_rtt_us = rs->rtt_us;
 		bbr->min_rtt_stamp = tcp_jiffies32;
 	}
@@ -1117,6 +1156,7 @@ static void bbr_update_min_rtt(struct sock *sk, const struct rate_sample *rs)
 			    after(tcp_jiffies32, bbr->probe_rtt_done_stamp)) {
 				bbr->min_rtt_stamp = tcp_jiffies32;
 				bbr->restore_cwnd = 1;  /* snap to prior_cwnd */
+                                pr_info("bbr exit probe rtt ***************\n");
 				bbr_reset_mode(sk);
 			}
 		}
@@ -1128,7 +1168,9 @@ static void bbr_update_min_rtt(struct sock *sk, const struct rate_sample *rs)
 
 static void bbr_update_model(struct sock *sk, const struct rate_sample *rs)
 {
+#if 1
 	bbr_update_bw(sk, rs);
+#endif
 	bbr_update_cycle_phase(sk, rs);
 	bbr_check_full_bw_reached(sk, rs);
 	bbr_check_drain(sk, rs);
@@ -1139,15 +1181,19 @@ static void bbr_main(struct sock *sk, const struct rate_sample *rs)
 {
 	struct bbr *bbr = inet_csk_ca(sk);
 	u32 bw;
-
+#if 1
+	struct tcp_sock *tp = tcp_sk(sk);
+#endif
 	bbr_update_model(sk, rs);
 
 	bw = bbr_bw(sk);
 	bbr_set_pacing_rate(sk, bw, bbr->pacing_gain);
 	bbr_set_tso_segs_goal(sk);
 	bbr_set_cwnd(sk, rs, rs->acked_sacked, bw, bbr->cwnd_gain);
-        pr_err(" %s call bbr_debug \n ",__func__);
-	bbr_debug(sk, rs->acked_sacked, rs);
+        //pr_err(" %s bw %u\n ",__func__,bw);
+        pr_err("tcp inflight %u, bbr inflight %u \n",tcp_packets_in_flight(tp),bbr_inflight(sk,bw,bbr->pacing_gain));
+        //pr_err(" %s call bbr_debug \n ",__func__);
+	//bbr_debug(sk, rs->acked_sacked, rs);
 }
 
 static void bbr_init(struct sock *sk)

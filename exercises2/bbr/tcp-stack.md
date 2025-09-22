@@ -32,7 +32,19 @@ ESTAB       0      0                                         192.168.112.135:ssh
         4. 估算SampleRTT 与 EstimatedRTT的偏差（称DevRTT）：
             * $DevRTT = (1-β)*DevRTT + β*|SampleRTT - EstimatedRTT|$    
             * 典型地，β= 0.25    
-        5. 设置重传定时器的超时值：$TimeoutInterval = EstimatedRTT + 4*DevRTT$       
+        5. 设置重传定时器的超时值：$TimeoutInterval = EstimatedRTT + 4*DevRTT$     
+
+```
+{
+    SampleRTT -= (EstimatedRTT >> 3);
+    EstimatedRTT += SampleRTT;
+    if (SampleRTT < 0) 
+        SampleRTT = -SampleRTT;
+    SampleRTT -= (Deviation >> 3);
+    Deviation += SampleRTT;
+    TimeOut = (EstimatedRTT >> 3) + (Deviation >> 1);
+}
+```		
 > ## RTT测量方法
 
 每发送一个分组，TCP都会进行RTT采样，这个采样并不会每一个数据包都采样，同一时刻发送的数据包中，只会针对一个数据包采样，这个采样数据被记为sampleRTT，用它来代表所有的RTT。采样的方法一般有两种：   
@@ -111,6 +123,117 @@ static unsigned int tcp_window_allows(struct tcp_sock *tp, struct sk_buff *skb, 
     ack_rate  = #pkts_delivered/(last_ack_time - first_ack_time)
     bw = min(send_rate, ack_rate)
 ```
+
+
+计算 rate sample (tcp_rate_gen)    
+如上图所示, 每当收到 ack, 协议栈就会计算出一个 rate sample. 其中rs->delivered没有异议, 而rs->interval取的是 snd_us 和 ack_us 的较大值. 前者是的意义是通过 send pipeline 估计速率，后者是通过 ack pipeline 估计.
+
+关于这一点, 在文件开头的注释中有解释
+
+```
+ /* The bandwidth estimator estimates the rate at which the network
+     * can currently deliver outbound data packets for this flow. At a high
+     * level, it operates by taking a delivery rate sample for each ACK.
+     *
+     * A rate sample records the rate at which the network delivered packets
+     * for this flow, calculated over the time interval between the transmission
+     * of a data packet and the acknowledgment of that packet.
+    */
+```
+意思是 bandwidth estimator 会同时使用两种 interval 进行计算: 1.使用发送时的时刻计算 2.通过ack到达的时刻计算
+
+
+```
+* Specifically, over the interval between each transmit and corresponding ACK,
+     * the estimator generates a delivery rate sample. Typically it uses the rate
+     * at which packets were acknowledged. However, the approach of using only the
+     * acknowledgment rate faces a challenge under the prevalent ACK decimation or
+     * compression: packets can temporarily appear to be delivered much quicker
+     * than the bottleneck rate. Since it is physically impossible to do that in a
+     * sustained fashion, when the estimator notices that the ACK rate is faster
+     * than the transmit rate, it uses the latter:
+     *    send_rate = #pkts_delivered/(last_snd_time - first_snd_time)
+     *    ack_rate  = #pkts_delivered/(last_ack_time - first_ack_time)
+     *    bw = min(send_rate, ack_rate
+```
+一般说来, 我们使用 ack到达的时刻计算. 但有一种特别的情况，就是当出现 ack compression 时(一个 ack 应答多个 skb), 这个时候用 ack_us 当做 interval 就可能出现计算出的带宽超过 bottleneck rate (物理链路的极限). 因此, 这种情况下, 内核使用 snd_us 进行计算, 对应上面最后一张图的 ack4。    
+
+
+```
+class RateSample:
+    """
+    The class rate sample used for estimation of delivery rate
+    Y. Cheng, N. Cardwell, S. Hassas Yeganeh, V.Jacvobson 
+    draft-cheng-iccrg-delivery-rate-estimation-02
+    """
+    def __init__(self):
+        self.delivery_rate = 0
+        self.delivered = 0
+        self.prior_delivered = 0
+        self.prior_time = 0
+        self.newly_acked = 0
+        self.last_acked = 0
+        self.delivery_rate = 0
+        self.send_rate = 0
+        self.ack_rate = 0
+        self.interval = 0
+        self.ack_elapsed = 0
+        self.send_elapsed = 0
+        self.minRTT = 10
+        self.rtt = -1
+        self.lost = 0
+        self.is_app_limited = False
+        self.newly_lost = 0
+        self.full_lost = 0
+        self.prior_lost = 0
+        self.tx_in_flight = -1
+        
+    def send_packet(self, packet, C, packets_in_flight, current_time):
+        if (packets_in_flight == 0):
+            C.first_sent_time = current_time
+            C.delivered_time  = current_time
+        packet.first_sent_time = C.first_sent_time
+        packet.delivered_time = C.delivered_time
+        packet.delivered = C.delivered
+        packet.lost = C.lost
+        packet.is_app_limited = (C.is_app_limited != 0)
+        
+    def updaterate_sample(self, packet, C ,current_time):
+        if packet.delivered_time == 0:
+            return # packet already sacked
+        C.delivered += packet.size
+        C.delivered_time = current_time
+        if (packet.delivered >= self.prior_delivered):
+            self.prior_delivered = packet.delivered
+            if not packet.self_lost:
+                self.send_elapsed = packet.time - packet.first_sent_time
+                self.ack_elapsed = C.delivered_time - packet.delivered_time
+                self.prior_time = packet.delivered_time
+            self.is_app_limited = packet.is_app_limited
+            self.tx_in_flight = packet.tx_in_flight
+            C.first_sent_time = packet.time
+        
+        packet.delivered_time = 0
+
+    def update_sample_group(self, C, minRTT = -1):
+        self.rtt = minRTT
+        self.newly_lost = C.lost - self.prior_lost
+        self.prior_lost = C.lost
+        # print(f"BBRS ack_elpased{self.ack_elapsed}, send_elapsed{self.send_elapsed}")
+        if(C.is_app_limited and C.delivered > C.is_app_limited):
+                C.is_app_limited = 0
+        
+        self.minRTT = minRTT
+        self.delivered = C.delivered - self.prior_delivered
+        self.interval = max(self.ack_elapsed, self.send_elapsed)
+        if(self.interval < self.minRTT):
+            self.interval = -1
+            return False
+        self.delivery_rate = self.delivered / self.interval
+        # print(f"BBRState interval {self.interval}, rtt {self.minRTT}, delivered {self.delivered}, {self.prior_delivered} {self.prior_time} delivery_rate {self.delivery_rate}")
+        return True
+```
+
 > ## 发送报文速率记录
 如下函数tcp_rate_skb_sent记录下发送的skb相关信息，之后，当接收到ACK（SACK）确认报文时，根据这些信息生成速率采样。首先，看一下采样周期，当packets_out为零时，表明网络中没有报文，所有发送的报文都已经被确认，从这一刻起，是合适的时间点，记录之后报文的发送时间，在接收到相应的ACK报文后，计算报文在网络中的传播时间，即要采样的间隔。
 

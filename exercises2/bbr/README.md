@@ -157,6 +157,10 @@ int main(int argc, char **argv)
 
 # BBR算法主要处理阶段 
 
+每当收到一个ACK报文后，Linux内核会调用tcp_ack函数进行处理。在该函数中会调用拥塞控制算法的关键函数tcp_cong_control。这个调用链对于所有拥塞控制算法是相同的。     
+
+tcp_cong_control函数中主要有两大分支，一个是发送方当前处于快速恢复阶段，即拥塞窗口减少过程，另一个是拥塞避免阶段，其中包含了慢启动过程。     
+
 
 ![images](bbr.png)
 

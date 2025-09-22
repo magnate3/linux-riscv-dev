@@ -1,3 +1,108 @@
+#  tcp rtt采样
+
+```
+root@tango-rac01 tools]# ss -ti
+State       Recv-Q Send-Q                                      Local Address:Port                                                       Peer Address:Port                
+ESTAB       0      0                                         192.168.112.135:ssh                                                       192.168.112.1:56505                
+         cubic wscale:8,9 rto:241 rtt:40.225/0.997 ato:74 mss:1448 cwnd:10 bytes_acked:152109 bytes_received:12047 segs_out:733 segs_in:816 send 2.9Mbps lastsnd:41 lastrcv:137 pacing_rate 5.8Mbps rcv_rtt:28 rcv_space:28960
+
+
+```
+其中有rtt:40.225/0.997数据，表示RTT均值和中位数   
+
+
+
+```text
+
+看一组 RTT 采样：9，10，11，9，28，12，9，3，10，11，.... 这组样本对目前TCP RTT 采集会有什么影响？
+
+样本 28 会拉高 srtt，虽然移动指数平均会平滑些许，但还是会拉高。  
+样本 3 会被 minrtt 记录，造成类 BBR，Vegas 算法对带宽的高估。    
+肉眼看一眼就能排除 28 和 3，但在算法离散采样过程中如何识别？势必要进行更精细粒度的观测。  
+```
+![images](bbr2.png)   
+
+> ## 如何估计RTT
+如何估计RTT：
+        1. RTT是变化的，需要实时测量从发出某个报文段到收到其确认报文段之间经过的时间（称SampleRTT）   
+        2. 由于SampleRTT波动很大，更有意义的是计算其平均值（称EstimatedRTT）   
+        3. 平均RTT的估算方法（指数加权移动平均）：   
+            * $EstimatedRTT = (1- α)*EstimatedRTT + α*SampleRTT$   
+            * 典型地，α=0.125   
+        4. 估算SampleRTT 与 EstimatedRTT的偏差（称DevRTT）：
+            * $DevRTT = (1-β)*DevRTT + β*|SampleRTT - EstimatedRTT|$    
+            * 典型地，β= 0.25    
+        5. 设置重传定时器的超时值：$TimeoutInterval = EstimatedRTT + 4*DevRTT$       
+> ## RTT测量方法
+
+每发送一个分组，TCP都会进行RTT采样，这个采样并不会每一个数据包都采样，同一时刻发送的数据包中，只会针对一个数据包采样，这个采样数据被记为sampleRTT，用它来代表所有的RTT。采样的方法一般有两种：   
+TCP Timestamp选项：在TCP选项中添加时间戳选项，发送数据包的时候记录下时间，收到数据包的时候计算当前时间和时间戳的差值就能得到RTT。这个方法简单并且准确，但是需要发送段和接收端都支持这个选项。     
+
+重传队列中数据包的TCP控制块：每个数据包第一次发送出去后都会放到重传队列中，数据包中的TCP控制块包含着一个变量，tcp_skb_cb->when，记录了该数据包的第一次发送时间。如果没有时间戳选项，那么RTT就等于当前时间和when的差值。     
+linux内核中，更新rtt的函数为tcp_ack_update_rtt：   
+
+#   tcp 发送    
+
+> ## 滑动窗口
+
+
+
+```
+//检查这一次要发送的报文最大序号是否超出了发送滑动窗口大小
+static inline int tcp_snd_wnd_test(struct tcp_sock *tp, struct sk_buff *skb, unsigned int cur_mss)
+{
+    //end_seq待发送的最大序号
+    u32 end_seq = TCP_SKB_CB(skb)->end_seq;
+
+    if (skb->len > cur_mss)
+      end_seq = TCP_SKB_CB(skb)->seq + cur_mss;
+
+    //snd_una是已经发送过的数据中，最小的没被确认的序号；而snd_wnd就是发送窗口的大小
+    return !after(end_seq, tp->snd_una + tp->snd_wnd);
+}
+```
+
+> ##  慢启动和拥塞窗口
+
+首先用unsigned int tcp_cwnd_test方法检查飞行的报文数是否小于拥塞窗口个数（多少个MSS的个数）
+
+```
+static inline unsigned int tcp_cwnd_test(struct tcp_sock *tp, struct sk_buff *skb)
+{
+    u32 in_flight, cwnd;
+
+    /* Don't be strict about the congestion window for the final FIN.  */
+    if (TCP_SKB_CB(skb)->flags & TCPCB_FLAG_FIN)
+        return 1;
+
+    //飞行中的数据，也就是没有ACK的字节总数
+    in_flight = tcp_packets_in_flight(tp);
+    cwnd = tp->snd_cwnd;
+    //如果拥塞窗口允许，需要返回依据拥塞窗口的大小，还能发送多少字节的数据
+    if (in_flight < cwnd)
+        return (cwnd - in_flight);
+
+    return 0;
+}
+
+```
+再通过tcp_window_allows方法获取拥塞窗口与滑动窗口的最小长度，检查待发送的数据是否超出   
+
+```
+static unsigned int tcp_window_allows(struct tcp_sock *tp, struct sk_buff *skb, unsigned int mss_now,unsigned int cwnd)
+{
+    u32 window, cwnd_len;
+
+    window = (tp->snd_una + tp->snd_wnd - TCP_SKB_CB(skb)->seq);
+    cwnd_len = mss_now * cwnd;
+    return min(window, cwnd_len);
+}
+```
+
+
+
+
+
 # TCP传输速率估算
 
 如下公式，带宽取值为计算得出的数据传输速率与接收ACK速率两者之间的较小值。通常情况下，传输速率（send_rate-发送并得到确认的数据速率）将大于ACK接收速率（ack_rate），但是，在面对ACK压缩等的情况下，将导致ACK接收速率意外的增大，此时，带宽应选取传输速率（send_rate）。

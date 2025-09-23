@@ -67,6 +67,10 @@ To make this more concrete, you can take a look at tcp_clean_rtx_queue() in the 
 ```		
 
 ![images](bbr4.png)   
+
+
+
+
 > ## RTT测量方法
 
 每发送一个分组，TCP都会进行RTT采样，这个采样并不会每一个数据包都采样，同一时刻发送的数据包中，只会针对一个数据包采样，这个采样数据被记为sampleRTT，用它来代表所有的RTT。采样的方法一般有两种：   
@@ -264,7 +268,7 @@ class RateSample:
 ```
 
 
-···
+```
 class RateSample:
     def __init__(self):
 
@@ -322,6 +326,21 @@ delivered_time is the time we received the most recent ACKorSACK,
 
 
 ![images](bbr5.png) 
+
+
+BBR算法中每收到一个ack，就计算一下即时带宽，论文[1]给出的计算公式为：
+deliveryRate=(delivered-packet.delivered)/(now-packet.delivered_time) ,其中，假设收到的ack是对一个数据包的确认，那么delivered增加1，delivered说明的是成功接收数据包的数量，packet.delivered是数据包packet发送时，发送端接收到最新的ack确认的收据包数量，packet.delivered_time为接收到最新ack的时间戳。
+
+ 举例说明，假设网络中rtt不发生变化。在初始状态，发送端向网络中均匀地发送10个数据包，这10个包在发送端中packet.delivered均为0，packet.delivered_time为发送时的时戳。在下一个rtt周期，开始发送11-20之间的包。假设在第一个rtt的末尾（在发送第11个包之前），收到第一个包的ack确认，收到ack的时间假设为rtt，delivered值增加为1，这个时候计算的带宽为(1-packet(1).delivered)/(now-packet(1).delivered_time)=1/rtt(pkts/s)。
+ 发送端在第11包发送的时候，标记packet(11).delivered为1，packet(11).delivered_time=接收第1个ack的时刻。在发送第12个数据包之前，收到对第二包ack的确认，delivered为2，标记packet(12).delivered为2，packet(12).delivered_time=接收第2个ack的时刻，这个时候计算的即时带宽为(2-packet(2).delivered)/(now-packet(2).delivered_time)=2/rtt(pkts/s)。
+ 
+ 在发送第20个数据包之前，收到对第10包ack的确认，delivered为10，标记packet(20).delivered为10，packet(20).delivered_time=接收第10个ack的时刻，这个时候计算的即时带宽为(10-packet(10).delivered)/(now-packet(10).delivered_time)=10/rtt(pkts/s)。
+ 
+ 之后的带宽计算，就可以反映出，在一个rtt间隔内，向网络中发送数据包的数量。
+ 具体的代码可见[3],tp->delivered为收到最新ack时的确认接收数据包的计数器。函数tcp_rate_skb_sent负责记录发送的数据包packet.delivered_time(tp->delivered_mstamp)和packet.delivered(tp->delivered)。函数tcp_rate_gen获取时间间隔(now-packet.delivered_time)。
+ 另外，BBR的主动带宽探测思想，并不是无源之水，之前就有类似的(PCP: Efficient Endpoint Congestion Control)
+ 
+
 ```
 1. Consider an application that has 3 distinct "phases":
 

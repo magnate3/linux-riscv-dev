@@ -20,6 +20,26 @@ ESTAB       0      0                                         192.168.112.135:ssh
 样本 3 会被 minrtt 记录，造成类 BBR，Vegas 算法对带宽的高估。    
 肉眼看一眼就能排除 28 和 3，但在算法离散采样过程中如何识别？势必要进行更精细粒度的观测。  
 ```
+
+
+```
+The distinction about the oldest of the ACKed segments vs the newest of the ACKed segments is about how to obtain an RTT sample when an ACK covers multiple segments transmitted at different times. Consider the following scenario, from the perspective of a transport sender sending 3 data segments, P1, P2, and P3, at different times:
+
+t= 0ms: send P1
+t=10ms: send P2
+t=20ms: send P3
+t=40ms: receive cumulative ACK for P1, P2, and P3
+
+Here the oldest of the ACKed segments is P1, and the newest of the ACKed segments is P3.
+
+RTT from the oldest of the ACKed segments = 40ms - 0ms = 40ms
+
+RTT from the newest of the ACKed segments = 40ms - 20ms = 20ms
+
+To make this more concrete, you can take a look at tcp_clean_rtx_queue() in the Linux TCP code base, where ca_rtt_us computes an RTT sample from the newest of ACKed segments (for congestion control), and seq_rtt_us computes an RTT sample from the oldest of ACKed segments (for RTO calculation).
+```
+
+
 ![images](bbr2.png)   
 
 > ## 如何估计RTT
@@ -45,6 +65,8 @@ ESTAB       0      0                                         192.168.112.135:ssh
     TimeOut = (EstimatedRTT >> 3) + (Deviation >> 1);
 }
 ```		
+
+![images](bbr4.png)   
 > ## RTT测量方法
 
 每发送一个分组，TCP都会进行RTT采样，这个采样并不会每一个数据包都采样，同一时刻发送的数据包中，只会针对一个数据包采样，这个采样数据被记为sampleRTT，用它来代表所有的RTT。采样的方法一般有两种：   
@@ -112,8 +134,15 @@ static unsigned int tcp_window_allows(struct tcp_sock *tp, struct sk_buff *skb, 
 ```
 
 
+# TCPW (TCP Westwood)
+基于丢包的拥塞控制方法把数据包的丢失解释为网络发生了拥塞，而假定链路错误造成的分组丢失是忽略不计的，然而在高速网络中，这种假设是不成立的，当数据传输速率比较高时，或者在无线网络环境下，链路错误是不能忽略的。此时的丢包并不一定代表网络发生拥塞。同时，基于丢包的拥塞控制方法倾向于填满缓冲区，当瓶颈链路的缓冲区很大时，需要很长时间才能将缓冲区中的数据包排空，造成很大的网络延时，这种情况称之为缓冲区膨胀。
 
+不同于基于丢包的拥塞控制，TCPW发送端监控ACK报文的接收速率，进而估算当前连接可达到的数据发送速率（可用带宽）。
 
+当发送端检测到丢包时（超时或者3个重复ACK），发送端根据估算的发送速率设置拥塞窗口大小（cwnd）和慢启动阈值（ssthresh）。
+
+TCPW评估当前采样点的带宽如下：   
+![images](bbr3.png)   
 
 # TCP传输速率估算
 
@@ -233,6 +262,158 @@ class RateSample:
         # print(f"BBRState interval {self.interval}, rtt {self.minRTT}, delivered {self.delivered}, {self.prior_delivered} {self.prior_time} delivery_rate {self.delivery_rate}")
         return True
 ```
+
+
+···
+class RateSample:
+    def __init__(self):
+
+        # The delivery rate sample (in most cases rs.delivered / rs.interval).
+        self.delivery_rate = 0.0
+        # The P.is_app_limited from the most recent packet delivered; indicates
+        # whether the rate sample is application-limited.
+        self.is_app_limited = False
+        # The length of the sampling interval.
+        self.interval = 0.0
+        # The amount of data marked as delivered over the sampling interval.
+        self.delivered = 0
+        # The P.delivered count from the most recent packet delivered.
+        self.prior_delivered = 0
+        # The P.delivered_time from the most recent packet delivered.
+        self.prior_time = 0.0
+        # Send time interval calculated from the most recent packet delivered
+        # (see the "Send Rate" section above).
+        self.send_elapsed = 0.0
+        # ACK time interval calculated from the most recent packet delivered
+        # (see the "ACK Rate" section above).
+        self.ack_elapsed = 0.0
+        # in flight before this ACK
+        self.prior_in_flight = 0
+        # number of packets marked lost upon ACK
+        self.losses = 0
+        self.pkt_in_fast_recovery_mode = False
+
+    def debug_print(self):
+        print("delivery_rate: {}, \nis_app_limited: {}, \ninterval: {},\n delivered: {},\n prior_delivered: {}".format(
+            self.delivery_rate, self.is_app_limited, self.interval, self.delivered, self.prior_delivered))
+```
+
+
+```
+function send(packet)
+    bdp = BtlBwFilter.currentMax * RTpropFilter.currentMin
+    if (inﬂight >= cwnd_gain * bdp)
+        // wait for ack or timeout
+        return
+    if (now >= nextSendTime)
+        packet = nextPacketToSend()
+        if (! packet)
+            app_limited_until = inflight
+            return
+        packet.app_limited = (app_limited_until > 0)
+        packet.sendtime = now
+        packet.delivered = delivered
+        packet.delivered_time = delivered_time
+        ship(packet)
+        nextSendTime = now + packet.size / (pacing_gain * BtlBwFilter.currentMax)
+        timerCallbackAt(send, nextSendTime)
+```
+delivered_time is the time we received the most recent ACKorSACK, 
+
+
+![images](bbr5.png) 
+```
+1. Consider an application that has 3 distinct "phases":
+
+(a) Sends a large amount of data (enough to get BBR out of Startup state)
+(b) Alternates between long periods of idle time and sends of small amounts of data (e.g. 1xSMSS)
+(c) Sends a large amount of data again
+
+If I'm understanding correctly, none of the sends in phase (b) would be considered "app limited", since they don't satisfy the "<1xSMSS" condition.
+
+Meanwhile, the delivery rate estimates during phase (b) could drastically underestimate the actual BtlBw.  e.g.
+
+Real BtlBw: 10 Mbps
+Real RtProp: 150 ms
+
+@ t=0
+P.size=1460
+P.delivered=0
+P.delivered_time=0
+P.is_app_limited=0
+
+@ t=150
+rs.delivery_rate=(C.delivered - P.delivered)/(C.delivered_time - P.delivered_time)=(1460-0)/(0.15-0) = ~76 Kbps
+
+Given a long enough phase (b), eventually BBR will update its BtlBw estimate to be equal to ~76 Kbps.
+
+When phase (c) starts, the application throughput will behave something like "slow start", since the TargetCwnd and PacingRate will initially be based on the BtlBw of ~76 Kbps.
+
+Is this behaviour known/intentional?  An application that loops between phases (b) and (c), where (b) is long but (c) is relatively short, will get sub-optimal throughput during (c).
+
+Would it make sense to tighten the "app limited" constraints such that the small sends in (b) would be considered "app limited", so that BBR doesn't update BtlBw if the channel never gets filled?
+
+
+2. Section 4.2 of the draft talks about ACK losses and BtlBw underestimation.  If ACKs are reordered/delayed, isn't BtlBw overestimation also possible?  e.g.
+
+(a) @ t=0 (P1 and P2 transmitted)
+
+	P1.delivered=0
+	P1.delivered_time=0
+	P2.delivered=0
+	P2.delivered_time=0
+
+(b) @ t=150 (ACK for P1 delayed, ACK for P2 received)
+
+	rs2.delivery_rate=(1460-0)/(0.15-0)
+
+(c) @ t=150 (P3 transmitted)
+
+	P3.delivered=1460
+	P3.delivered_time=150
+
+(d) @ t=300 (ACK for P1 received)
+
+	rs1.delivery_rate=(2920-0)(0.3-0)
+
+(e) @ t=300 (ACK for P3 received)
+
+	rs3.delivery_rate=(4380-1460)/(300-150)
+
+In step (e), the delivery_rate numerator includes the byte count for P1, but P1 actually traversed the bottleneck link long before t=150.  Meaning the numerator accounts for P1, but the denominator does not, resulting in an overestimate.
+
+Is my understanding correct?  If so, is the assumption just that delays of this magnitude are rare enough in practice that it's OK to ignore them?
+```
+
++ tips1     
+```
+Actually, the sends in phase (b) would be considered "app-limited".
+This is covered in section 3.4 of the draft:
+
+https://tools.ietf.org/html/draft-cheng-iccrg-delivery-rate-estimation-00#section-3.4
+
+The check in OnApplicationWrite() is executed "when the sending
+application asks the transport layer to send more data". Since the app
+is idle at the time of the write, "C.write_seq - SND.NXT < SND.MSS"
+and all the other conditions are true, so the connection is marked as
+application-limited.
+
+We will try to update the draft to make it more clear that these 
+```
+
++ tips2
+```
+In TCP, ACKs are cumulative, so if a sender has received an ACK for P2
+it knows that P1 was delivered as well. So this particular issue
+should not be a problem, if I understand your scenario.
+
+Also keep in mind that the app or congestion control will generally be
+applying a filter to the delivery rate samples, so if there are
+transient effects that cause the delivery rate samples to occasionally
+be low, those samples should be ignored (e.g. see the BtlBw filter in
+the BBR draft).
+```
+
 
 > ## 发送报文速率记录
 如下函数tcp_rate_skb_sent记录下发送的skb相关信息，之后，当接收到ACK（SACK）确认报文时，根据这些信息生成速率采样。首先，看一下采样周期，当packets_out为零时，表明网络中没有报文，所有发送的报文都已经被确认，从这一刻起，是合适的时间点，记录之后报文的发送时间，在接收到相应的ACK报文后，计算报文在网络中的传播时间，即要采样的间隔。
@@ -520,7 +701,7 @@ void tcp_rate_gen(struct sock *sk, u32 delivered, u32 lost, bool is_sack_reneg, 
 ```	
 	
 
-如果interval_us小于RTT的最小值，很有可能带宽会估算过高，将其设置为无效值。
+****如果interval_us小于RTT的最小值，很有可能带宽会估算过高，将其设置为无效值****。
 ```
     /* Normally we expect interval_us >= min-rtt.
      * Note that rate may still be over-estimated when a spuriously

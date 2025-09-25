@@ -1,3 +1,63 @@
+
+
+
+
+
+
+
+```
+ * The next routines deal with comparing 32 bit unsigned ints
+ * and worry about wraparound (automatic with unsigned arithmetic).
+ */
+
+static inline bool before(__u32 seq1, __u32 seq2)
+{
+        return (__s32)(seq1-seq2) < 0;
+}
+#define after(seq2, seq1)       before(seq1, seq2)
+```
+
+
+```
+#include<stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+typedef uint32_t __u32;
+typedef int32_t  __s32;
+static inline bool before(__u32 seq1, __u32 seq2)
+{
+        return (__s32)(seq1-seq2) < 0;
+}
+#define after(seq2, seq1)       before(seq1, seq2)
+
+/* is s2<=s1<=s3 ? */
+static inline bool between(__u32 seq1, __u32 seq2, __u32 seq3)
+{
+        return seq3 - seq2 >= seq1 - seq2;
+}
+
+int main()
+{
+    if(before(2,3))
+        printf("2 before 3 \n");
+    if(before(2,0))
+        printf("2 before 0 \n");
+    if(after(2,3))
+        printf("2 after 3 \n");
+    if(after(2,0))
+        printf("2 after 0 \n");
+    retu
+```
+
+```
+[root@centos7 prog]# gcc test.c  -o test
+[root@centos7 prog]# ./test 
+2 before 3 
+2 after 0 
+```
+
+
+
 #  tcp rtt采样
 
 ```
@@ -65,7 +125,7 @@ To make this more concrete, you can take a look at tcp_clean_rtx_queue() in the 
     TimeOut = (EstimatedRTT >> 3) + (Deviation >> 1);
 }
 ```		
-
+Linux 原生的 tcp rtt 是算法持续平滑的. 
 ![images](bbr4.png)   
 
 
@@ -339,6 +399,39 @@ deliveryRate=(delivered-packet.delivered)/(now-packet.delivered_time) ,其中，
  之后的带宽计算，就可以反映出，在一个rtt间隔内，向网络中发送数据包的数量。
  具体的代码可见[3],tp->delivered为收到最新ack时的确认接收数据包的计数器。函数tcp_rate_skb_sent负责记录发送的数据包packet.delivered_time(tp->delivered_mstamp)和packet.delivered(tp->delivered)。函数tcp_rate_gen获取时间间隔(now-packet.delivered_time)。
  另外，BBR的主动带宽探测思想，并不是无源之水，之前就有类似的(PCP: Efficient Endpoint Congestion Control)
+ 
+ 
+ ```
+ /* BBR v3 assumes that there is state associated with the acknowledgements.
+ * BBR assumes that upon reception of an ACK the code immediately
+ * schedule transmission of packets that are deemed lost (code was
+ * modifed to do that).
+ * 
+ * From draft-cheng-iccrg-delivery-rate-estimation:
+ * data_acked = C.delivered - P.delivered
+ *            = path->delivered - packet->delivered_prior;
+ * ack_elapsed = C.delivered_time - P.delivered_time
+ *            = current_time - packet->delivered_time_prior
+ * ack_rate = data_acked / ack_elapsed
+ * 
+ * ack_elapsed is NOT equal to rtt_sample, because packet->delivered_time_prior
+ * may be lower than packet->send_time.
+ * 
+ * The ack rate is imprecise, because of ACK compression, etc. The Cheng draft
+ * suggests:
+ * - Define "P.first_sent_time" as the time of the first send in a flight of data,
+ * - and "P.sent_time" as the time the final send in that flight of data
+ *   (the send that transmits packet "P").
+ * The elapsed time for sending the flight is:
+ * send_elapsed = (P.sent_time - P.first_sent_time)
+ *               = packet->send_time - packet->delivered_sent_prior
+ * The delay to receive packets should never be larger than the send rate,
+ * so we can use a filter:
+ *   delivery_elapsed = max(ack_elapsed, send_elapsed)
+ *   delivery_rate = data_acked / delivery_elapsed
+ *
+ */
+ ```
  
 
 ```
@@ -817,3 +910,160 @@ struct rate_sample {
 
  Maintain 1-round-trip max of delivered bandwidth =(rs->delivered/rs->interval_us)    
  
+ 而rs->interval_us取的是 snd_us 和 ack_us 的较大值. 前者是的意义是通过 send pipeline 估计速率，后者是通过 ack pipeline 估计.    
+ BBR源码中收到ack并不是一个一个处理的，而是一段时间(interval)的ack会累积在一个 rate_sample 里，一起处理。    
+
+```
+	ack_us = tcp_stamp_us_delta(tp->tcp_mstamp,
+				    rs->prior_mstamp); /* ack phase */
+	rs->interval_us = max(snd_us, ack_us);
+``` 
+
+# 理解 TCP rate sample
+ 
+ [理解 TCP rate sample](https://blog.csdn.net/maimang1001/article/details/136387106)    
+ 
+ 
+```
+struct tcp_sock {
++	u32	delivered;	/* Total data packets delivered incl. rexmits */
+	u32	lost;		/* Total data packets lost incl. rexmits */
++	u32	app_limited;	/* limited until "delivered" reaches this val */
++	struct skb_mstamp first_tx_mstamp;  /* start of window send phase  */
++	struct skb_mstamp delivered_mstamp; /* time we reached "delivered" */
+	u32	rate_delivered;    /* saved rate sample: packets delivered */
+	u32	rate_interval_us;  /* saved rate sample: time elapsed */
+	...
+}
+```
+delivered 表示截止此刻该条连接已经成功送达的报文数目   
+delivered_mstamp :达到送达 delivered 个报文的时间戳   
+first_tx_mstamp 采样周期开始的时刻, 也就是 interval 的起始时间戳   
+前两个的意思很明确，不多说。但 first_tx_mstamp 比较有意思. 它遵守以下规则:   
+
+1.发送报文时, 如果网络中没有这条流没有 ack 的数据包(说明这条流处于闲置状态)，就以当前时刻作为起点, first_tx_mstamp 顾名思义意思为 “发送第一个报文时的时间戳” 2.收到 ack 后, 将 skb 从重传队列上移除, 将这个 skb 当初发送时刻的时间戳作为起点.   
+
+
+![images](bbr6.png)   
+
+
+```
+struct tcp_skb_cb  {
+	union {
+		struct {
+			/* There is space for up to 24 bytes */
+			__u32 in_flight:30,/* Bytes in flight at transmit */
+			      is_app_limited:1, /* cwnd not fully used? */
+			      unused:1;
+			/* pkts S/ACKed so far upon tx of skb, incl retrans: */
+			__u32 delivered;
+			/* start of send pipeline phase */
+			struct skb_mstamp first_tx_mstamp;
+			/* when we reached the "delivered" count */
+			struct skb_mstamp delivered_mstamp;
+		} tx;   /* only used for outgoing skbs */
+		union {
+			struct inet_skb_parm	h4;
+#if IS_ENABLED(CONFIG_IPV6)
+			struct inet6_skb_parm	h6;
+#endif
+		} header;	/* For incoming skbs */
+	};
+}
+```
+函数tcp_rate_skb_delivered用于计算报文的传输时间，当接收到ACK报文时，调用此函数进行处理。   
+
+
+```
+
+/* Snapshot the current delivery information in the skb, to generate
+ * a rate sample later when the skb is (s)acked in tcp_rate_skb_delivered().
+ */
+void tcp_rate_skb_sent(struct sock *sk, struct sk_buff *skb)
+{
+	struct tcp_sock *tp = tcp_sk(sk);
+
+	 /* In general we need to start delivery rate samples from the
+	  * time we received the most recent ACK, to ensure we include
+	  * the full time the network needs to deliver all in-flight
+	  * packets. If there are no packets in flight yet, then we
+	  * know that any ACKs after now indicate that the network was
+	  * able to deliver those packets completely in the sampling
+	  * interval between now and the next ACK.
+	  *
+	  * Note that we use packets_out instead of tcp_packets_in_flight(tp)
+	  * because the latter is a guess based on RTO and loss-marking
+	  * heuristics. We don't want spurious RTOs or loss markings to cause
+	  * a spuriously small time interval, causing a spuriously high
+	  * bandwidth estimate.
+	  */
+	if (!tp->packets_out) {
+		u64 tstamp_us = tcp_skb_timestamp_us(skb);
+
+		tp->first_tx_mstamp  = tstamp_us;
+		tp->delivered_mstamp = tstamp_us;
+	}
+
+	TCP_SKB_CB(skb)->tx.first_tx_mstamp	= tp->first_tx_mstamp;
+	TCP_SKB_CB(skb)->tx.delivered_mstamp	= tp->delivered_mstamp;
+	TCP_SKB_CB(skb)->tx.delivered		= tp->delivered;
+	TCP_SKB_CB(skb)->tx.delivered_ce	= tp->delivered_ce;
+	TCP_SKB_CB(skb)->tx.lost		= tp->lost;
+	TCP_SKB_CB(skb)->tx.is_app_limited	= tp->app_limited ? 1 : 0;
+	tcp_set_tx_in_flight(sk, skb);
+}
+
+/* When an skb is sacked or acked, we fill in the rate sample with the (prior)
+ * delivery information when the skb was last transmitted.
+ *
+ * If an ACK (s)acks multiple skbs (e.g., stretched-acks), this function is
+ * called multiple times. We favor the information from the most recently
+ * sent skb, i.e., the skb with the most recently sent time and the highest
+ * sequence.
+ */
+void tcp_rate_skb_delivered(struct sock *sk, struct sk_buff *skb,
+			    struct rate_sample *rs)
+{
+	struct tcp_sock *tp = tcp_sk(sk);
+	struct tcp_skb_cb *scb = TCP_SKB_CB(skb);
+	u64 tx_tstamp;
+
+	if (!scb->tx.delivered_mstamp)
+		return;
+
+	tx_tstamp = tcp_skb_timestamp_us(skb);
+	if (!rs->prior_delivered ||
+	    tcp_skb_sent_after(tx_tstamp, tp->first_tx_mstamp,
+			       scb->end_seq, rs->last_end_seq)) {
+		rs->prior_lost	     = scb->tx.lost;
+		rs->prior_delivered_ce  = scb->tx.delivered_ce;
+		rs->prior_delivered  = scb->tx.delivered;
+		rs->prior_mstamp     = scb->tx.delivered_mstamp;
+		rs->is_app_limited   = scb->tx.is_app_limited;
+		rs->is_retrans	     = scb->sacked & TCPCB_RETRANS;
+		rs->last_end_seq     = scb->end_seq;
+		rs->tx_in_flight     = scb->tx.in_flight;
+
+		/* Record send time of most recently ACKed packet: */
+		tp->first_tx_mstamp  = tx_tstamp;
+		/* Find the duration of the "send phase" of this window: */
+		rs->interval_us      = tcp_stamp32_us_delta(
+						tp->first_tx_mstamp,
+						scb->tx.first_tx_mstamp);
+
+	}
+	/* Mark off the skb delivered once it's sacked to avoid being
+	 * used again when it's cumulatively acked. For acked packets
+	 * we don't need to reset since it'll be freed soon.
+	 */
+	if (scb->sacked & TCPCB_SACKED_ACKED)
+		scb->tx.delivered_mstamp = 0;
+}
+```
+        static bool tcp_skb_sent_after(long t1, long t2, uint seq1, uint seq2)
+        {
+            return t1 > t2 || (t1 == t2 && after(seq1, seq2));
+        }
+```
+
+

@@ -6,7 +6,7 @@
 [BBR 和 CUBIC 对长肥管道的不同反应](https://zhuanlan.zhihu.com/p/31704683339)   
 [长肥管道(LFT)中TCP的艰难处境与打法](https://blog.csdn.net/dog250/article/details/113020804)   
 
-
+![images](cub1.png)   
 #  tc
 
 

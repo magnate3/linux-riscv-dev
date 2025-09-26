@@ -7,6 +7,12 @@
 [长肥管道(LFT)中TCP的艰难处境与打法](https://blog.csdn.net/dog250/article/details/113020804)   
 
 ![images](cub1.png)   
+
+
+[广域网优化之TCP拥塞控制算法技术白皮书-6W100](https://www.h3c.com/cn/Service/Document_Software/Document_Center/Home/Routers/00-Public/Learn_Technologies/White_Paper/TCP_WP/)   
+
+
+
 #  tc
 
 

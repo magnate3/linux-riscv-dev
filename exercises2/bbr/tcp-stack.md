@@ -937,14 +937,30 @@ struct tcp_sock {
 }
 ```
 delivered 表示截止此刻该条连接已经成功送达的报文数目   
-delivered_mstamp :达到送达 delivered 个报文的时间戳   
-first_tx_mstamp 采样周期开始的时刻, 也就是 interval 的起始时间戳   
-前两个的意思很明确，不多说。但 first_tx_mstamp 比较有意思. 它遵守以下规则:   
-
-1.发送报文时, 如果网络中没有这条流没有 ack 的数据包(说明这条流处于闲置状态)，就以当前时刻作为起点, first_tx_mstamp 顾名思义意思为 “发送第一个报文时的时间戳” 2.收到 ack 后, 将 skb 从重传队列上移除, 将这个 skb 当初发送时刻的时间戳作为起点.   
+delivered_mstamp : ack 报文recv的时间戳   
+first_tx_mstamp 采样周期开始的时刻, 也就是 interval 的起始时间戳, first_tx_mstamp遵守以下规则:   
+1.发送报文时, 如果网络中没有这条流没有 ack 的数据包(说明这条流处于闲置状态)，就以当前时刻作为起点, first_tx_mstamp 顾名思义意思为 “发送第一个报文时的时间戳”      
+2.收到 ack 后, 将 skb 从重传队列上移除, 将这个 skb 当初发送时刻的时间戳作为起点.   
 
 
 ![images](bbr6.png)   
+
+
+```text
+ 
+
+1.prior_delivered
+‌定义‌：记录当前已传输的数据包序列号，表示当前已成功传输的包中最大的序列号。 ‌
+‌作用‌：用于判断数据包是否属于当前轮次（round）或下一轮次。当新数据包被确认时，若其序列号在prior_delivered范围内，则属于当前轮次；若超出范围，则进入新轮次。 ‌
+
+2.next_rtt_delivered
+‌定义‌：表示下一轮次的起始点，初始值为0。 ‌
+
+‌     作用‌：与prior_delivered配合使用，确定新轮次的起始位置。当确认的包序列号超过next_rtt_delivered时，算法认为进入新轮次，并更新相关计数器。 ‌
+
+3.常见问题
+在Linux内核实现中，若prior_delivered接近2^31（即32位计数上限），可能导致before/after函数判断异常，进而影响轮次计算。例如，当prior_delivered为2^31+1时，before(rs->prior_delivered, 0)始终为真，导致BBR算法无法正确进入新轮次
+```
 
 
 ```
@@ -1059,6 +1075,8 @@ void tcp_rate_skb_delivered(struct sock *sk, struct sk_buff *skb,
 	if (scb->sacked & TCPCB_SACKED_ACKED)
 		scb->tx.delivered_mstamp = 0;
 }
+```
+
 ```
         static bool tcp_skb_sent_after(long t1, long t2, uint seq1, uint seq2)
         {

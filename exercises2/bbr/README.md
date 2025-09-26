@@ -159,7 +159,11 @@ int main(int argc, char **argv)
 
 每当收到一个ACK报文后，Linux内核会调用tcp_ack函数进行处理。在该函数中会调用拥塞控制算法的关键函数tcp_cong_control。这个调用链对于所有拥塞控制算法是相同的。     
 
-tcp_cong_control函数中主要有两大分支，一个是发送方当前处于快速恢复阶段，即拥塞窗口减少过程，另一个是拥塞避免阶段，其中包含了慢启动过程。     
+tcp_cong_control函数中主要有两大分支，一个是发送方当前处于快速恢复阶段，即拥塞窗口减少过程，另一个是拥塞避免阶段，其中包含了慢启动过程。  
+
+```
+tcp_cong_control(sk, ack, delivered, flag, sack_state.rate);
+```   
 
 
 ![images](bbr.png)
@@ -432,3 +436,17 @@ struct rate_sample {
 	 */
 	bw = div64_long((u64)rs->delivered * BW_UNIT, rs->interval_us);
 ``` 
+
+
+> ### bbr params
+
+
+```text
+ PROBE_RTT 模式的目标是让 BBR 流协同并定期排空瓶颈队列，以收敛以测量真正的 min_rtt（卸载传播延迟）。
+ 这允许流保持较小的队列（减少排队延迟和丢包）并实现 BBR 流之间的公平。
+
+最小rtt有效时间为bbr_min_rtt_win_sec*HZ, 即10s。当 min_rtt 估计过期时，我们进入 PROBE_RTT 模式并将 cwnd 限制在 bbr_cwnd_min_target=4 个数据包。
+至少 bbr_probe_rtt_mode_ms=200ms 和至少一个数据包定时后,该空中包数大小 <= 4 的往返已过去，
+我们离开 PROBE_RTT 模式并重新进入先前的模式。 BBR 使用 200 毫秒将 PROBE_RTT 的 cwnd 上限的性能损失大致限制在大约 2%（200 毫秒/10 秒）。
+
+```

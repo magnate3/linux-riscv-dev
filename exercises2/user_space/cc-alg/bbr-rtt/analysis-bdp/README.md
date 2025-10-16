@@ -1,7 +1,7 @@
 
 
 
-#  tcp.analysis.bytes_in_flight
+#  bdp use tcp.analysis.bytes_in_flight
 
 
 ```
@@ -48,6 +48,16 @@ docker  run -it -d --net=host --cap-add=NET_ADMIN --privileged=true  -v /root/pr
 ![images](bdp.png)
 
 
+> ### inflight
+采用plot_throughput.py脚本
+```
+root@centos7:/tcp-bbr/plot-rtt-tput# tshark -2 -r ../bbr.pcap  -R 'tcp.analysis.bytes_in_flight'  -e frame.time_relative -e tcp.analysis.bytes_in_flight -Tfields -E separator=, >  bbr_infl.txt
+Running as user "root" and group "root". This could be dangerous.
+root@centos7:/tcp-bbr/plot-rtt-tput# python3 plot_throughput.py --xlimit 60 -f bbr_infl.txt -o bbr-infl.png
+saving to bbr-infl.png
+root@centos7:/tcp-bbr/plot-rtt-tput# 
+```
+![images](bbr-infl.png)
 
 > ###  rtt
 因为ipef测试了60s，所以--xlimit 60

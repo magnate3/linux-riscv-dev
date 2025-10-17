@@ -177,6 +177,8 @@ else
 fi
 ```
 
+
+
 > ###  python map
 
 
@@ -199,6 +201,32 @@ deff(x): returnx*x
 print(map(f, [1, 2, 3])) 
 ```
 
+#  rate
+
+```
+./ss-rate.sh 
+```
+
+```
+python3 plot_rate.py --xlimit 60 -f ../sender-ss-rate.csv -o bbr-pace.png
+```
+
+
+![images](bbr-pace.png)
+
+# gain
+
+
+
+![images](bbr-gain.png)
+
+```
+./ss-gain.sh 
+```
+
+```
+python3 plot_gain.py --xlimit 60 -f ../sender-ss-gain.csv -o bbr-gain.png
+```
 
 # throughput
 
@@ -213,7 +241,7 @@ python3 iperf_plotter.py  cli.json
 ![images](cli_throughput.png)
 
  
- # to do 
+# to do 
  
 ```
 root@centos7:/tcp-bbr/iperf3-log# python3 iperf3_analyzer.py  -v  --plot  logs/cli.json
@@ -223,3 +251,5 @@ root@centos7:/tcp-bbr/iperf3-log# python3 iperf3_analyzer.py  -v  --plot  logs/c
 2025-10-16 00:40:01 | INFO     | processed logs/cli.json in 0.534s
 2025-10-16 00:40:01 | INFO     | finished 1 file(s) in 0.535s
 ```
+
+##  pacing_rate  delivery_rate 

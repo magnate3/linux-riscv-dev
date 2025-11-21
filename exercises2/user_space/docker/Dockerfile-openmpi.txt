@@ -1,0 +1,41 @@
+# Based on the Dockefile for creating a Docker image that JupyterLab can use,
+# Create a Docker container that can be used for athena++ development and execution.
+
+# Based on the latest version of ubuntu 22.04.
+FROM ubuntu:jammy-20240111
+
+# Set bash as the default shell
+ENV SHELL=/bin/bash
+
+# Build with some basic utilities
+RUN apt update && apt install -y \
+        build-essential \
+    python3-pip apt-utils vim \
+    git git-lfs \
+    curl unzip wget gnuplot \
+        openmpi-bin libopenmpi-dev \
+        openssh-client openssh-server
+
+# alias python='python3'
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# install python package to need
+RUN pip install -U pip setuptools \
+        && pip install numpy scipy h5py mpmath
+
+# The following stuff is derived for horovod in docker.
+# Allow OpenSSH to talk to containers without asking for confirmation
+RUN mkdir -p /var/run/sshd
+RUN cat /etc/ssh/ssh_config | grep -v StrictHostKeyChecking > /etc/ssh/ssh_config.new && \
+    echo "    StrictHostKeyChecking no" >> /etc/ssh/ssh_config.new && \
+    mv /etc/ssh/ssh_config.new /etc/ssh/ssh_config
+
+# --allow-run-as-root
+ENV OMPI_ALLOW_RUN_AS_ROOT=1
+ENV OMPI_ALLOW_RUN_AS_ROOT_CONFIRM=1
+
+# Create a working directory
+WORKDIR /workdir
+
+# command prompt
+CMD ["/bin/bash"]

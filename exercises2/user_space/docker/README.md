@@ -408,7 +408,9 @@ RUN pip3 install -r ./fedml/requirements.txt
 
 
 
-[镜像代理](https://taimatsu.xlog.app/china-mirror-proxy)
+[镜像代理](https://taimatsu.xlog.app/china-mirror-proxy)   
+
+
 nvcr.io     
 ```
 将 nvcr.io 替换为 ngc.nju.edu.cn 即可。

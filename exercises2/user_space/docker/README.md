@@ -398,16 +398,28 @@ hello from core 5
 
 
 ![images](add.png)
+
 ```
 ADD ./devops/requirements.txt ./fedml/requirements.txt
 RUN pip3 install -r ./fedml/requirements.txt
 ```
 
-#镜像代理
+#  镜像代理
+
+
 
 [镜像代理](https://taimatsu.xlog.app/china-mirror-proxy)
+nvcr.io     
+```
+将 nvcr.io 替换为 ngc.nju.edu.cn 即可。
 
-+ Google Container Registry#
+docker pull nvcr.io/nvidia/pytorch:21.12-py3
+=>
+docker pull ngc.nju.edu.cn/nvidia/pytorch:21.12-py3
+```
+
+
++ Google Container Registry 
 ```
 
 gcr.io#
@@ -417,6 +429,7 @@ docker pull gcr.io/username/image:tag
 =>
 docker pull gcr.dockerproxy.com/username/image:tag
 ```
+
 + k8s.gcr.io#
 
 ```
@@ -428,7 +441,7 @@ docker pull k8s.dockerproxy.com/username/image:tag
 GitHub Container Registry#
 ```
 
-+ ghcr.io#    
++ ghcr.io     
 ```
 将 ghcr.io 替换为 ghcr.dockerproxy.com 即可。
 
@@ -437,7 +450,7 @@ docker pull ghcr.io/github/super-linter:latest
 docker pull ghcr.dockerproxy.com/github/super-linter:latest
 ```
 
-+  Microsoft Artifact Registry#   
++  Microsoft Artifact Registry    
 ```
 mcr.microsoft.com#
 
@@ -447,7 +460,8 @@ docker pull mcr.microsoft.com/azure-cognitive-services/diagnostic:latest
 =>
 docker pull mcr.dockerproxy.com/azure-cognitive-services/diagnostic:latest
 ```
-+ Quay Container Registry#    
++ Quay Container Registry     
+
 ```
 quay.io#
 将 quay.io 替换为 quay.dockerproxy.com 即可。

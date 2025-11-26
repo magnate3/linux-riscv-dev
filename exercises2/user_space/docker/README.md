@@ -393,3 +393,57 @@ hello from core 3
 hello from core 4
 hello from core 5
 ```
+
+# add 指令
+
+
+[images](add.png)
+```
+ADD ./devops/requirements.txt ./fedml/requirements.txt
+RUN pip3 install -r ./fedml/requirements.txt
+```
+
+#镜像代理
+
+[镜像代理](https://taimatsu.xlog.app/china-mirror-proxy)
+```
+Google Container Registry#
+gcr.io#
+将 gcr.io 替换为 gcr.dockerproxy.com 即可。
+
+docker pull gcr.io/username/image:tag
+=>
+docker pull gcr.dockerproxy.com/username/image:tag
+
+k8s.gcr.io#
+
+将 k8s.gcr.io 替换为 k8s.dockerproxy.com 即可。
+
+docker pull k8s.gcr.io/username/image:tag
+=>
+docker pull k8s.dockerproxy.com/username/image:tag
+GitHub Container Registry#
+
+ghcr.io#
+将 ghcr.io 替换为 ghcr.dockerproxy.com 即可。
+
+docker pull ghcr.io/github/super-linter:latest
+=>
+docker pull ghcr.dockerproxy.com/github/super-linter:latest
+Microsoft Artifact Registry#
+
+mcr.microsoft.com#
+将 mcr.microsoft.com 替换为 mcr.dockerproxy.com 即可。
+
+docker pull mcr.microsoft.com/azure-cognitive-services/diagnostic:latest
+=>
+docker pull mcr.dockerproxy.com/azure-cognitive-services/diagnostic:latest
+
+Quay Container Registry#
+quay.io#
+将 quay.io 替换为 quay.dockerproxy.com 即可。
+
+docker pull quay.io/prometheus/prometheus:latest
+=>
+docker pull quay.dockerproxy.com/prometheus/prometheus:latest
+```

@@ -9,7 +9,7 @@ lspci | grep -i nvidia
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
-#  NVIDIA Container Toolkit
+#  NVIDIA Container Toolkit(docker支持gpu)
 
 Configure the repository:   
 ```
@@ -84,6 +84,15 @@ Failed, NCCL error one_device_per_thread.cu:17 'invalid usage (run with NCCL_DEB
 Failed, NCCL error one_device_per_thread.cu:17 'invalid usage (run with NCCL_DEBUG=WARN for details)'
 ```
 nranks太多   
+
+
+```
+ root@ubuntu/pytorch# ./one_device_per_thread  --nranks 1
+Local rank size: 1
+NCCL version 2.22.3+cuda12.5
+GPU:0 data: 0.000000.
+Finished successfully.
+```
  
 ```
 root@ubuntu:/pytorch# g++ --version
@@ -175,13 +184,6 @@ GLIBC_PRIVATE
 ```
 
 
-```
- root@ubuntu/pytorch# ./one_device_per_thread  --nranks 1
-Local rank size: 1
-NCCL version 2.22.3+cuda12.5
-GPU:0 data: 0.000000.
-Finished successfully.
-```
 
 > ##  libnccl
  

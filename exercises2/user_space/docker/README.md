@@ -430,6 +430,10 @@ docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/nvcr.io/nvidia/py
 docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/nvcr.io/nvidia/pytorch:24.07-py3  docker.io/nvcr.io/nvidia/pytorch:24.07-py3
 ```
 
+```
+docker run  --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  -v /pytorch:/pytorch -u 0 --name=nccl docker.io/nvcr.io/nvidia/pytorch:24.07-py3 bash
+```
+
 + Google Container Registry 
 ```
 

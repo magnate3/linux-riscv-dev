@@ -420,6 +420,15 @@ docker pull nvcr.io/nvidia/pytorch:21.12-py3
 docker pull ngc.nju.edu.cn/nvidia/pytorch:21.12-py3
 ```
 
+```
+ docker pull nvcr.io/nvidia/pytorch:24.07-py3
+ docker pull ngc.nju.edu.cn/nvidia/pytorch:24.07-py3
+```
+ 
+```
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/nvcr.io/nvidia/pytorch:24.07-py3
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/nvcr.io/nvidia/pytorch:24.07-py3  docker.io/nvcr.io/nvidia/pytorch:24.07-py3
+```
 
 + Google Container Registry 
 ```

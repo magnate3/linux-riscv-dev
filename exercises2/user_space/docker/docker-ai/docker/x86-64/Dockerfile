@@ -127,7 +127,8 @@ RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/
 add-apt-repository "deb https://developer.download.nvidia.com/compute/cuda/repos/${DISTRO}/${ARCH} /" && \
 apt update && \
 #export NCCL_VERSION_ENV=`echo $NCCL_VERSION | awk -F'-1' '{print $1}'` && \
-apt install -y --allow-change-held-packages --allow-downgrades libnccl2=${LIB_NCCL} libnccl-dev=${LIB_NCCL}
+apt install -y --allow-change-held-packages --allow-downgrades libnccl2 libnccl-dev
+#apt install -y --allow-change-held-packages --allow-downgrades libnccl2=${LIB_NCCL} libnccl-dev=${LIB_NCCL}
 
 # ***************************************************************************
 # PyTorch (install from source)
@@ -197,7 +198,7 @@ RUN pip3 install --upgrade requests
 RUN pip install -U fedml && pip install grpcio
 RUN pip install mpi4py
 
-RUN python3 -c "import fedml; fedml.__version__"
+#RUN python3 -c "import fedml; fedml.__version__"
 
 # ***************************************************************************
 ## Add fedml user

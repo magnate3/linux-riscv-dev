@@ -183,9 +183,60 @@ GLIBC_2.35
 GLIBC_PRIVATE
 ```
 
+> ## gdb
+
+```
+root@ubuntu:/pytorch# export dbg=1
+root@ubuntu:/pytorch# make
+```
+
+> ## mpi
+
+
+```
+root@ubuntu:/pytorch# vim Makefile 
+root@ubuntu:/pytorch# make mpi
+/usr/local/cuda/bin/nvcc -ccbin g++ -m64 -I./ -I/usr/local/mpi/include/ -gencode arch=compute_50,code=sm_50 -gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_75,code=compute_75 -o nccl_with_mpi nccl_with_mpi.cu -lnccl -lmpi -L/usr/local/mpi/lib/
+/usr/local/cuda/bin/nvcc -ccbin g++ -m64 -I./ -I/usr/local/mpi/include/ -gencode arch=compute_50,code=sm_50 -gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_75,code=compute_75 -o allreduce_2comms example_allreduce_2comms.cu -lnccl -lmpi -L/usr/local/mpi/lib/
+root@ubuntu:/pytorch# 
+root@ubuntu:/pytorch# mpirun -np 1 --allow-run-as-root   allreduce_2comms 
+The local rank is: 0
+[MPI Rank 0] Success 
+[Rank MPI 0] Success 
+```
+
+```
+root@ubuntu:/pytorch# export NCCL_DEBUG=INFO
+root@ubuntu:/pytorch# mpirun -np 2 --allow-run-as-root   allreduce_2comms 
+The local rank is: 0
+The local rank is: 1
+ubuntu:1482:1482 [0] NCCL INFO Bootstrap : Using eno1:172.22.116.89<0>
+Failed: Cuda error example_allreduce_2comms.cu:107 'invalid device ordinal'
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+ubuntu:1482:1482 [0] NCCL INFO cudaDriverVersion 12080
+ubuntu:1482:1482 [0] NCCL INFO NCCL version 2.22.3+cuda12.5
+ubuntu:1482:1482 [0] NCCL INFO Plugin Path : /opt/hpcx/nccl_rdma_sharp_plugin/lib/libnccl-net.so
+ubuntu:1482:1482 [0] NCCL INFO P2P plugin IBext_v8
+ubuntu:1482:1482 [0] NCCL INFO NET/IB : No device found.
+ubuntu:1482:1482 [0] NCCL INFO NET/IB : No device found.
+ubuntu:1482:1482 [0] NCCL INFO NET/Socket : Using [0]eno1:172.22.116.89<0> [1]ztyou3pbk2:192.168.193.155<0>
+ubuntu:1482:1482 [0] NCCL INFO Using network Socket
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[34415,1],1]
+  Exit code:    1
+--------------------------------------------------------------------------
+```
 
 
 > ##  libnccl
+ 
+[NCCL Release](https://docs.nvidia.com/deeplearning/nccl/archives/nccl_2234/release-notes/rel_2-22-3.html) 
  
 ```
 ./one_device_per_thread 

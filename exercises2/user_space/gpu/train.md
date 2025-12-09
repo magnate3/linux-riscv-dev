@@ -1,7 +1,7 @@
 # 数据集
 
-[dataset of the url  with the ssl](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz) 
-[dataset of the url without the ssl](http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz) 
+[dataset of the url  with the ssl](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz)     
+[dataset of the url without the ssl](http://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz)    
 
 ```
 root@ubuntu:/pytorch# ls cifar-10-batches-py/

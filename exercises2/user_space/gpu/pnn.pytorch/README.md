@@ -112,7 +112,7 @@ Best Accuracy: 56.49  (epoch 125)
 ls results/2025-12-09_07-12-35/Save/model_epoch_125_acc_56.49.pth
 ```
 
-
++ test   
 ```
  python3 test1.py --net-type 'lenet' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10'  --dataroot ../ResNet18_Cifar10_95.46/dataset/   --resume results/2025-12-09_07-12-35/Save/model_epoch_125_acc_56.49.pth
 

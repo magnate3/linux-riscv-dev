@@ -1,3 +1,9 @@
+
+[Part 1. Single GPU Example (this article) — Training ResNet34 on CIFAR10](https://medium.com/polo-club-of-data-science/multi-gpu-training-in-pytorch-with-code-part-1-single-gpu-example-d682c15217a8)   
+[Part2. Data Parallel — Training code & issue between DP and NVLink](https://medium.com/polo-club-of-data-science/multi-gpu-training-in-pytorch-with-code-part-1-single-gpu-example-d682c15217a8)   
+[Part3. Distributed Data Parallel — Training code & Analysis](https://medium.com/polo-club-of-data-science/multi-gpu-training-in-pytorch-with-code-part-1-single-gpu-example-d682c15217a8)   
+[Part4. Torchrun — Fault tolerance](https://medium.com/polo-club-of-data-science/multi-gpu-training-in-pytorch-with-code-part-1-single-gpu-example-d682c15217a8)   
+
 # 数据集
 
 [dataset of the url  with the ssl](https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz)     

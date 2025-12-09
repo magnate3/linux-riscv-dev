@@ -79,6 +79,61 @@ Experiments 6 and 7 are the closest to what was described in the paper.
 
 `python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10' --nfilters 128 --batch-size 16 --learning-rate 1e-3 --first_filter_size 3 --filter_size 0 --nmasks 64 --no-unique_masks --train_masks`
 
+#    lenet
+
+```
+python3 main.py --net-type 'lenet' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10'  --dataroot ../ResNet18_Cifar10_95.46/dataset/
+```
+
+```
+CIFAR-10:
+
+python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 450
+
+MNIST:
+
+python main.py --net-type 'lenet' --dataset-test 'MNIST' --dataset-train 'MNIST'
+
+
+transfer CIFAR-10 on CIFAR-100:
+python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR100' --dataset-train 'CIFAR100' --transfer True --resume '/home/eli/Workspace/pnn-results/CIFAR-10/model_epoch_268_acc_86.40.pth' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 25
+
+
+transfer EMNIST on MNIST:
+python main.py --net-type 'lenet' --dataset-test 'MNIST' --dataset-train 'MNIST' --transfer True --resume '/home/eli/Workspace/pnn-results/EMINST/model_epoch_30_acc_85.39.pth' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 25
+
+transfer CIFAR-100 on CIFAR-10:
+python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10' --transfer True --resume '/home/eli/Workspace/pnn-results/CIFAR-100/model_epoch_58_acc_55.00.pth' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 25
+```
+
+
+```
+Best Accuracy: 56.49  (epoch 125)
+ls results/2025-12-09_07-12-35/Save/model_epoch_125_acc_56.49.pth
+```
+
+
+```
+ python3 test1.py --net-type 'lenet' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10'  --dataroot ../ResNet18_Cifar10_95.46/dataset/   --resume results/2025-12-09_07-12-35/Save/model_epoch_125_acc_56.49.pth
+
+
+****** Creating lenet model ******
+
+
+
+
+Loading model from saved checkpoint at results/2025-12-09_07-12-35/Save/model_epoch_125_acc_56.49.pth
+
+
+
+
+****** Preparing CIFAR10 dataset *******
+
+
+Files already downloaded and verified
+Files already downloaded and verified
+```
+
 ## Weakness of reasoning:
 Section 3.3: "given the known input x and convolution transformation matrix A, we can always solve for the matching noise perturbation matrix N". 
 

@@ -11,6 +11,11 @@ from torch import nn
 import models
 import torch.optim as optim
 
+import matplotlib.pyplot as plt
+NORMALIZATION_MEAN = [0.4914, 0.4822, 0.4465]
+NORMALIZATION_STD = [0.2470, 0.2435, 0.2616]
+classes = ('plane', 'car', 'bird', 'cat',
+          'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 result_path = "results/"
 result_path = os.path.join(result_path, datetime.now().strftime('%Y-%m-%d_%H-%M-%S/'))
 
@@ -236,125 +241,101 @@ class Model:
         return np.mean(losses), np.mean(accuracies)
 
 print('\n\n****** Creating {} model ******\n\n'.format(args.net_type))
+if args.resume is None or False ==  os.path.exists(args.resume):
+    print('\n\nLoading model from saved checkpoint at {} is not exist \n\n'.format(args.resume))
+    exit(0)
+print('\n\nLoading model from saved checkpoint at {}\n\n'.format(args.resume))
 setup = Model(args)
 print('\n\n****** Preparing {} dataset *******\n\n'.format(args.dataset_train))
 dataloader = Dataloader(args, setup.input_size)
-loader_train, loader_test = dataloader.create()
+train_loader, test_loader = dataloader.create()
+setup.model = torch.load(args.resume)
+model = setup.model
+batch_size = args.batch_size
+#model.load_state_dict(torch.load(args.resume))
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = model.to(device)
 
-# initialize model:
-if args.resume is None:
-    model = setup.model
-    model.apply(utils.weights_init)
-    train = setup.train
-    test = setup.test
-    init_epoch = 0
-    acc_best = 0
-    best_epoch = 0
-    if os.path.isdir(args.save) == False:
-        os.makedirs(args.save)
-else:
-    print('\n\nLoading model from saved checkpoint at {}\n\n'.format(args.resume))
-    #self.model.load_state_dict(checkpoints.load(checkpoints.latest('resume')))
-    setup.model = torch.load(args.resume)
-    model = setup.model
-    train = setup.train
-    test = setup.test
-    te_loss, te_acc = test(loader_test)
-    init_epoch = int(args.resume.split('_')[3])  # extract N from 'results/xxx_xxx/Save/model_epoch_N_acc_nn.nn.pth'
-    print('\n\nRestored Model Accuracy (epoch {:d}): {:.2f}\n\n'.format(init_epoch, te_acc))
-    acc_best = te_acc
-    best_epoch = init_epoch
-    args.save = '/'.join(args.resume.split('/')[:-1])
-    init_epoch += 1
-
-
-print('\n\n****** Model Graph ******\n\n')
-for arg in vars(model):
-    print(arg, getattr(model, arg))
-
-print('\n\nModel parameters:\n')
-model_total = 0
-for name, param in model.named_parameters():
-    size = param.numel() / 1000000.
-    print('{}  {}  requires_grad: {}  size: {:.2f}M'.format(name, list(param.size()), param.requires_grad, param.numel()/1000000.))
-    model_total += size
-
-print('\n\nNoise masks:\n')
-masks_total = 0
-for name, param in [(name, param) for name, param in model.named_parameters() if 'noise' in name]:
-    size = param.numel() / 1000000.
-    print('{:>22}  size: {:.2f}M'.format(str(list(param.size())), param.numel()/1000000.))
-    masks_total += size
-
-print('\n\nModel size: {:.2f}M regular parameters, {:.2f}M noise mask values\n\n'.format(model_total - masks_total, masks_total))
-"""
-print('\n\n******************** Model parameters:\n')
-for param in model.parameters():
-    #if param.requires_grad:
-    print('{} {}'.format(list(param.size()), param.requires_grad))
+total_sample = 0
+right_sample = 0
+model.eval()  # 验证模型
+for data, target in test_loader:
+    data = data.to(device)
+    target = target.to(device)
+    # forward pass: compute predicted outputs by passing inputs to the model
+    output = model(data).to(device)
+    # convert output probabilities to predicted class(将输出概率转换为预测类)
+    _, pred = torch.max(output, 1)    
+    # compare predictions to true label(将预测与真实标签进行比较)
+    correct_tensor = pred.eq(target.data.view_as(pred))
+    # correct = np.squeeze(correct_tensor.to(device).numpy())
+    total_sample += batch_size
+    for i in correct_tensor:
+        if i:
+            right_sample += 1
+print("Accuracy:",100*right_sample/total_sample,"%")
+def show_train_data(train_loader):
+    # Get a batch from the training data loader
+    images, labels = next(iter(train_loader))
     
-print('\n\n****** Model state_dict() ******\n\n')
-for name, param in model.state_dict().items():
-    print('{}  {}  {}'.format(name, list(param.size()), param.requires_grad))
-"""
-
-print('\n\n****** Model Configuration ******\n\n')
-for arg in vars(args):
-    print(arg, getattr(args, arg))
-
-if args.net_type != 'resnet18' and args.net_type != 'noiseresnet18' and (args.first_filter_size == 0 or args.filter_size == 0):
-    if args.train_masks:
-        msg = '(also training noise masks values)'
-    else:
-        msg = '(noise masks are fixed)'
-else:
-    msg = ''
-
-print('\n\nTraining {} model {}\n\n'.format(args.net_type, msg))
-
-accuracies = []
-
-for epoch in range(init_epoch, args.nepochs, 1):
-
-    tr_loss, tr_acc = train(epoch, loader_train)
-    te_loss, te_acc = test(loader_test)
-
-    accuracies.append(te_acc)
-
-    if te_acc > acc_best and epoch > 10:
-        print('{}  Epoch {:d}/{:d}  Train: Loss {:.2f} Accuracy {:.2f} Test: Loss {:.2f} Accuracy {:.2f} (best result, saving to {})'.format(
-                        str(datetime.now())[:-7], epoch, args.nepochs, tr_loss, tr_acc, te_loss, te_acc, args.save))
-        model_best = True
-        acc_best = te_acc
-        best_epoch = epoch
-        torch.save(model, args.save + '/model_epoch_{:d}_acc_{:.2f}.pth'.format(epoch, te_acc))
-    else:
-        if epoch == 0:
-            print('\n')
-        print('{}  Epoch {:d}/{:d}  Train: Loss {:.2f} Accuracy {:.2f} Test: Loss {:.2f} Accuracy {:.2f}'.format(
-                                str(datetime.now())[:-7], epoch, args.nepochs, tr_loss, tr_acc, te_loss, te_acc))
-
-print('\n\nBest Accuracy: {:.2f}  (epoch {:d})\n\n'.format(acc_best, best_epoch))
-
-print('\n\nTest Accuracies:\n\n')
-
-for v in accuracies:
-    print('{:.2f}'.format(v)+', ', end='')
-print('\n\n')
-
-plot = False
-if plot:
-    import matplotlib.pyplot as plt
-    plt.plot(range(args.nepochs), accuracies, 'black', label='model_1')
-    plt.plot(range(args.nepochs), accuracies, 'red', label='model_2')
-    plt.plot(range(args.nepochs), accuracies, 'blue', label='model_3')
-    plt.title('Test Accuracy (CIFAR-10)', fontsize=18)
-    plt.xlabel('Epochs', fontsize=16)
-    plt.ylabel('%', fontsize=16)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.legend(loc='center right', prop={'size': 14})
+    # Reshape the images back to 3x32x32 for plotting and transpose to 32x32x3 for matplotlib
+    images = images.permute(0, 2, 3, 1)
+    
+    # Display a few images
+    fig, axes = plt.subplots(1, 5, figsize=(10, 3))
+    for i in range(5):
+        # Denormalize the image for display
+        img = images[i].numpy() * np.array(NORMALIZATION_STD) + np.array(NORMALIZATION_MEAN)
+        img = np.clip(img, 0, 1)  # Clip values to be within [0, 1] after denormalization
+        axes[i].imshow(img)
+        axes[i].set_title(f"Class: {classes[labels[i]]}")
+        axes[i].axis('off')
     #plt.show()
+    plt.savefig("train.png")
+# Visualize predictions
+def visualize_predictions(model, test_loader, classes, device, num_images=8):
+    model.eval()
+    images_shown = 0
+
+    fig, axes = plt.subplots(2, 4, figsize=(12, 6))
+
+    with torch.no_grad():
+        for inputs, targets in test_loader:
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model(inputs)
+            _, predicted = outputs.max(1)
+
+            for i in range(inputs.size(0)):
+                if images_shown >= num_images:
+                    break
+
+                # Denormalize image for display
+                img = inputs[i].cpu()
+                img = img * torch.tensor([0.2023, 0.1994, 0.2010]).view(3, 1, 1)
+                img = img + torch.tensor([0.4914, 0.4822, 0.4465]).view(3, 1, 1)
+                img = torch.clamp(img, 0, 1)
+
+                ax = axes[images_shown//4, images_shown%4]
+                ax.imshow(img.permute(1, 2, 0))
+
+                true_label = classes[targets[i]]
+                pred_label = classes[predicted[i]]
+                color = 'green' if targets[i] == predicted[i] else 'red'
+
+                ax.set_title(f'True: {true_label}\nPred: {pred_label}', color=color)
+                ax.axis('off')
+
+                images_shown += 1
+
+            if images_shown >= num_images:
+                break
+
     plt.tight_layout()
     #plt.show()
     plt.savefig("test.png")
+show_train_data(train_loader)
+#visualize_predictions(model, test_loader, num_images=10)
+visualize_predictions(model, test_loader, classes, device)
+
+
+

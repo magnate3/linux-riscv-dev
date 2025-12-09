@@ -3,6 +3,7 @@
 ```
 nvidia-smi
 lspci | grep -i nvidia
+nvidia-smi nvlink -R
 ```
 
 ```

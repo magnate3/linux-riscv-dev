@@ -16,6 +16,7 @@ root@ubuntu:/pytorch#
 cp cifar-10-python.tar.gz  ResNet18_Cifar10_95.46/dataset/
 ```
 
+#  ResNet18_Cifar10
 
 ```
 /pytorch/ResNet18_Cifar10_95.46# python3 train.py 
@@ -47,4 +48,38 @@ Traceback (most recent call last):
   File "/usr/local/lib/python3.8/dist-packages/torch/serialization.py", line 287, in __init__
     super(_open_zipfile_writer_file, self).__init__(torch._C.PyTorchFileWriter(str(name)))
 RuntimeError: Parent directory checkpoint does not exist.
+```
+
+
+#    lenet
+
+```
+python3 main.py --net-type 'lenet' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10'  --dataroot ../ResNet18_Cifar10_95.46/dataset/
+```
+
+```
+CIFAR-10:
+
+python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 450
+
+MNIST:
+
+python main.py --net-type 'lenet' --dataset-test 'MNIST' --dataset-train 'MNIST'
+
+
+transfer CIFAR-10 on CIFAR-100:
+python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR100' --dataset-train 'CIFAR100' --transfer True --resume '/home/eli/Workspace/pnn-results/CIFAR-10/model_epoch_268_acc_86.40.pth' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 25
+
+
+transfer EMNIST on MNIST:
+python main.py --net-type 'lenet' --dataset-test 'MNIST' --dataset-train 'MNIST' --transfer True --resume '/home/eli/Workspace/pnn-results/EMINST/model_epoch_30_acc_85.39.pth' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 25
+
+transfer CIFAR-100 on CIFAR-10:
+python main.py --net-type 'perturb_resnet18' --dataset-test 'CIFAR10' --dataset-train 'CIFAR10' --transfer True --resume '/home/eli/Workspace/pnn-results/CIFAR-100/model_epoch_58_acc_55.00.pth' --nfilters 256 --batch-size 20 --learning-rate 1e-4 --first_filter_size 0 --filter_size 0 --nmasks 1 --level 0.1 --optim-method Adam --nepochs 25
+```
+
+
+```
+Best Accuracy: 56.49  (epoch 125)
+ls results/2025-12-09_07-12-35/Save/model_epoch_125_acc_56.49.pth
 ```

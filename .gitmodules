@@ -37,3 +37,6 @@
 [submodule "nccl/Minimal-ZeRO-2"]
 	path = nccl/Minimal-ZeRO-2
 	url = https://github.com/SwayamInSync/Minimal-ZeRO-2.git
+[submodule "nccl/llama3.cuda"]
+	path = nccl/llama3.cuda
+	url = https://github.com/abideenml/llama3.cuda.git

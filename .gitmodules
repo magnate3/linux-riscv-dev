@@ -34,3 +34,6 @@
 [submodule "exercises2/soft-roce/rdma-ping/rdma-core-mummy"]
 	path = exercises2/soft-roce/rdma-ping/rdma-core-mummy
 	url = https://github.com/RDMA-Rust/rdma-core-mummy.git
+[submodule "nccl/Minimal-ZeRO-2"]
+	path = nccl/Minimal-ZeRO-2
+	url = https://github.com/SwayamInSync/Minimal-ZeRO-2.git

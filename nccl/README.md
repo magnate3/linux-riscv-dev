@@ -1,4 +1,18 @@
 
+# pytorch cpp
+
+[使用Cpp扩展自定义进程组后端](https://github.com/pytorch/tutorials/blob/main/intermediate_source/process_group_cpp_extension_tutorial.rst)      
+[rstorch](https://github.com/Kylejeong2/rstorch/tree/c0958b9593d23e647806cefddd7876d82b5bbe42)
+
+# cuda   
+```
+ root@ubuntu:/pytorch/cuda2/cuda/nccl# ls /usr/local/cuda/lib64/libcudart.so
+/usr/local/cuda/lib64/libcudart.so
+root@ubuntu:/pytorch/cuda2/cuda/nccl# ls /usr/local/cuda/include
+CL                           cuda_occupancy.h            curand_lognormal.h                   host_defines.h                            nvml.h
+ 
+```
+
 #  rankhasroot 
 ```
 cat rankhasroot.cu 

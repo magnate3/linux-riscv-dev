@@ -4,6 +4,31 @@
 [使用Cpp扩展自定义进程组后端](https://github.com/pytorch/tutorials/blob/main/intermediate_source/process_group_cpp_extension_tutorial.rst)      
 [rstorch](https://github.com/Kylejeong2/rstorch/tree/c0958b9593d23e647806cefddd7876d82b5bbe42)
 
+
+```
+ python3 -c 'import torch;print(torch.utils.cmake_prefix_path())' 
+root@ubuntu:/# find ./ -name torch.h
+./usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/api/include/torch/torch.h
+root@ubuntu:/# find ./ -name ProcessGroupMPI.hpp
+./usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/distributed/c10d/ProcessGroupMPI.hpp
+root@ubuntu:/# 
+```
+
+```
+
+ 
+ 
+ c++  -std=c++17 -lm -ldl dist-mnist.cpp -o dist-mnist -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC -I/usr/local/lib/python3.8/dist-packages/torch/include -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/lib/python3.8/dist-packages/torch/include/TH -I/usr/local/lib/python3.8/dist-packages/torch/include/THC -I/usr/include/python3.8 -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/distributed
+
+```
+
+```
+
+ 
+ c++  -std=c++17 -lm -ldl dist-mnist.cpp -o dist-mnist -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC -I/usr/local/lib/python3.8/dist-packages/torch/include -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/api/include  -I/usr/include/python3.8 -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/distributed
+
+```
+
 # cuda   
 ```
  root@ubuntu:/pytorch/cuda2/cuda/nccl# ls /usr/local/cuda/lib64/libcudart.so
@@ -81,4 +106,19 @@ Rank 12 is a root.
 Rank 13 is NOT a root.
 Rank 14 is NOT a root.
 Rank 15 is NOT a root.
+```
+
+
+#  learnnccl
+```
+root@ubuntu:/pytorch/cuda2/learnnccl# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./build/lib
+root@ubuntu:/pytorch/cuda2/learnnccl# make CUDA_HOME=/usr/local/cuda clean
+rm -rf build
+root@ubuntu:/pytorch/cuda2/learnnccl# make CUDA_HOME=/usr/local/cuda test 
+```
+
+```
+./build/test/all_reduce_test 10 1 
+# Using devices
+Segmentation fault (core dumped)
 ```

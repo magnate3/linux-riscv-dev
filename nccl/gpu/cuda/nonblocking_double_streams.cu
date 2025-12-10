@@ -8,6 +8,9 @@
 #include <sys/time.h>
 
 #include "comm.h"
+#include <string>
+#include <iostream>
+#include <iomanip> // Required for setfill and setw
 
 void *allReduceOps(void *args);
 
@@ -27,8 +30,16 @@ struct ThreadArgs {
         , uuid(uuid) {};
 };
 
+std::string NcclUniqueId2String(const ncclUniqueId& id) {
+  std::stringstream ss;
+  for (int i = 0; i < NCCL_UNIQUE_ID_BYTES; ++i) {
+    ss << std::hex << std::setfill('0') << std::setw(2) << static_cast<int>(id.internal[i]);
+  }
+  return ss.str();
+}
 bool cmpID(ncclUniqueId *id1, ncclUniqueId *id2)
 {
+    std::cout << "id1 " << NcclUniqueId2String(*id1) << "  id2 " << NcclUniqueId2String(*id2) << std::endl;
     if (memcmp(id1->internal, id2->internal, sizeof(id2->internal)) == 0) {
         printf("id1:%p is same with id2:%p\n", id1, id2);
         return false;

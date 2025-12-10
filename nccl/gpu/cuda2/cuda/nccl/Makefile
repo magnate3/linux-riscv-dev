@@ -231,7 +231,8 @@ endif
 
 ################################################################################
 
-all: nonblocking_double_streams node_server node_client one_device_per_thread multi_devices_per_thread alltoall_test
+all: rankhasroot
+#all: rankconfig
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -239,32 +240,9 @@ ifeq ($(SAMPLE_ENABLED),0)
 else
 	@echo "Sample is ready - all dependencies have been met"
 endif
-
-nonblocking_double_streams: nonblocking_double_streams.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-node_server: node_server.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-node_client: node_client.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-one_device_per_thread: one_device_per_thread.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-multi_devices_per_thread: multi_devices_per_thread.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-alltoall_test: alltoall.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
-
-allreduce_2comms: example_allreduce_2comms.cu
+rankhasroot: rankhasroot.cu
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(MPI_INCLUDES) $(GENCODE_FLAGS) -o $@ $+ $(MPI_LIBRARIES)
-nccl_with_mpi: nccl_with_mpi.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(MPI_INCLUDES) $(GENCODE_FLAGS) -o $@ $+ $(MPI_LIBRARIES)
-single-gpu-mutil-procs: single-gpu-mutil-procs.cu
-	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(MPI_INCLUDES) $(GENCODE_FLAGS) -o $@ $+ $(MPI_LIBRARIES)
-nccl_test: nccl_test.cu
+rankconfig: rankconfig.cu
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(MPI_INCLUDES) $(GENCODE_FLAGS) -o $@ $+ $(MPI_LIBRARIES)
 
 mpi: nccl_with_mpi allreduce_2comms  single-gpu-mutil-procs nccl_test
@@ -273,7 +251,7 @@ run:
 	./nonblocking_double_streams && ./one_device_per_thread && ./multi_devices_per_thread && ./alltoall_test
 
 clean:
-	rm -f nonblocking_double_streams node_server node_client nccl_with_mpi one_device_per_thread multi_devices_per_thread alltoall_test allreduce_2comms  single-gpu-mutil-procs nccl_test
+	rm -f rankhasroot 
 	
 clobber: clean
 

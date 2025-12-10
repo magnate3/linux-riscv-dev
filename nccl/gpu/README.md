@@ -234,6 +234,30 @@ the job to be terminated. The first process to do so was:
 --------------------------------------------------------------------------
 ```
 
+> ## nonblocking_double_streams
+```
+./nonblocking_double_streams --nranks 1
+Local rank size: 1
+GPU:0 data: 0.000000.
+GPU:0 data: 0.000000.
+All streams finished successfully.
+```
++  DEBUG   
+```
+DEBUG=1 ./nonblocking_double_streams --nranks 1
+Local rank size: 1
+Id diff internal idx_2: id1:2:d diff internal idx_3: id1:2:S
+Group: 1 GPU idx: 0. The start time: 2025-12-09 11:00:30.602
+Group: 1 GPU idx: 0. The first iter end time: 2025-12-09 11:00:30.602
+Group: 1 GPU idx: 0. The end time: 2025-12-09 11:00:30.603
+GPU:0 data: 0.000000.
+Group: 2 GPU idx: 0. The start time: 2025-12-09 11:00:30.604
+Group: 2 GPU idx: 0. The first iter end time: 2025-12-09 11:00:30.604
+Group: 2 GPU idx: 0. The end time: 2025-12-09 11:00:30.604
+GPU:0 data: 0.000000.
+All streams finished successfully.
+```
+
 
 > ##  libnccl
  

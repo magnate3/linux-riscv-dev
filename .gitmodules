@@ -40,3 +40,6 @@
 [submodule "nccl/llama3.cuda"]
 	path = nccl/llama3.cuda
 	url = https://github.com/abideenml/llama3.cuda.git
+[submodule "nccl/torch_custom_backend"]
+	path = nccl/torch_custom_backend
+	url = https://github.com/arjundevraj/stragglar.git

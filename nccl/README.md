@@ -38,6 +38,13 @@ CL                           cuda_occupancy.h            curand_lognormal.h     
  
 ```
 
+```
+export LD_LIBRARY_PATH="/usr/local/cuda-11.6/lib64:$LD_LIBRARY_PATH"
+export PATH="/usr/local/cuda-11.6/bin:$PATH"
+ export CUDA_INCLUDE_DIRS=/usr/local/cuda-11.6/include
+  export CUDA_CUDART_LIBRARY=/usr/local/cuda-11.6/lib64  
+```
+
 #  rankhasroot 
 ```
 cat rankhasroot.cu 

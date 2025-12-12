@@ -132,6 +132,7 @@ Segmentation fault (core dumped)
 
 # ring
 
+[NCCL源码图解之基本通信算子](https://mubai.tech/nccl_primitives_ops)   
 
 构建prims对象
 
@@ -182,4 +183,17 @@ chunk = modRanks(ringIx + 1);
 offset = calcOffset(chunk);
 nelem = min(realChunkSize, size-offset);
 prims.directRecv(offset, nelem);
+```
+
+
+#  netTransport
+
+
+```
+struct ncclTransport netTransport = {
+  "NET",
+  canConnect,
+  { sendSetup, sendConnect, sendFree, proxySharedInit, sendProxySetup, sendProxyConnect, sendProxyFree, sendProxyProgress, sendProxyRegBuffer, sendProxyDeregBuffer },
+  { recvSetup, recvConnect, recvFree, proxySharedInit, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress, recvProxyRegBuffer, recvProxyDeregBuffer }
+};
 ```

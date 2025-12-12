@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cmath>
 #include <iomanip>
+#include "nccl_dbg.h"
 
 GPUWorkerManager::GPUWorkerManager(int nodeRank, int nodeCount, size_t dataSize, int iterations)
     : nodeRank(nodeRank), nodeCount(nodeCount), dataSize(dataSize), iterations(iterations), initError(false) {
@@ -70,20 +71,6 @@ void GPUWorkerManager::getPerformanceStats(double& avgTime, double& avgBandwidth
   }
 }
 
-void runring(int tid, int nthreads, struct ncclComm *comm)
-{
-     struct ncclChannel * channel  = comm->channels + tid;
-     ncclRing *ring = &channel->ring;
-     const int nranks = comm->nRanks;
-     int ringIx = ring->index;
-     printf("runRing: TID %d: RingIx %d, nranks %d\n", tid, ringIx, nranks);
-}
-void runTreeUpDown(int tid, int nthreads, struct ncclComm *comm)
-{
-     struct ncclChannel * channel  = comm->channels + tid;
-     ncclTree *tree = &channel->tree;
-}
-
 void GPUWorkerManager::gpuWorkerThread(GPUContext& ctx, Barrier& initBarrier, Barrier& syncBarrier,
                                        std::atomic<bool>& initError, int iterations, const ncclUniqueId& ncclId) {
   try {
@@ -108,7 +95,10 @@ void GPUWorkerManager::gpuWorkerThread(GPUContext& ctx, Barrier& initBarrier, Ba
     Logger::log("Node", ctx.nodeRank, "GPU", ctx.deviceId, "initialized NCCL communicator with global rank",
                 ctx.globalRank);
 
+    selectTransport(ctx.comm,0,0,0);
     runring(0,2,ctx.comm); 
+    ncclProxy(ctx.comm,5);
+    ncclTransportTest(ctx.comm);
     NCCLCOMM_DUMP(ctx.comm);
 
     syncBarrier.wait();

@@ -7,7 +7,7 @@ CFLAGS := -g -I$(NCCL_DIR)/build/include  -I$(NCCL_DIR)/fake_cuda/include  -I$(N
 TARGETS := main
 
 # Source files
-SRCS := gpu_worker.cpp    tcp_socket.cpp  main.cpp
+SRCS := nccl_dbg.cpp gpu_worker.cpp    tcp_socket.cpp   main.cpp
 
 # Object files
 OBJS := $(SRCS:.cpp=.o)

@@ -6,7 +6,7 @@
 #include <thread>
 #include <vector>
 #include "utils.h"
-#include "comm.h"
+#include "nccl_dbg.h"
 
 #define NCCLCOMM_DUMP(comm)                         \
     do {                                            \

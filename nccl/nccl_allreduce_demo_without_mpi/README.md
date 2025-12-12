@@ -21,6 +21,8 @@ cmake --build .
 ./nccl_multi_node_demo --rank 1 --nproc 2 --master [master_node_IP] --port [communication_port] --size [data_size]
 ```
 
+
+
 ## Results
 
 ### Master Node Output
@@ -30,3 +32,11 @@ cmake --build .
 ### Worker Node Output
 
 ![Worker Node Results](https://github.com/whitelok/nccl_allreduce_demo_without_mpi/blob/master/imgs/worker.png?raw=true "Worker Node Results")
+
+
+## my
+
+```
+./main --rank 0 --nproc 2 --port 3333 --size 256
+./main  --rank 1 --nproc 2 --master  172.20.0.20 --port 3333 --size 256
+```

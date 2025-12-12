@@ -129,3 +129,57 @@ root@ubuntu:/pytorch/cuda2/learnnccl# make CUDA_HOME=/usr/local/cuda test
 # Using devices
 Segmentation fault (core dumped)
 ```
+
+# ring
+
+
+构建prims对象
+
+```cpp
+__device__ Primitives(
+    const int tid, const int nthreads, int const *recvPeers, int const *sendPeers,
+    void const *inputBuf, void *outputBuf, uint64_t redOpArg, int group=0
+):
+
+Primitives<T, RedOp, FanSymmetric<1>, 1, Proto, 0> prims
+      (tid, nthreads, &ring->prev, &ring->next, args->sendbuff, args->recvbuff, args->redOpArg);
+```
+
+几步走
+
+```cpp
+// step 0: push data to next GPU
+chunk = modRanks(ringIx + nranks-1);
+offset = calcOffset(chunk);
+nelem = min(realChunkSize, size-offset);
+prims.send(offset, nelem);
+
+// k-2 steps: reduce and copy to next GPU
+for (int j=2; j<nranks; ++j) {
+  chunk = modRanks(ringIx + nranks-j);
+  offset = calcOffset(chunk);
+  nelem = min(realChunkSize, size-offset);
+  prims.recvReduceSend(offset, nelem);
+}
+
+// step k-1: reduce this buffer and data, which will produce the final
+// result that we store in this data and push to the next GPU
+chunk = ringIx + 0;
+offset = calcOffset(chunk);
+nelem = min(realChunkSize, size-offset);
+prims.directRecvReduceCopySend(offset, offset, offset, nelem, /*postOp=*/true);
+
+// k-2 steps: copy to next GPU
+for (int j=1; j<nranks-1; ++j) {
+  chunk = modRanks(ringIx + nranks-j);
+  offset = calcOffset(chunk);
+  nelem = min(realChunkSize, size-offset);
+  prims.directRecvCopySend(offset, offset, nelem);
+}
+
+// Make final copy from buffer to dest.
+chunk = modRanks(ringIx + 1);
+offset = calcOffset(chunk);
+nelem = min(realChunkSize, size-offset);
+prims.directRecv(offset, nelem);
+```

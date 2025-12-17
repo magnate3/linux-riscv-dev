@@ -16,3 +16,9 @@ g++  -o main c10d/ProcessGroup.o c10d/NCCLUtils.o c10d/Utils.o c10d/Store.o c10d
 root@6bc5e2b9e885:/workspace/dist-opt# ./main 
 root@6bc5e2b9e885:/workspace/dist-opt# 
 ```
+
+
+```
+ProcessGroupNCCL pg(store, rank, size);
+std::shared_ptr<WorkNCCL> work = pg.allreduce(tensors);
+```

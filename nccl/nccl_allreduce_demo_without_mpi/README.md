@@ -284,3 +284,15 @@ Thread 7 "main" hit Breakpoint 8, ncclGroupEndInternal (simInfo=0x0) at group.cc
   CUCHECKGOTO(cuLaunchKernel(fn, grid.x, grid.y, grid.z, block.x, block.y, block.z, smem, launchStream, nullptr, extra), ret, do_return);
   CUCHECKGOTO(cuLaunchKernelEx(&launchConfig, fn, nullptr, extra), ret, do_return);
 ```
+
+#  connFifo   
+
+```
+__device__ __forceinline__ void loadSendConn(ncclDevChannelPeer *peer, int connIndex, uint32_t direct, int ipcRegFlag, int netRegFlag) {
+    conn = &peer->send[connIndex];
+    step = conn->step;
+    step = roundUp(step, SlicePerChunk*StepPerSlice);
+
+    connFifo = conn->connFifo;
+    if (connFifo != nullptr) flags |= ConnFifoEnabled;
+```

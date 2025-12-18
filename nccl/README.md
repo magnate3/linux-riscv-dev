@@ -197,3 +197,147 @@ struct ncclTransport netTransport = {
   { recvSetup, recvConnect, recvFree, proxySharedInit, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress, recvProxyRegBuffer, recvProxyDeregBuffer }
 };
 ```
+
+#    Async TP
++ Async-TP算法核心在于拆散通信操作，人为创造通信与计算的并行空间。
+与Megatron的SP+TP的组合相比：将allgather\reduce_scatter通信拆分为局部的send\recv，并手动做reduce(累加)。      
++ P2P的内存拷贝尽量不用SM，改用CE（Copy Engines）。方案的核心在于：不再下发send/recv kernels改用tensor.to(device)的D2D拷贝    
+```
+Asynchronous Tensor Parallelism (Async TP) in CUDA utilizes techniques to overlap computation (specifically MatMul operations) with communication (NCCL send and recv primitives) to improve model training performance. 
+```
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    用户代码                               │
+└──────────────────────────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │    ncclGroupStart()           │
+        └───────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │  ncclAllReduce(...)           │ ──→ 添加CollTask
+        │  ncclSend(...)                │ ──→ 添加P2pTask
+        │  ncclRecv(...)                │ ──→ 添加P2pTask
+        │  ncclAllGather(...)           │ ──→ 添加CollTask
+        └───────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │    ncclGroupEnd()             │
+        └───────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│              Kernel Planner处理                          │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  1. 任务排序 (按大小降序)                               │
+│     CollTaskQueue: [Task1(10GB), Task2(1GB), ...]       │
+│                                                          │
+│  2. 通道分配                                            │
+│     Task1 → Channels [0,1,2,3]                          │
+│     Task2 → Channels [0,1]                              │
+│                                                          │
+│  3. 算法/协议选择                                       │
+│     Task1: Ring + Simple                                │
+│     Task2: Tree + LL                                    │
+│                                                          │
+│  4. 构建Work元素                                        │
+│     ┌──────────────┐  ┌──────────────┐                 │
+│     │ WorkColl     │  │ WorkP2p      │                 │
+│     │ - func       │  │ - sendRank   │                 │
+│     │ - sendbuff   │  │ - recvRank   │                 │
+│     │ - recvbuff   │  │ - buff       │                 │
+│     │ - count      │  │ - count      │                 │
+│     └──────────────┘  └──────────────┘                 │
+│                                                          │
+│  5. 构建WorkBatch                                       │
+│     Batch包含多个Work元素                               │
+│                                                          │
+│  6. 生成KernelPlan                                      │
+│     ┌────────────────────────────────────┐             │
+│     │ KernelPlan                          │             │
+│     │ - kernelFn                          │             │
+│     │ - kernelArgs                        │             │
+│     │ - channelMask                       │             │
+│     │ - workQueue                         │             │
+│     │ - proxyOpQueue                      │             │
+│     └────────────────────────────────────┘             │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│              Enqueue & Launch                            │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  1. 分配WorkFifo空间                                    │
+│     workFifoBuf[workFifoProduced]                       │
+│                                                          │
+│  2. 拷贝Work到Device                                    │
+│     cudaMemcpyAsync(workFifoBuf, workBatch, ...)        │
+│                                                          │
+│  3. 启动CUDA Kernel                                     │
+│     ┌────────────────────────────────────┐             │
+│     │ ncclDevKernel<<<blocks, threads>>> │             │
+│     │   (kernelArgs)                      │             │
+│     └────────────────────────────────────┘             │
+│          ↓                                               │
+│     GPU执行work                                         │
+│                                                          │
+│  4. 唤醒Proxy线程                                       │
+│     proxyQueue.enqueue(proxyOps)                        │
+│          ↓                                               │
+│     Proxy处理网络通信                                   │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │    等待完成                    │
+        │  cudaStreamSynchronize()       │
+        └───────────────────────────────┘
+```
+
+```
+import torch
+
+torch.distributed.init_process_group(backend='nccl')
+rank = torch.distributed.get_rank()
+
+torch.cuda.set_device(rank)
+
+torch.distributed.barrier()
+
+with torch.profiler.profile(
+    activities=[
+        torch.profiler.ProfilerActivity.CPU,
+        torch.profiler.ProfilerActivity.CUDA,
+    ]
+) as p:
+
+    if rank == 0:
+        x = torch.empty(1000000000, device='cuda')
+        x.fill_(2.3)
+        work = torch.distributed.isend(x, 1)
+        work.wait()
+    else:
+        y = torch.empty(1000000000, device='cuda')
+        work = torch.distributed.irecv(y, 0)
+        a = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        b = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        c = a @ b
+        work.wait()
+
+    if rank == 0:
+        x = torch.empty(1000000000, device='cuda')
+        x.fill_(2.3)
+        work = torch.distributed.isend(x, 1)
+        work.wait()
+    else:
+        y = torch.empty(1000000000, device='cuda')
+        work = torch.distributed.irecv(y, 0)
+        a = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        b = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        c = a @ b
+        work.wait()
+
+p.export_chrome_trace(f"rank{rank}.json")
+```

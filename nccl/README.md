@@ -1,4 +1,10 @@
 
+
+# nccl
+
+[NCCL：chunk，slice，step的关系](https://blog.csdn.net/shanleo1986/article/details/145949742)   
+
+
 # pytorch cpp
 
 [使用Cpp扩展自定义进程组后端](https://github.com/pytorch/tutorials/blob/main/intermediate_source/process_group_cpp_extension_tutorial.rst)      

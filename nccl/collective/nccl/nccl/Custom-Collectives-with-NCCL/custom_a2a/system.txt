@@ -1,0 +1,62 @@
+<system version="1">
+  <cpu host_hash="0x2a5f3abfbb5dfe3f" numaid="0" affinity="00000000,00000000,00000000,00000000,00000000,00000000,000000ff,ffffffff,ffffffff" arch="arm64">
+    <pci busid="0002:01:00.0" class="0x020000" vendor="0x17db" device="0x0501" subsystem_vendor="0x17db" subsystem_device="0x0000" link_speed="16.0 GT/s PCIe" link_width="16">
+      <nic>
+        <net name="cxi0" dev="0" speed="200000" port="1" latency="0.000000" guid="0x0" maxconn="2147483647" gdr="1"/>
+      </nic>
+    </pci>
+    <pci busid="0009:01:00.0" class="0x030200" vendor="0x10de" device="0x2342" subsystem_vendor="0x10de" subsystem_device="0x16eb" link_speed="16.0 GT/s PCIe" link_width="1">
+      <gpu dev="0" sm="90" rank="0" gdr="1">
+        <nvlink target="0019:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0039:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0029:01:00.0" count="6" tclass="0x030200"/>
+        <c2c bw="44712" count="10"/>
+      </gpu>
+    </pci>
+  </cpu>
+  <cpu host_hash="0x2a5f3abfbb5dfe3f" numaid="1" affinity="00000000,00000000,00000000,00000000,0000ffff,ffffffff,ffffff00,00000000,00000000" arch="arm64">
+    <pci busid="0010:01:00.0" class="0x020000" vendor="0x17db" device="0x0501" subsystem_vendor="0x17db" subsystem_device="0x0000" link_speed="16.0 GT/s PCIe" link_width="16">
+      <nic>
+        <net name="cxi1" dev="1" speed="200000" port="1" latency="0.000000" guid="0x1" maxconn="2147483647" gdr="1"/>
+      </nic>
+    </pci>
+    <pci busid="0019:01:00.0" class="0x030200" vendor="0x10de" device="0x2342" subsystem_vendor="0x10de" subsystem_device="0x16eb" link_speed="16.0 GT/s PCIe" link_width="1">
+      <gpu dev="1" sm="90" rank="1" gdr="1">
+        <nvlink target="0009:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0029:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0039:01:00.0" count="6" tclass="0x030200"/>
+        <c2c bw="44712" count="10"/>
+      </gpu>
+    </pci>
+  </cpu>
+  <cpu host_hash="0x2a5f3abfbb5dfe3f" numaid="2" affinity="00000000,00000000,00ffffff,ffffffff,ffff0000,00000000,00000000,00000000,00000000" arch="arm64">
+    <pci busid="0020:01:00.0" class="0x020000" vendor="0x17db" device="0x0501" subsystem_vendor="0x17db" subsystem_device="0x0000" link_speed="16.0 GT/s PCIe" link_width="16">
+      <nic>
+        <net name="cxi2" dev="2" speed="200000" port="1" latency="0.000000" guid="0x2" maxconn="2147483647" gdr="1"/>
+      </nic>
+    </pci>
+    <pci busid="0029:01:00.0" class="0x030200" vendor="0x10de" device="0x2342" subsystem_vendor="0x10de" subsystem_device="0x16eb" link_speed="16.0 GT/s PCIe" link_width="1">
+      <gpu dev="2" sm="90" rank="2" gdr="1">
+        <nvlink target="0039:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0019:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0009:01:00.0" count="6" tclass="0x030200"/>
+        <c2c bw="44712" count="10"/>
+      </gpu>
+    </pci>
+  </cpu>
+  <cpu host_hash="0x2a5f3abfbb5dfe3f" numaid="3" affinity="ffffffff,ffffffff,ff000000,00000000,00000000,00000000,00000000,00000000,00000000" arch="arm64">
+    <pci busid="0030:01:00.0" class="0x020000" vendor="0x17db" device="0x0501" subsystem_vendor="0x17db" subsystem_device="0x0000" link_speed="16.0 GT/s PCIe" link_width="16">
+      <nic>
+        <net name="cxi3" dev="3" speed="200000" port="1" latency="0.000000" guid="0x3" maxconn="2147483647" gdr="1"/>
+      </nic>
+    </pci>
+    <pci busid="0039:01:00.0" class="0x030200" vendor="0x10de" device="0x2342" subsystem_vendor="0x10de" subsystem_device="0x16eb" link_speed="16.0 GT/s PCIe" link_width="1">
+      <gpu dev="3" sm="90" rank="3" gdr="1">
+        <nvlink target="0029:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0009:01:00.0" count="6" tclass="0x030200"/>
+        <nvlink target="0019:01:00.0" count="6" tclass="0x030200"/>
+        <c2c bw="44712" count="10"/>
+      </gpu>
+    </pci>
+  </cpu>
+</system>

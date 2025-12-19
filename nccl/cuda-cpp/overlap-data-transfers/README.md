@@ -1,4 +1,7 @@
 
+[如何在 CUDA C/C++ 中实现数据传输的重叠](https://developer.nvidia.cn/blog/how-overlap-data-transfers-cuda-cc/)   
+
+
 
 ```
 root@ubuntu:/pytorch/cuda-cpp/overlap-data-transfers# nvcc  --std=c++11 async.cu -o async_test
@@ -10,6 +13,25 @@ Time for asynchronous V1 transfer and execute (ms): 0.984352
   max error: 1.192093e-07
 Time for asynchronous V2 transfer and execute (ms): 0.970208
   max error: 1.192093e-07
+```
+```
+root@ubuntu:/pytorch/cuda-cpp/overlap-data-transfers# ./overlap_async 
+Device : NVIDIA GeForce RTX 3090
+Time for sequential transfer and execute (ms): 1.516928
+  max error: 1.192093e-07
+Time for asynchronous V1 transfer and execute (ms): 0.988960
+  max error: 1.192093e-07
+Time for asynchronous V2 transfer and execute (ms): 0.974272
+  max error: 1.192093e-07
+root@ubuntu:/pytorch/cuda-cpp/overlap-data-transfers# ./overlap_data_transfers 
+Device : NVIDIA GeForce RTX 3090
+Time for sequential transfer and execute (ms): 1.528448
+  max error: 1.192093e-07
+Time for asynchronous V1 transfer and execute (ms): 0.997440
+  max error: 1.192093e-07
+Time for asynchronous V2 transfer and execute (ms): 0.981280
+  max error: 1.192093e-07
+root@ubuntu:/pytorch/cuda-cpp/overlap-data-transfers#
 ```
 
  

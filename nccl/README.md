@@ -2,8 +2,9 @@
 
 # nccl
 
-[NCCL：chunk，slice，step的关系](https://blog.csdn.net/shanleo1986/article/details/145949742)   
-
+[NCCL：chunk，slice，step的关系](https://blog.csdn.net/shanleo1986/article/details/145949742)  
+[PyTorch的集合通信与计算并行](https://zhuanlan.zhihu.com/p/690116679)    
+ 
 
 # pytorch cpp
 

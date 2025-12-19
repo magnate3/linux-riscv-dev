@@ -95,7 +95,8 @@ void GPUWorkerManager::gpuWorkerThread(GPUContext& ctx, Barrier& initBarrier, Ba
     Logger::log("Node", ctx.nodeRank, "GPU", ctx.deviceId, "initialized NCCL communicator with global rank",
                 ctx.globalRank);
 
-    selectTransport(ctx.comm,0,0,0);
+    test_selectTransport(ctx.comm,0);
+    test_selectTransport(ctx.comm,1);
     runring(0,2,ctx.comm); 
     ncclProxy(ctx.comm,5);
     ncclTransportTest(ctx.comm);

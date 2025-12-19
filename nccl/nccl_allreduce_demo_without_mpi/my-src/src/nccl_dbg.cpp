@@ -86,8 +86,8 @@ ncclResult_t ncclTransportTest(struct ncclComm* comm) {
 }
 extern struct ncclTransport* ncclTransports[NTRANSPORTS+1];
 //static ncclResult_t selectTransport(struct ncclComm* comm, struct ncclTopoGraph* graph, struct ncclConnect* connect, int channelId, int peer, int connIndex, int* transportType) {
-ncclResult_t selectTransport(struct ncclComm* comm,  int channelId, int peer, int connIndex) {
-  int type = 1;
+ncclResult_t selectTransport(int type , struct ncclComm* comm,  int channelId, int peer, int connIndex) {
+  //int type = 1;
   struct ncclPeerInfo* myInfo = comm->peerInfo+comm->rank;
   struct ncclPeerInfo* peerInfo = comm->peerInfo+peer;
   struct ncclConnector* connector = (type == 1) ? comm->channels[channelId].peers[peer]->send + connIndex :
@@ -95,10 +95,53 @@ ncclResult_t selectTransport(struct ncclComm* comm,  int channelId, int peer, in
   for (int t=0; t<NTRANSPORTS; t++) {
     struct ncclTransport *transport = ncclTransports[t];
     struct ncclTransportComm* transportComm = type==1 ? &transport->send : &transport->recv;
+    if(connector->transportComm == transportComm)
+         printf("transport found for rank %d[%lx] -> rank %d[%lx], ncclTransportComm type== send ?  %d, name:  %s \n", myInfo->rank, myInfo->busId, peerInfo->rank, peerInfo->busId,type,transport->name);
+    if(TRANSPORT_NET == t)
+    {
+	//struct ncclProxyState* sharedProxyState = comm->proxyState;
+	//int tpProxyRank = comm->topParentRanks[proxyRank];
+        printf("Channel %02d/%d : %d[%d] -> %d[%d] [send] via NET/%s \n", channelId, connIndex, myInfo->rank, myInfo->nvmlDev, peerInfo->rank, peerInfo->nvmlDev, comm->ncclNet->name);
+    }
   }
-  printf("transport found for rank %d[%lx] -> rank %d[%lx] \n", myInfo->rank, myInfo->busId, peerInfo->rank, peerInfo->busId);
-  //printf("conn->transportComm->connect:%p \n",connector->transportComm->connect);
-  return ncclSystemError;
+  //printf("equal netTransport ? %d \n",connector->transportComm == (type? &netTransport.send : &netTransport.recv));
+  return ncclSuccess;
+}
+ncclResult_t test_selectTransport(struct ncclComm* comm,  int connIndex)
+{
+    for (int i=1; i<comm->nRanks; i++) {
+        int recvPeer = (comm->rank - i + comm->nRanks) % comm->nRanks;
+        int sendPeer = (comm->rank + i) % comm->nRanks;
+        uint64_t recvMask = comm->connectRecv[recvPeer];
+        uint64_t sendMask = comm->connectSend[sendPeer];
+
+        // Data[i] contains all ncclConnect information for all send and receive connections with a given send and recv peer
+        // This data is packed in the array based on the number of sendChannels and recvChannels connected with these peers
+        // The first N entries contain recvData, connection information for recv connections
+        // The next M entries contain sendData, connection information for send connections
+        // It's not guaranteed that each entry of data has the same number of total or send/recv specific connections
+#if 0
+        for (int c=0; c<MAXCHANNELS; c++) {
+          if (recvMask & (1UL<<c)) {
+            selectTransport(0,comm,  c, recvPeer, connIndex);
+          }
+        }
+        for (int c=0; c<MAXCHANNELS; c++) {
+          if (sendMask & (1UL<<c)) {
+            selectTransport(1,comm,  c, sendPeer, connIndex);
+          }
+        }
+#else
+        for (int c=0; c<comm->nChannels; c++) {
+            selectTransport(0,comm,  c, recvPeer, connIndex);
+        }
+        for (int c=0; c<comm->nChannels; c++) {
+            selectTransport(1,comm,  c, sendPeer, connIndex);
+        }
+#endif
+    }
+
+  return ncclSuccess;
 }
 void runring(int tid, int nthreads, struct ncclComm *comm)
 {

@@ -31,7 +31,8 @@ static ncclResult_t SaveProxy(int peer, struct ncclChannel* channel) {
 const char *ncclSocketToStringTest(union ncclSocketAddress *addr, char *buf, const int numericHostForm ) ;
 ncclResult_t ncclProxy(struct ncclComm* comm,int proxyRank) ;
 //static ncclResult_t selectTransport(struct ncclComm* comm, struct ncclTopoGraph* graph, struct ncclConnect* connect, int channelId, int peer, int connIndex, int* transportType);
-ncclResult_t selectTransport(struct ncclComm* comm,  int channelId, int peer, int connIndex) ;
+ncclResult_t selectTransport(int type , struct ncclComm* comm,  int channelId, int peer, int connIndex);
+ncclResult_t test_selectTransport(struct ncclComm* comm,   int connIndex) ;
 void runring(int tid, int nthreads, struct ncclComm *comm);
 void runTreeUpDown(int tid, int nthreads, struct ncclComm *comm);
 ncclResult_t ncclTransportTest(struct ncclComm* comm);

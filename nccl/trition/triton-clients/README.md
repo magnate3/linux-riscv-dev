@@ -11,7 +11,7 @@ curl -LJo yolo_v4.onnx https://github.com/onnx/models/raw/main/validated/vision/
 wget -O models/maskrcnn_onnx/1/models.onnx https://github.com/onnx/models/blob/master/vision/object_detection_segmentation/mask-rcnn/model/MaskRCNN-10.onnx?raw=true
 
 ```
-
+models/maskrcnn_onnx模型没下载，所以移出models/maskrcnn_onnx
 ```
 root@ubuntux86:# tree  -L 3  models/
 models/

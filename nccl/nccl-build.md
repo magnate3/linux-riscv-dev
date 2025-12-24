@@ -1,5 +1,7 @@
 
 # docker 
+
+编译的docker镜像   
 ```
 root@ubuntux86:# docker images | grep 54478aaec63b
 nvidia/cuda                                                          11.6.1-cudnn8-devel-ubuntu20.04         54478aaec63b   2 years ago     8.53GB

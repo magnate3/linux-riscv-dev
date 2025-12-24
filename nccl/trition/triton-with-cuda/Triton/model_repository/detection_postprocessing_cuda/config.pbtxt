@@ -1,0 +1,36 @@
+name: "detection_postprocessing_cuda"
+backend: "detection_postprocessing_cuda"
+runtime: "libtriton_postprocess.so"
+max_batch_size: 0
+input [
+    {
+        name: "detection_postprocessing_detections"
+        data_type: TYPE_FP32
+        dims: [ 1, 84, 8400 ]
+    },
+    {
+        name: "detection_postprocessing_shape"
+        data_type: TYPE_UINT32
+        dims: [ 2 ]
+    }
+]
+
+output [
+    {
+        name: "detection_postprocessing_bboxes"
+        data_type: TYPE_FP32
+        dims: [ -1, 4 ]
+    },
+    {
+        name: "detection_postprocessing_scores"
+        data_type: TYPE_FP32
+        dims: [ -1 ]
+    },
+    {
+        name: "detection_postprocessing_ids"
+        data_type: TYPE_UINT32
+        dims: [ -1 ]
+    }
+]
+
+instance_group [{ kind: KIND_GPU }]

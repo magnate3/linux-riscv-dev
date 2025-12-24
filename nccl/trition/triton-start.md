@@ -195,6 +195,23 @@ root@ubuntux86:/workspace/models# curl --location --request GET 'http://127.0.0.
 {"error":"requested model 'resnet18' is not available"}root@ubuntux86:/workspace/models# 
 ```
 
+```
+存活检查（Liveness Check）
+存活检查用于判断Triton进程是否正常运行。如果失败，通常意味着服务需要重启。通过访问以下端点进行：
+http://localhost:8000/v2/health/live
+成功响应（HTTP 200 OK）表示服务进程存活。
+
+就绪检查（Readiness Check）
+就绪检查更为关键，它指示Triton是否准备好接收推理请求。这不仅要求进程运行，还需要所有模型加载完成且处于可用状态：
+
+ http://localhost:8000/v2/health/ready
+
+```
+
+```
+curl http://localhost:8002/metrics
+```
+
 
 ```
 curl --location --request POST 'http://IP-Address:8000/v2/models/zst/infer' --header 'Content-Type: application/octet-stream' --header 'Accept: */*' --header 'Inference-Header-Content-Length: 275'  --data-binary '@inputv1.json' -v

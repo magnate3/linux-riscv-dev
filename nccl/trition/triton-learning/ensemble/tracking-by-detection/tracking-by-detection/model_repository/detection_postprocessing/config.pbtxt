@@ -1,0 +1,25 @@
+name: "detection_postprocessing"
+backend: "python"
+max_batch_size: 32
+input [
+{
+    name: "detections"
+    data_type: TYPE_FP32
+    dims: [ -1, -1 ]
+},
+{
+    name: "postprocessing_params"
+    data_type: TYPE_FP32
+    dims: [ -1 ]
+}
+]
+
+output [
+{
+    name: "processed_detections"
+    data_type: TYPE_FP32
+    dims: [ -1, -1 ]
+}
+]
+
+instance_group [{ kind: KIND_CPU }]

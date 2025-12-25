@@ -145,6 +145,25 @@ torch.Size([1, 32, 32, 1])
         image = image.permute(0, 2, 3, 1)
 ```
 
++ numpy  transpose(permute)
+
+```
+import numpy as np
+
+a = np.arange(24).reshape((3, 4, 2))
+# Shape of a is (3, 4, 2)
+
+# Permute axes to (1, 0, 2)
+b = np.transpose(a, (1, 0, 2))
+# Shape of b is (4, 3, 2)
+print(b.shape)
+
+# Reversing the axes order (equivalent to a.T for 2D, or (2, 1, 0) for 3D)
+c = np.transpose(a)
+# Shape of c is (2, 4, 3)
+print(c.shape)
+```
+
 # test   
 ```
 cd conceptual-guide

@@ -171,8 +171,33 @@ or --log-verbose=3 --log-info=1 --log-warning=1 --log-error=1
 ```
 docker run -it --shm-size=2G  --rm    -p8000:8000 -p8001:8001 -p8002:8002   -v ${PWD}:/workspace/ -v ${PWD}/model_repository:/models   --name triton-ensemble-model triton-ensemble-model:v1  /bin/bash
 ```
- 
 
+#  np.bool
+
+
+```
+import numpy as np
+ 
+np.bool = np.bool_
+```
+
+
+# detection 数据集
+
+
+```
+wget http://images.cocodataset.org/val2017/000000439715.jpg -O input.jpg
+```
+ 
+```
+!wget http://images.cocodataset.org/val2017/000000439715.jpg -q -O input.jpg
+im = cv2.imread("./input.jpg")
+plt.imshow(cv2.cvtColor(im, cv2.COLOR_BGR2RGB))
+```
+YOLOv8   
+```
+wget https://rbln-public.s3.ap-northeast-2.amazonaws.com/images/people4.jpg
+```
 
  
 

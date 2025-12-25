@@ -159,6 +159,27 @@ root@ubuntux86:/workspace/models/model_serving_scripts/triton# python3 check_mod
 root@ubuntux86:/workspace/models/model_serving_scripts/triton# 
 ```
 
+##   bug4  at least one version must be available under the version policy of model 'yolov8n_ensemble'"
+
+执行mkdir -p model_repository/yolov8n_ensemble/1
+```
+root@ubuntux86:# ls model_repository/yolov8n_ensemble/
+config.pbtxt
+root@ubuntux86:# mkdir -p model_repository/yolov8n_ensemble/1
+root@ubuntux86:# 
+```
+
+## bug5 Invalid argument: model 'yolov8n_onnx', tensor 'output0': the model expects 3 dimensions (shape [1,84,8400]) but the model configuration  3 dimensions (shape [-1,84,-1])   
+
+```
+dims: [ -1, 84, -1 ]  
+```
+改成
+```
+    dims: [ 1, 84, 8400 ]
+```
+    
+
 # curl
 
 

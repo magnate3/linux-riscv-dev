@@ -1,0 +1,25 @@
+# Copyright (C) 2025 YIQISOFT
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+backend: "python"
+
+# Input: Receives the raw output from the ONNX model
+input [
+  {
+    name: "raw_output" # This is a custom name, linked in the ensemble configuration
+    data_type: TYPE_FP32
+    dims: [-1, 84, -1 ] # Must match the output dimensions of the yolo11n_onnx model
+  }
+]
+
+# Output: Processed bounding box information
+output [
+  {
+    name: "bboxes" # Custom output name
+    data_type: TYPE_FP32
+    dims: [1, -1, 7 ] # [image_id, label_id, conf, xmin, ymin, xmax, ymax]
+                    # -1 indicates a variable number of detected boxes
+  }
+]

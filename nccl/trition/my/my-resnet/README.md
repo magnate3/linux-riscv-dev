@@ -15,6 +15,8 @@ max of predict [5]
 ```
 
 
+
+
 +  server
 
 ```
@@ -23,4 +25,10 @@ nvcr.io/nvidia/tritonserver                                          24.07-py3
 
 ```
 docker run -it --shm-size=2G  --rm    -p8000:8000 -p8001:8001 -p8002:8002   -v ${PWD}:/workspace/ -v ${PWD}/model_repository:/models   --name triton-ensemble-model triton-ensemble-model:v1  /bin/bash
+```
+
+# batch_size
+
+```
+test_loader = torch.utils.data.DataLoader(test, batch_size=1, shuffle=True)
 ```

@@ -24,11 +24,13 @@ or
 curl localhost:8000/v2/models/model_test/config |  jq '.' | tee  model_test.json
 ```
 
+![images](res.png)
+
 #    batch size   
 
 the input shape (1, 3, 225, 225), the batch size is set to 1. With input shape (8, 3, 225, 225) the batch size is set to 8.
 
-![images](res.png)
+
 
 ```
 root@ubuntux86:/workspace/models/resnet# python3

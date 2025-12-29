@@ -147,11 +147,12 @@ NCCL version: (2, 14, 3)
 >>> 
 ```
 
-编译如下版本出错   
+编译如下版本出错(编译symmtric函数出错)   
 ```
 root@ubuntux86:# git branch
-* (HEAD detached at v2.27.7-1)
   master
+* v2.27_sym_memory
+root@ubuntux86:# 
 ```
 
 
@@ -166,12 +167,54 @@ Cuda compilation tools, release 11.6, V11.6.124
 Build cuda_11.6.r11.6/compiler.31057947_0
 root@ubuntux86:/# 
 ```
++ 编译
 
-##  build  v2.27_sym_memory with cuda:12.8.1-devel-ubuntu22.04
++  bug: Undefined reference to 'ncclDevFuncTable'     
+```
+dos2unix src/device/generate.py
+```
+
++  bug: Is a directory: '/workspace/nccl-dev/nccl-latest/build/obj/device/gensrc/symmetric'   
 
 
 ```
+root@ubuntux86:# rm  -rf build/obj/device/gensrc/symmetric    
+```
+
+
+
+应用程序   
+```
+root@82adaca144df:/workspace/nccl-latest-dev/nccl_graphs# g++ --version
+g++ (Ubuntu 9.4.0-1ubuntu1~20.04.1) 9.4.0
+Copyright (C) 2019 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+```
+
+##  build  v2.27_sym_memory with cuda:12.8.1-devel-ubuntu22.04(编译成功)
+
+
+cuda:12.8.1-devel-ubuntu22.04 也能编译 origin/v2.17-racecheck    
+
+```
 docker run --name nccl -itd  --rm -v /work/nccl/:/workspace    --network=host  --shm-size=4g --ulimit memlock=-1 --cap-add=NET_ADMIN --privileged=true nvcr.io/nvidia/cuda:12.8.1-devel-ubuntu22.04
+```
+
+```
+root@ubuntux86:/# g++ --version
+g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+root@ubuntux86:/# gcc --version
+gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+root@ubuntux86:/# 
 ```
 
 ###  Build NCCL
@@ -182,10 +225,113 @@ git checkout v2.27_sym_memory # on commit dec8621
 make -j src.build NVCC_GENCODE="-gencode=arch=compute_100,code=sm_100"
 ```
 
++  bug: Undefined reference to 'ncclDevFuncTable'       
+```
+dos2unix src/device/generate.py
+```
+
++  bug: Is a directory: '/workspace/nccl-dev/nccl-latest/build/obj/device/gensrc/symmetric'      
+
+
+```
+root@ubuntux86:# rm  -rf build/obj/device/gensrc/symmetric    
+```
+
++ make log     
+
+```
+Compiling       build/obj/device/gensrc/reduce_scatter_sumpostdiv_u8.cu
+Compiling       build/obj/device/gensrc/reduce_sum_bf16.cu
+Compiling       build/obj/device/gensrc/reduce_sum_f16.cu
+Compiling       build/obj/device/gensrc/reduce_sum_f32.cu
+Compiling       build/obj/device/gensrc/reduce_sum_f64.cu
+Compiling       build/obj/device/gensrc/reduce_sum_f8e4m3.cu
+Compiling       build/obj/device/gensrc/reduce_sum_f8e5m2.cu
+Compiling       build/obj/device/gensrc/reduce_sum_u32.cu
+Compiling       build/obj/device/gensrc/reduce_sum_u64.cu
+Compiling       build/obj/device/gensrc/reduce_sum_u8.cu
+Compiling       build/obj/device/gensrc/reduce_sumpostdiv_u32.cu
+Compiling       build/obj/device/gensrc/reduce_sumpostdiv_u64.cu
+Compiling       build/obj/device/gensrc/reduce_sumpostdiv_u8.cu
+Compiling       build/obj/device/gensrc/device_table.cu
+Compiling       build/obj/device/gensrc/symmetric/all_gather.cu
+Compiling       build/obj/device/gensrc/symmetric/all_reduce_sum_bf16.cu
+Compiling       build/obj/device/gensrc/symmetric/all_reduce_sum_f16.cu
+Compiling       build/obj/device/gensrc/symmetric/all_reduce_sum_f32.cu
+Compiling       build/obj/device/gensrc/symmetric/all_reduce_sum_f8e4m3.cu
+Compiling       build/obj/device/gensrc/symmetric/all_reduce_sum_f8e5m2.cu
+Compiling       build/obj/device/gensrc/symmetric/reduce_scatter_sum_bf16.cu
+Compiling       build/obj/device/gensrc/symmetric/reduce_scatter_sum_f16.cu
+Compiling       build/obj/device/gensrc/symmetric/reduce_scatter_sum_f32.cu
+Compiling       build/obj/device/gensrc/symmetric/reduce_scatter_sum_f8e4m3.cu
+Compiling       build/obj/device/gensrc/symmetric/reduce_scatter_sum_f8e5m2.cu
+Compiling       src/device/onerank.cu
+```
+
+```
+make -j src.build NVCC_GENCODE="-gencode=arch=compute_100,code=sm_100"
+```
+
+```
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# export NVCC_GENCODE="-gencode=arch=compute_86,code=sm_86"
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# make -j src.build                                                     
+make -C src build BUILDDIR=/workspace/nccl-dev/nccl-latest/build
+make[1]: Entering directory '/workspace/nccl-dev/nccl-latest/src'
+NVCC_GENCODE is -gencode=arch=compute_86,code=sm_86
+make[2]: Entering directory '/workspace/nccl-dev/nccl-latest/src/device'
+NVCC_GENCODE is -gencode=arch=compute_86,code=sm_86
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/common.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/onerank.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/all_gather.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/all_reduce_sum_bf16.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/all_reduce_sum_f16.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/all_reduce_sum_f32.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/all_reduce_sum_f8e4m3.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/all_reduce_sum_f8e5m2.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/reduce_scatter_sum_bf16.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/reduce_scatter_sum_f16.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/reduce_scatter_sum_f32.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/reduce_scatter_sum_f8e4m3.cu.o'
+nvlink warning : SM Arch ('sm_86') not found in '/workspace/nccl-dev/nccl-latest/build/obj/device/genobj/symmetric/reduce_scatter_sum_f8e5m2.cu.o'
+make[2]: Leaving directory '/workspace/nccl-dev/nccl-latest/src/device'
+Linking    libnccl.so.2.27.0                   > /workspace/nccl-dev/nccl-latest/build/lib/libnccl.so.2.27.0
+Archiving  libnccl_static.a                    > /workspace/nccl-dev/nccl-latest/build/lib/libnccl_static.a
+make[1]: Leaving directory '/workspace/nccl-dev/nccl-latest/src
+```
+
 ### Build NCCL-test
 ```
 git clone https://github.com/NVIDIA/nccl-tests.git
 cd nccl-test # on commit 59072b7
 git checkout v2.27_sym_memory
 make NCCL_HOME=/path/to/nccl-test/build
+```
+##   host_table.cc
+
+```
+Dependencies    build/obj/device/gensrc/device_table.cu
+Compiling       build/obj/device/gensrc/host_table.cc
+```
+
+## 应用
+
+ Upgrade your operating system (e.g., to Ubuntu 22.04 or later, which provides GLIBC 2.34)
+ 
+```
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `cudaGetDriverEntryPoint'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `dlclose@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `__cudaRegisterFunction'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `dlerror@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `pthread_mutexattr_init@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `pthread_detach@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `pthread_condattr_setpshared@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `pthread_join@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `__cudaRegisterFatBinaryEnd'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `pthread_setname_np@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `pthread_mutex_trylock@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `dlsym@GLIBC_2.34'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `ncclSymImplemented(ncclFunc_t, int, ncclDataType_t)'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `__cudaUnregisterFatBinary'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `stat@GLIBC_2.33'
+/usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `dlopen@GLIBC_2.34'
 ```

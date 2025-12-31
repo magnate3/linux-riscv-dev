@@ -13,3 +13,25 @@ No CUDA runtime is found, using CUDA_HOME='/usr/local/cuda'
 /usr/local/lib/python3.8/dist-packages/torch/lib
 >>> 
 ```
+
+#  fastmoe
+
+```
+sudo git remote -v
+origin  https://github.com/laekov/fastmoe.git (fetch)
+origin  https://github.com/laekov/fastmoe.git (push)
+```
+
+
+```
+export LD_LIBRARY_PATH=/usr/local/lib/python3.8/dist-packages/torch/lib:$LD_LIBRARY_PATH
+```
+
+```
+root@ubuntu:/pytorch/fastmoe/cuda/tests# ./test_counting  1 2
+ref lec
+1 0 
+lec
+1 0 
+root@ubuntu:/pytorch/fastmoe/cuda/tests# 
+```

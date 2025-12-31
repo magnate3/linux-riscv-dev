@@ -102,6 +102,7 @@ Linking    libnccl.so.2.17.1                   > /workspace/nccl-dev/nccl/build/
 Archiving  libnccl_static.a                    > /workspace/nccl-dev/nccl/build/lib/libnccl_static.a
 make[1]: Leaving directory '/workspace/nccl-dev/nccl/src'
 ```
+生成colldevice.a    
 
 
 # nccl 加载cuda(NCCL_CUDA_PATH)
@@ -334,4 +335,25 @@ Compiling       build/obj/device/gensrc/host_table.cc
 /usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `__cudaUnregisterFatBinary'
 /usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `stat@GLIBC_2.33'
 /usr/bin/ld: /workspace/nccl-dev/nccl-latest/build/lib//libnccl.so: undefined reference to `dlopen@GLIBC_2.34'
+```
+
+#  ncclKernel
+```
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# TORCH_CUDA_LIB=`python -c 'from torch.utils import cpp_extension; print(f"{cpp_extension.TORCH_LIB_PATH}/libtorch_cuda.so")' 2>/dev/null`
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# 
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# echo $TORCH_CUDA_LIB
+/usr/local/lib/python3.9/site-packages/torch/lib/libtorch_cuda.so
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# syms=`nm $TORCH_CUDA_LIB | grep ncclKernel | grep -v __device_stub__ | c++filt | awk 'BEGIN{a=""} /ncclKernel_/{fn=$3;sub(/\(.*/, "", fn);a = "{" "0x"$1 ", \"" fn "\"},\n" a} END{print a}'`
+root@ubuntux86:/workspace/nccl-dev/nccl-latest# echo $syms
+```
+
+```
+root@ubuntux86:/workspace/nccl-dev/nccl-latest/nccl_graphs# ./gen_nvidia_syms.sh  nvidia_syms.h
+root@ubuntux86:/workspace/nccl-dev/nccl-latest/nccl_graphs# cat nvidia_syms.h 
+```
+
+
+```
+ncclKernel_AllReduce_RING_LL_Sum_float(ncclDevComm*, unsigned long, ncclWork*)
+ncclDevKernel_SendRecv(ncclDevComm*, unsigned long, ncclWork*)
 ```

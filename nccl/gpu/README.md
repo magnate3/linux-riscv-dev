@@ -41,6 +41,11 @@ docker run  --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size
  
 ```
 
+```
+"Failed to initialize NVML: Unknown Error"
+```
+这个error要加上 Adding --privileged        
+
 
 ```
 python3 --version

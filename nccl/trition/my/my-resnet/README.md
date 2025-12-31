@@ -1,4 +1,8 @@
 
+```
+root@ubuntux86:/workspace/models/resnet/my-resnet# ls ../../dataset
+cifar-10-batches-py  cifar-10-python.tar.gz
+```
 
 
 ```

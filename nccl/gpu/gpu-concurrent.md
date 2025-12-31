@@ -1222,6 +1222,21 @@ int main() {
 }
 ```
 
+```
+nvcc -std=c++11 -I/usr/local/mpi/include -I. -I/usr/local/cuda/include concurrentKernels.cu  -o concurrent
+```
+
+```
+./concurrent 
+Multiply Kernel Time: 0.022400 ms
+Add Kernel Time: 0.015360 ms
+Multiply (first 5):
+0 2 4 6 8 
+Add (first 5):
+5 6 7 8 9 
+```
+加法时间短   
+
 ### Explanation
 - **Concurrency:** Two kernels run in separate streams for overlap.
 - **Timing:** Events measure each kernel’s execution time.

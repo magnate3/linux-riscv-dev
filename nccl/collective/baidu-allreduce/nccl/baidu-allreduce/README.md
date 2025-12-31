@@ -8,6 +8,8 @@ within their respective frameworks.
 A description of the ring allreduce with its application to deep learning is
 available on the [Baidu SVAIL blog](http://research.baidu.com/bringing-hpc-techniques-deep-learning/).
 
+[baidu-allreduce算法的实现解析](https://zhuanlan.zhihu.com/p/1944848399892460554)   
+
 ## Installation
 
 **Prerequisites:** Before compiling `baidu-allreduce`, make sure you have
@@ -25,16 +27,33 @@ To compile `baidu-allreduce`, run
 make MPI_ROOT=/usr/lib/openmpi CUDA_ROOT=/path/to/cuda/lib64
 ```
 
-You may need to modify your `LD_LIBRARY_PATH` environment variable to point to
-your MPI implementation as well as your CUDA libraries.
+```
+root@ubuntu:/pytorch/baidu-allreduce# ls /usr/local/mpi
+bin  etc  include  lib  share
+root@ubuntu:/pytorch/baidu-allreduce# ls /usr/local/cuda
+bin  compat  compute-sanitizer  doc  extras  gds  include  lib64  nvml  nvvm  share  src  targets
+root@ubuntu:/pytorch/baidu-allreduce# make MPI_ROOT=/usr/local/mpi CUDA_ROOT=/usr/local/cuda
+make: Warning: File 'Makefile' has modification time 28730 s in the future
+mpic++ -c -std=c++11 -I/usr/local/mpi/include -I. -I/usr/local/cuda/include -DOMPI_SKIP_MPICXX= timer.cpp -o timer.o
+mpic++ -c -std=c++11 -I/usr/local/mpi/include -I. -I/usr/local/cuda/include -DOMPI_SKIP_MPICXX= test/test.cpp -o test/test.o
+nvcc -c -std=c++11 -I/usr/local/mpi/include -I. -I/usr/local/cuda/include -DOMPI_SKIP_MPICXX= collectives.cu -o collectives.o
+mpic++ -o allreduce-test -L/usr/local/cuda/lib64 -L/usr/local/mpi/lib -lcudart -lmpi -DOMPI_SKIP_MPICXX= timer.o test/test.o collectives.o -L/usr/local/cuda/lib64 -L/usr/local/mpi/lib -lcudart -lmpi -DOMPI_SKIP_MPICXX=
+make: warning:  Clock skew detected.  Your build may be incomplete.
+```
 
-To run the `baidu-allreduce` tests after compiling it, run
 ```bash
 # On CPU.
 mpirun --np 3 allreduce-test cpu
 
 # On GPU. Requires a CUDA-aware MPI implementation.
 mpirun --np 3 allreduce-test gpu
+```
+
+
+```
+mpirun --np 1 allreduce-test gpu
+Verified allreduce for size 0 (6.90844e-07 per iteration)
+Verified allreduce for size 32 (8.87529e-06 per iteration)
 ```
 
 ## Interface

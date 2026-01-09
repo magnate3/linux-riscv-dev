@@ -191,6 +191,20 @@ gdb) bt
 #2  0x00007ffff7dd3c10 in ncclProxyProgress (proxyState_=0x7ffff010aa20) at proxy.cc:931
 ```
 
++ coredump
+```
+(gdb) bt
+#0  0x00007fed4201e735 in xmlSetAttrLong (node=0x7fed4111d87c, attrName=0x0, value=140656991397550) at graph/xml.h:280
+#1  0x00007fed41f8f48b in __float2half (a=-1.78403724e+12) at /workspace/nccl-latest/cuda/include/cuda_fp16.hpp:550
+#2  0x00007fed41fa19f4 in getAlgoInfo (comm=0x0, info=0x0, collNetSupport=0, nvlsSupport=0, numPipeOps=0, simInfo=0x0) at enqueue.cc:2077
+#3  0x00007fed41fa5e38 in RingARAlgorithm::getNextRecvAddr (this=0x7fed41fa5e38 <RingARAlgorithm::getNextRecvAddr(int, unsigned char**, unsigned long*, void**)+770>, curStep=32749, 
+    recvbuffOut=0x7fff233d0e10, sizeOut=0x7fff233d0db0, mhandleOut=0x55870d3b9020) at include/collectives.h:194
+#4  0x00007fed41f97cf6 in ncclRegFindSymmetric (comm=0x7fed3c001a00, data=0x7fed3c4ad50c, size=0, symPtr=0x14111e4b0, outReg=0x7fed3c001a00) at include/register_inline.h:27
+#5  0x00007fed41f992c8 in ncclPrepareTasks (comm=0x700000000, algoNeedConnect=0x100, needConnect=0x7fed3c0011e0, simInfo=0x7fed3c000dd0) at enqueue.cc:465
+#6  0x00007fed41f99cde in ncclPrepareTasks (comm=0x0, algoNeedConnect=0x0, needConnect=0x0, simInfo=0x0) at enqueue.cc:567
+#7  0x00007fed41fa9dcb in ncclCuMemAlloc (ptr=0x0, handlep=0x7fed3c4ad480, type=CU_MEM_HANDLE_TYPE_NONE, size=0) at include/alloc.h:236
+```
+
 ## 集合通信原语的实现
 
 在完成设备的Communicator初始化后，就可以调用集合通信的相关原语。在这里我们以Allreduce为例，分析集合通信原语的实现逻辑。

@@ -1,3 +1,71 @@
+
+# cuda
+
+```
+#include "cuda_runtime.h"
+#include <iostream>
+using namespace std;
+int main() {
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount) ;
+    cout << "deviceCount: " << deviceCount << endl;
+    if (deviceCount == 0){
+    cout << "error: no devices supporting CUDA.\n";
+    exit(EXIT_FAILURE);
+    }
+    int dev = 0;
+    cudaSetDevice(dev);
+    cudaDeviceProp devProps;
+    cudaGetDeviceProperties(&devProps, dev);
+    //1.设备。
+    cout << devProps.name << endl; // GeForce 610M
+    cout << devProps.major << "." << devProps.minor << endl; // 2.1
+    cout << devProps.totalConstMem << endl; // 65536 = 2^16 = 64K
+    cout << devProps.totalGlobalMem << endl; // 1073741824 = 2^30 = 1G
+    cout << devProps.unifiedAddressing << endl; // 1
+    cout <<"warpSize: "<< devProps.warpSize << endl; // 32
+    //2.多处理器。
+    cout << devProps.multiProcessorCount << endl; // 1
+    cout << "maxThreadsPerMultiProcessor: "<< devProps.maxThreadsPerMultiProcessor << endl; // 1536
+    //for (auto x : devProps.maxGridsize) cout << x << " "; cout << endl; // 65535 65535 65535
+    cout << devProps.regsPerMultiprocessor << endl; // 32768 = 2^15 = 32K
+    cout << devProps.sharedMemPerMultiprocessor << endl; // 49152
+    // 3.Block。
+    cout <<"maxThreadsPerBlock: " << devProps.maxThreadsPerBlock << endl; // 1024
+    for (auto x : devProps.maxThreadsDim) cout << x << " "; cout << endl; // 1024 1024 64
+    cout << devProps.regsPerBlock << endl; // 32768 = 2^15 = 32K
+    cout << devProps.sharedMemPerBlock << endl; // 49152
+}
+```
+
+```
+deviceCount: 1
+NVIDIA GeForce RTX 3090
+8.6
+65536
+25297879040
+1
+warpSize: 32
+82
+maxThreadsPerMultiProcessor: 1536
+65536
+102400
+maxThreadsPerBlock: 1024
+1024 1024 64 
+65536
+49152
+```
+
+maxThreadsPerBlock：1个block内最多容纳的线程数量，一般为1024。           
+warpSize：线程束的大小，一般为32。1个block最多有1024个线程，但只有32个线程可以同时执行，它们的线程编号连续，执行同一条指令处理不同的数据。每个block内的线程数最好设置成32的整数倍，如果设置32n+x(0<x<32）个线程，最后一次仍有32个线程运行，但只有前×个线程的工作有效。    
+maxThreadsPerMultiProcessor：一个多处理器最多同时调度的线程数，是warpSize的整数倍。       
+
+
+
+
+
+
+
 # NCCL C++ Examples
 
 | **Cases**                  | **Node require** | **Description**                                           |  

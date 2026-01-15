@@ -10,7 +10,7 @@
 #include <cuda_runtime.h>
 #include <cupti.h>
 
-#include "gemm/impl.h"
+#include "impl.h"
 
 // For power limited testing, please run 2000+ iterations
 constexpr int warmup_iterations = 10;

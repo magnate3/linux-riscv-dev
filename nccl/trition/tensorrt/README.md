@@ -35,13 +35,16 @@ ONNX models can be exported from most popular deep learning training frameworks 
 #  tensorrt
 
 
-##  ##  onnx export  TensorRT with pytorch:25.03-py3(自带TensorRT)
+##   onnx export  TensorRT with pytorch:25.03-py3(自带TensorRT)
+
 ```
 
 sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
 
 ```
 
++  onnx export  TensorRT  
+ 
 ```
  python onnx_exporter.py --save model.onnx 
 mkdir -p ./model_repository/resnet50_trt/1
@@ -72,6 +75,11 @@ sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host 
 
 ```
 
+安装pip3 install tritonclient[all]时间很短
+```
+pip3 install tritonclient[all]
+```
+
 ```
 /pytorch/triton/resnet50_trt# python3 client.py 
 /usr/local/lib/python3.10/dist-packages/tritongrpcclient/__init__.py:33: DeprecationWarning: The package `tritongrpcclient` is deprecated and will be removed in a future version. Please use instead `tritonclient.grpc`
@@ -79,9 +87,29 @@ sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host 
 104.86435890197754ms class: COFFEE MUG
 ```
 
-安装pip3 install tritonclient[all]时间很短
+
+
++ 性能测试
+
+
 ```
-pip3 install tritonclient[all]
+Inferences/Second vs. Client Average Batch Latency
+Concurrency: 1, throughput: 927.205 infer/sec, latency 1043 usec
+Concurrency: 2, throughput: 1844.99 infer/sec, latency 1049 usec
+Concurrency: 3, throughput: 2123.76 infer/sec, latency 1376 usec
+Concurrency: 4, throughput: 2411 infer/sec, latency 1625 usec
+Concurrency: 5, throughput: 2713.27 infer/sec, latency 1806 usec
+Concurrency: 6, throughput: 2885.28 infer/sec, latency 2040 usec
+Concurrency: 7, throughput: 3080.65 infer/sec, latency 2232 usec
+Concurrency: 8, throughput: 3121.55 infer/sec, latency 2519 usec
+Concurrency: 9, throughput: 3116.1 infer/sec, latency 2839 usec
+Concurrency: 10, throughput: 3162.23 infer/sec, latency 3110 usec
+Concurrency: 11, throughput: 3128.93 infer/sec, latency 3456 usec
+Concurrency: 12, throughput: 3169.89 infer/sec, latency 3722 usec
+Concurrency: 13, throughput: 3177.43 infer/sec, latency 4023 usec
+Concurrency: 14, throughput: 3231.82 infer/sec, latency 4261 usec
+Concurrency: 15, throughput: 3184.37 infer/sec, latency 4635 usec
+Concurrency: 16, throughput: 3222.13 infer/sec, latency 4888 usec
 ```
  
 ##  TensorRT with pytorch:23.08-py3(自带TensorRT)

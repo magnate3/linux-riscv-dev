@@ -14,7 +14,106 @@ docker pull nvcr.io/nvidia/tritonserver:24.05-py3
 测试 tritonserver 模型服务的 QPS 通常有两种方法，一种是使用 perf_analyzer 来测试，另一种是通过 model-analyzer 来获取更为详细的模型服务启动的参数，使得模型的 QPS 达到最大。     
 [使用perf_analyzer和model-analyzer测试tritonserver的模型性能超详细完整版](https://blog.csdn.net/sinat_29957455/article/details/132583942)    
 
+# model
+
+
+Specify the Model
+TensorRT-RTX specification requires different model formats to convert a model successfully. The ONNX path requires that models be saved in ONNX.
+
+We will use ResNet-50, a basic backbone vision model that can be used for various purposes. We will perform classification using a pre-trained ResNet-50 ONNX model included with the ONNX model zoo.
+
+Download a pre-trained ResNet-50 model from the ONNX model zoo using wget and untar it.
+
+```
+wget https://download.onnxruntime.ai/onnx/models/resnet50.tar.gz
+tar xzf resnet50.tar.gz
+```
+This will unpack a pretrained ResNet-50 .onnx file to the path resnet50/model.onnx.
+
+ONNX models can be exported from most popular deep learning training frameworks such as PyTorch or TensorFlow. When using transformer models from Hugging Face, consider the Optimum library.
+
 #  tensorrt
+
+
+##  ##  onnx export  TensorRT with pytorch:25.03-py3(自带TensorRT)
+
+
+```
+ python onnx_exporter.py --save model.onnx 
+mkdir -p ./model_repository/resnet50_trt/1
+trtexec --onnx=model.onnx --saveEngine=./model_repository/resnet50_trt/1/model.plan --minShapes=input:1x3x224x224 --optShapes=input:1x3x224x224 --maxShapes=input:256x3x224x224 --fp16
+```
+
+```
+[01/16/2026-02:47:59] [I] Total Host Walltime: 3.0017 s
+[01/16/2026-02:47:59] [I] Total GPU Compute Time: 2.98781 s
+[01/16/2026-02:47:59] [I] Explanations of the performance metrics are printed in the verbose logs.
+[01/16/2026-02:47:59] [I] 
+&&&& PASSED TensorRT.trtexec [TensorRT v100001] # trtexec --onnx=model.onnx --saveEngine=./model_repository/resnet50_trt/1/model.plan --minShapes=input:1x3x224x224 --optShapes=input:1x3x224x224 --maxShapes=input:256x3x224x224 --fp16
+```
+
+```
+docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g" --privileged   -u 0  -p 8000:8000 -p 8001:8001 -p 8002:8002 --name=triton -v $(pwd)/model_repository:/models nvcr.io/nvidia/tritonserver:24.05-py3 tritonserver --model-repository=/models
+```
+
+![images](server.png)   
+
+
++ client 采用pytorch:24.05-py3 + pip3 install tritonclient    
+
+
+```
+
+sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+
+```
+
+安装pip3 install tritonclient[all]时间很短
+```
+pip3 install tritonclient[all]
+```
+ 
+##  TensorRT with pytorch:23.08-py3(自带TensorRT)
+
+
+  OnnxRuntime to  TensorRT    
+ ```python
+import torch
+import torchvision.models as models
+import argparse
+import os
+resnet50 = models.resnet50(pretrained=True)
+dummy_input = torch.randn(1, 3, 224, 224)
+resnet50 = resnet50.eval()
+
+torch.onnx.export(resnet50,
+                    dummy_input,
+                    args.save,
+                    export_params=True,
+                    opset_version=10,
+                    do_constant_folding=True,
+                    input_names=['input'],
+                    output_names=['output'],
+                    dynamic_axes={'input': {0: 'batch_size', 2: "height", 3: 'width'},
+                                'output': {0: 'batch_size'}})
+  ```
+
+ Once you have your exported onnx model, using trtexec:
+ ```bash
+   trtexec --onnx=model.onnx --saveEngine=model.plan --explicitBatch --minShapes=input:1x3x224x224 --optShapes=input:1x3x224x224 --maxShapes=input:256x3x224x224
+
+  ```
+
+  * Pay attention to use tensorrt version corresponding to the one used on Triton image, or you could use a container like below (supposing you are using Triton release 23.08)
+   ```bash
+  docker run -it --gpus=all -v $(pwd):/workspace nvcr.io/nvidia/pytorch:23.08-py3 /bin/bash -cx \
+   "trtexec --onnx=model.onnx --saveEngine=model.plan --explicitBatch --minShapes=input:1x3x224x224 --optShapes=input:1x3x224x224 --maxShapes=input:256x3x224x224 --fp16 
+  ```  
+ 
+
+
+
+##    TensorRT with tensorrt:24.05-py3
 
 ```
 dpkg -l | grep -i tensorrt-dev
@@ -26,8 +125,40 @@ sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host 
 -v $(pwd)/models:/models \
 nvcr.io/nvidia/tensorrt:24.05-py3  bash
 ```
+
+
 ```
 /workspace/tensorrt/bin# ./trtexec --loadEngine=/models/resnet50_trt/1/model.plan    
+```
+
+
++ onnx to  tensorrt   
+```
+/workspace/tensorrt/bin/trtexec  --onnx=resnet50/model.onnx --fp16 --saveEngine=resnet50.fp16.engine
+```
+
+```
+[01/16/2026-02:16:23] [I] Total Host Walltime: 3.00104 s
+[01/16/2026-02:16:23] [I] Total GPU Compute Time: 2.98803 s
+[01/16/2026-02:16:23] [I] Explanations of the performance metrics are printed in the verbose logs.
+[01/16/2026-02:16:23] [I] 
+&&&& PASSED TensorRT.trtexec [TensorRT v100001] # /workspace/tensorrt/bin/trtexec --onnx=resnet50/model.onnx --fp16 --saveEngine=resnet50.fp16.engine
+```
+
++ 加载resnet50.fp16.engine
+
+
+```
+/workspace/tensorrt/bin/trtexec  --loadEngine=resnet50.fp16.engine 
+```
+```
+[01/16/2026-02:17:36] [I] Total Host Walltime: 3.00127 s
+[01/16/2026-02:17:36] [I] Total GPU Compute Time: 2.98765 s
+[01/16/2026-02:17:36] [W] * GPU compute time is unstable, with coefficient of variance = 1.92523%.
+[01/16/2026-02:17:36] [W]   If not already in use, locking GPU clock frequency or adding --useSpinWait may improve the stability.
+[01/16/2026-02:17:36] [I] Explanations of the performance metrics are printed in the verbose logs.
+[01/16/2026-02:17:36] [I] 
+&&&& PASSED TensorRT.trtexec [TensorRT v100001] # /workspace/tensorrt/bin/trtexec --loadEngine=resnet50.fp16.engine
 ```
 
 # resnet18

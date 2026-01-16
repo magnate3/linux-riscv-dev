@@ -36,7 +36,7 @@ Incorrect!
 ```
 
 > ## simplegemm
-
++ -std=c++17编译simplegemm
 ```
 cuda-gemm/simplegemm# make gemm
 nvcc -std=c++17 -O3 -DNDEBUG -w --expt-relaxed-constexpr --expt-extended-lambda -Xcompiler=-fPIE -Xcompiler=-Wno-psabi -Xcompiler=-fno-strict-aliasing -arch=sm_90a -lcublas -lcuda  main.cu -o gemm

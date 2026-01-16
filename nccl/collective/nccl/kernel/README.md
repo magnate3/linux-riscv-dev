@@ -154,6 +154,8 @@ __device__ __forceinline__ void waitPeer(
 
 > ## 共享内存
 
+[第76篇 - NCCL SHM（共享内存）传输层深度分析](https://zhuanlan.zhihu.com/p/1982220126754461512)   
+
 
 ```
 ncclResult_t ncclShmAllocateShareableBuffer(size_t size, bool legacy, ncclShmIpcDesc_t *desc, void **hptr, void **dptr) {

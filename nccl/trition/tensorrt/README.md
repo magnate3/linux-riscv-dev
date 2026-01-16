@@ -36,7 +36,11 @@ ONNX models can be exported from most popular deep learning training frameworks 
 
 
 ##  ##  onnx export  TensorRT with pytorch:25.03-py3(自带TensorRT)
+```
 
+sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+
+```
 
 ```
  python onnx_exporter.py --save model.onnx 
@@ -66,6 +70,13 @@ docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-
 
 sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
 
+```
+
+```
+/pytorch/triton/resnet50_trt# python3 client.py 
+/usr/local/lib/python3.10/dist-packages/tritongrpcclient/__init__.py:33: DeprecationWarning: The package `tritongrpcclient` is deprecated and will be removed in a future version. Please use instead `tritonclient.grpc`
+  warnings.warn(
+104.86435890197754ms class: COFFEE MUG
 ```
 
 安装pip3 install tritonclient[all]时间很短

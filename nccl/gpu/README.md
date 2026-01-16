@@ -10,6 +10,10 @@ nvidia-smi nvlink -R
 docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 ```
 
+#  cuda
+
+[CUDA编程- __syncthreads()函数](https://blog.csdn.net/weixin_43844521/article/details/133945535)   
+
 #  NVIDIA Container Toolkit(docker支持gpu)
 
 Configure the repository:   

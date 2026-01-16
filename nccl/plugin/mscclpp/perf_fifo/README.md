@@ -113,3 +113,73 @@ Test: FifoTest_Size512_ParallelCustom (fifo)
     p8_push_throughput: 3082944.4
     p8_warmup_triggers: 8192
 ```
+
+
+# 
+
+
+```
+struct Fifo::Impl {
+  detail::UniqueGpuHostPtr<ProxyTrigger> triggers;
+  detail::UniqueGpuPtr<uint64_t> head;
+  detail::UniqueGpuHostPtr<uint64_t> tail;
+  detail::UniqueGpuPtr<uint64_t> tailCache;
+  const int size;
+
+  Impl(int size)
+      : triggers(detail::gpuCallocHostUnique<ProxyTrigger>(size)),
+        head(detail::gpuCallocUnique<uint64_t>()),
+        tail(detail::gpuCallocHostUnique<uint64_t>()),
+        tailCache(detail::gpuCallocUnique<uint64_t>()),
+        size(size) {}
+};
+```
++  gpuCalloc gpuCallocHost也就是cudaMalloc、cudaHostAlloc
+
+```
+        // 有 GPU：使用 pinned memory（CPU-GPU 共享内存）
+        // cudaHostAllocMapped 让 CPU 和 GPU 可以访问同一块内存
+        cudaHostAlloc(&tasks_, kNumTasks_ * sizeof(Task), cudaHostAllocMapped);
+        cudaHostGetDevicePointer(&tasks_device_, tasks_, 0);
+		cudaHostAlloc((void**)&doorbell, sizeof(int), cudaHostAllocMapped));
+```
+
+```
+template <class T>
+auto gpuCallocHostUnique(size_t nelems = 1, unsigned int flags = cudaHostAllocMapped) {
+  return detail::safeAlloc<T, detail::GpuHostDeleter<T>, UniqueGpuHostPtr<T>>(detail::gpuCallocHost, nelems, flags);
+}
+
+template <class T>
+auto gpuCallocUnique(size_t nelems = 1) {
+  return detail::safeAlloc<T, detail::GpuDeleter<T>, UniqueGpuPtr<T>>(detail::gpuCalloc, nelems);
+}
+
+```
+
+
+```
+void* gpuCalloc(size_t bytes) {
+  AvoidCudaGraphCaptureGuard cgcGuard;
+  void* ptr;
+  auto stream = gpuStreamPool()->getStream();
+  MSCCLPP_CUDATHROW(cudaMalloc(&ptr, bytes));
+  MSCCLPP_CUDATHROW(cudaMemsetAsync(ptr, 0, bytes, stream));
+  MSCCLPP_CUDATHROW(cudaStreamSynchronize(stream));
+  return ptr;
+}
+
+void* gpuCallocHost(size_t bytes, unsigned int flags) {
+  AvoidCudaGraphCaptureGuard cgcGuard;
+  void* ptr;
+  MSCCLPP_CUDATHROW(cudaHostAlloc(&ptr, bytes, flags));
+  ::memset(ptr, 0, bytes);
+  return ptr;
+}
+
+```
+
+
+```
+cudaHostAlloc st.global.release.sys.v2.u64
+```

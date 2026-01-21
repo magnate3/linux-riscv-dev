@@ -101,6 +101,17 @@ __device__ void simpleCopy(T *dst, T const *src, int tid, int nthreads) {
   for (int i = tid; i < sizeof(T); i += nthreads)
     d[i] = s[i];
 }
+// Copy 16-byte aligned data. You must call with at least `(bytes+15)/16` threads.
+inline __device__ void copyToShmem16(int tid, void* dst, void const* src, int bytes) {
+  int offset = 16*tid;
+  if (offset < bytes) {
+    ulong2 *src2, *dst2;
+    src2 = (ulong2*)((char const*)src + offset);
+    dst2 = (ulong2*)((char*)dst + offset);
+    dst2->x = src2->x;
+    dst2->y = src2->y;
+  }
+}
 struct ncclShmemData {
   union {
     uint64_t ll128warp[NCCL_LL128_MAX_NTHREADS/WARP_SIZE][NCCL_LL128_SHMEM_ELEMS_PER_THREAD*WARP_SIZE];
@@ -127,9 +138,10 @@ __global__ void kernelFunction(ncclShmemData *shd) {
 
 int main() {
     struct ncclShmemData cpudata;
+    //printf("sizeof (struct ncclShmemData) : %d \n",sizeof(struct ncclShmemData));
     //ncclKernel(&cpudata);
     //ncclKernel<<<2, 2>>>(&cpudata);
-    kernelFunction<<<1, 1>>>(&cpudata); 
+    kernelFunction<<<1, 1024>>>(&cpudata); 
     //ncclKernel<<<1, 1>>>(&cpudata); 
     cudaDeviceSynchronize();
     return 0;

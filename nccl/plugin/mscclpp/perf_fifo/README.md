@@ -181,5 +181,5 @@ void* gpuCallocHost(size_t bytes, unsigned int flags) {
 
 
 ```
-cudaHostAlloc st.global.release.sys.v2.u64
+cudaHostAlloc st.global.release.sys.v2.u64 cuda::atomic_ref
 ```

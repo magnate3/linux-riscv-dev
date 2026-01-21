@@ -1,5 +1,9 @@
 
+# docker 
 
+```
+docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+```
 
 #  uccl-ring
 

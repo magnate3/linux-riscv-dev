@@ -187,3 +187,11 @@ ptxas error   : Undefined reference to 'VecAdd2' in '<input>'
 
 invoke_VecAdd前面加上extern "C" __global__ 
 
+
+
+# copy  
+
+- shared修饰表示是GPU一个block中所有thread的共享内存
+
+- copyToShmem16函数，用于将一些数据（其实不是主要数据搬运，代码里可以看到，主要是用于搬运comm和channel这些控制信息的）从GPU的全局内存搬运到共享内存里   
+-  loadWorkBatchToShmem函数，用于从全局内存加载工作批次到共享内存中。这些批次由 ncclShmem 中的 workStorage 存储，每个线程负责加载不同的部分。通过 tid 和 tn，每个线程计算自己需要处理的工作项，并将其加载到共享内存中

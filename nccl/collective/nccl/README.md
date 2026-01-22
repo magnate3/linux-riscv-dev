@@ -2,9 +2,18 @@
 
 # all reduce
 
+NCCL虽然没有直接实现传统的2D/3D mesh拓扑，但通过多通道并行和多轨网络机制实现了类似mesh的通信模式   
+
 [bid loopSize nChannels nranks chunkSize关系图解](https://mubai.tech/nccl_allreduce)   
 
+NCCL采用迭代执行模式来处理大型数据集，将总输入数据分解为更小的数据块。这种方法允许系统有效管理内存使用，同时保持高吞吐量。数据被分配给不同的通道，每个通道由特定的流式多处理器（SM）处理。
+
+
 ![images](image.webp)
+
+![images](reduce.png)
+
+
 
 ## Single Process, Single Thread, Multiple Devices
 

@@ -111,6 +111,53 @@ Concurrency: 14, throughput: 3231.82 infer/sec, latency 4261 usec
 Concurrency: 15, throughput: 3184.37 infer/sec, latency 4635 usec
 Concurrency: 16, throughput: 3222.13 infer/sec, latency 4888 usec
 ```
+
+> ## pipline
+
+
+```
+root@ubuntu# mkdir -p model_repository/dali/1
+root@ubuntu# mkdir -p model_repository/ensemble_dali_resnet50/1
+root@ubuntu# python serialize_dali_pipeline.py --save ./model_repository/dali/1/model.dali
+Saved ./model_repository/dali/1/model.dali
+root@ubuntu# 
+```
+
++ 采用cat测试
+```
+root@ubuntu# python client.py 
+/usr/local/lib/python3.10/dist-packages/tritongrpcclient/__init__.py:33: DeprecationWarning: The package `tritongrpcclient` is deprecated and will be removed in a future version. Please use instead `tritonclient.grpc`
+  warnings.warn(
+5.239963531494141ms class: EGYPTIAN CAT
+root@ubuntu# 
+```
+
+```
+root@ubuntu# python pipeline_client.py --image cat.jpg 
+/usr/local/lib/python3.10/dist-packages/tritongrpcclient/__init__.py:33: DeprecationWarning: The package `tritongrpcclient` is deprecated and will be removed in a future version. Please use instead `tritonclient.grpc`
+  warnings.warn(
+105.52668571472168ms class: LYNX
+```
++ 采用mug测试  
+```
+wget https://raw.githubusercontent.com/triton-inference-server/server/master/qa/images/mug.jpg -O "mug.jpg"
+```
+
+```
+python client.py 
+/usr/local/lib/python3.10/dist-packages/tritongrpcclient/__init__.py:33: DeprecationWarning: The package `tritongrpcclient` is deprecated and will be removed in a future version. Please use instead `tritonclient.grpc`
+  warnings.warn(
+105.43942451477051ms class: COFFEE MUG
+```
+
+```
+python pipeline_client.py --image mug.jpg 
+/usr/local/lib/python3.10/dist-packages/tritongrpcclient/__init__.py:33: DeprecationWarning: The package `tritongrpcclient` is deprecated and will be removed in a future version. Please use instead `tritonclient.grpc`
+  warnings.warn(
+127.6545524597168ms class: COFFEE MUG
+```
+
+
  
 ##  TensorRT with pytorch:23.08-py3(自带TensorRT)
 

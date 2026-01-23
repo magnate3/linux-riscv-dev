@@ -1,4 +1,13 @@
 
+```
+apt-get install nlohmann-json3-dev
+```
+
+#  docker 
+
+```
+ sudo docker run -it --privileged --net=host --ipc=host --gpus all --name mscclpp-dev ghcr.io/microsoft/mscclpp/mscclpp:base-dev-cuda12.8 bash
+```
 
 # make
 

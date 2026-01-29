@@ -257,8 +257,7 @@ Reshape                  reshape_105              1 1 119 120 0=1 1=1 2=-1
 Flatten                  flatten_106              1 1 120 121
 InnerProduct             linear_104               1 1 121 out0 0=1000 1=1 2=2048000
 ```
-in0   
-out0   
+in0和out0  两个参数    
 
 
 

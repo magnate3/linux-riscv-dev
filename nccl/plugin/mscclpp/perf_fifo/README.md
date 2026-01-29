@@ -9,6 +9,11 @@ apt-get install nlohmann-json3-dev
  sudo docker run -it --privileged --net=host --ipc=host --gpus all --name mscclpp-dev ghcr.io/microsoft/mscclpp/mscclpp:base-dev-cuda12.8 bash
 ```
 
+
+```
+ sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  ghcr.io/microsoft/mscclpp/mscclpp:base-dev-cuda12.8 bash
+```
+
 # make
 
 ```

@@ -1,3 +1,9 @@
+
+
+```
+sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+```
+
 # 编译ncnn转换工具
 
 通过 `git clone https://github.com/Tencent/ncnn.git` 将ncnn的仓库拉取到本地，进行编译

@@ -266,8 +266,111 @@ InnerProduct             linear_104               1 1 121 out0 0=1000 1=1 2=2048
 in0和out0  两个参数    
 
 
+> ## 量化前benchncnn test
+```
+./benchmark/benchncnn 4 8 0 -1 1 param=onnx2ncnn/model.ncnn.param   shape=[227,227,3]
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = -1
+cooling_down = 1
+onnx2ncnn/model.ncnn.param  min =   16.62  max =   21.99  avg =   18.83
+```
 
-# test
+> ## int8 量化后 benchncnn test
+
++ 下载图片   
+```
+git clone https://github.com/nihui/imagenet-sample-images.git
+```
+
++  imagelist.txt
+```
+find imagenet-sample-images/ -type f > imagelist.txt
+```
+
+
++ 生成resnet50.table     
+```
+./tools/quantize/ncnn2table   onnx2ncnn/model.ncnn.param  onnx2ncnn/model.ncnn.bin imagelist.txt resnet50.table mean=[104,117,123] norm=[0.017,0.017,0.017] shape=[224,224,3] pixel=BGR thread=8 method=kl
+```
+
+
+```
+./tools/quantize/ncnn2table   onnx2ncnn/model.ncnn.param  onnx2ncnn/model.ncnn.bin imagelist.txt resnet50.table mean=[104,117,123] norm=[0.017,0.017,0.017] shape=[224,224,3] pixel=BGR thread=8 method=kl
+mean = [104.000000,117.000000,123.000000]
+norm = [0.017000,0.017000,0.017000]
+shape = [224,224,3]
+pixel = BGR
+thread = 8
+method = kl
+---------------------------------------
+count the absmax 0.00% [ 0 / 1026 ]
+count the absmax 9.75% [ 100 / 1026 ]
+count the absmax 19.49% [ 200 / 1026 ]
+count the absmax 29.24% [ 300 / 1026 ]
+count the absmax 38.99% [ 400 / 1026 ]
+count the absmax 48.73% [ 500 / 1026 ]
+count the absmax 58.48% [ 600 / 1026 ]
+count the absmax 68.23% [ 700 / 1026 ]
+count the absmax 77.97% [ 800 / 1026 ]
+count the absmax 87.72% [ 900 / 1026 ]
+count the absmax 97.47% [ 1000 / 1026 ]
+build histogram 0.00% [ 0 / 1026 ]
+build histogram 9.75% [ 100 / 1026 ]
+build histogram 19.49% [ 200 / 1026 ]
+build histogram 29.24% [ 300 / 1026 ]
+build histogram 38.99% [ 400 / 1026 ]
+build histogram 48.73% [ 500 / 1026 ]
+build histogram 58.48% [ 600 / 1026 ]
+build histogram 68.23% [ 700 / 1026 ]
+build histogram 77.97% [ 800 / 1026 ]
+build histogram 87.72% [ 900 / 1026 ]
+build histogram 97.47% [ 1000 / 1026 ]
+```
+
++  生成 resnet-int8.param  resnet-int8.bin
+```
+./tools/quantize/ncnn2int8 onnx2ncnn/model.ncnn.param  onnx2ncnn/model.ncnn.bin  int8-quant/resnet-int8.param int8-quant/resnet-int8.bin  resnet50.table
+```
+
+```
+./tools/quantize/ncnn2int8 onnx2ncnn/model.ncnn.param  onnx2ncnn/model.ncnn.bin  int8-quant/resnet-int8.param int8-quant/resnet-int8.bin  resnet50.table
+quantize_convolution convrelu_0
+quantize_convolution convrelu_1
+quantize_convolution convrelu_2
+quantize_convolution conv_54
+quantize_convolution conv_55
+quantize_convolution convrelu_3
+quantize_convolution convrelu_4
+quantize_convolution conv_58
+quantize_convolution convrelu_5
+quantize_convolution convrelu_6
+quantize_convolution conv_61
+quantize_convolution convrelu_7
+quantize_convolution convrelu_8
+quantize_convolution conv_64
+quantize_convolution conv_65
+quantize_convolution convrelu_9
+quantize_convolution convrelu_10
+quantize_convolution conv_68
+quantize_convolution convrelu_11
+quantize_convolution convrelu_12
+quantize_convolution conv_71
+quantize_convolution convrelu_13
+```
+
+```
+./benchmark/benchncnn 4 8 0 -1 1 param=int8-quant/resnet-int8.param   shape=[227,227,3]
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = -1
+cooling_down = 1
+int8-quant/resnet-int8.param  min =    7.89  max =   15.51  avg =   10.63
+```
+
+# 推理test
 
 ```
  python onnx_exporter.py --save model.onnx 
@@ -289,4 +392,61 @@ detection time: 88 ms
 228 = 5.034719
 181 = 4.681878
 190 = 4.639017
+```
+
+
+# benchmark
+
+> ## cpu
+```
+./benchmark/benchncnn 4 8 0 -1 1
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = -1
+cooling_down = 1
+          squeezenet  min =    2.32  max =    2.40  avg =    2.36
+     squeezenet_int8  min =    1.79  max =    1.81  avg =    1.80
+           mobilenet  min =    2.83  max =    3.33  avg =    2.99
+      mobilenet_int8  min =    1.64  max =    1.68  avg =    1.65
+        mobilenet_v2  min =    4.33  max =    4.48  avg =    4.40
+        mobilenet_v3  min =    2.36  max =    2.47  avg =    2.39
+          shufflenet  min =    2.74  max =    2.76  avg =    2.75
+       shufflenet_v2  min =    2.47  max =    2.47  avg =    2.47
+             mnasnet  min =    2.96  max =    3.05  avg =    3.00
+     proxylessnasnet  min =    3.53  max =    3.59  avg =    3.57
+     efficientnet_b0  min =    5.54  max =    5.56  avg =    5.55
+   efficientnetv2_b0  min =    5.73  max =    5.81  avg =    5.76
+        regnety_400m  min =    6.66  max =    6.79  avg =    6.70
+           blazeface  min =    0.95  max =    0.99  avg =    0.97
+           googlenet  min =    7.78  max =    8.02  avg =    7.87
+      googlenet_int8  min =    5.25  max =    5.32  avg =    5.30
+            resnet18  min =    5.08  max =    5.64  avg =    5.25
+       resnet18_int8  min =    3.82  max =    3.98  avg =    3.87
+             alexnet  min =    5.15  max =    5.30  avg =    5.22
+               vgg16  min =   29.00  max =   29.79  avg =   29.41
+          vgg16_int8  min =   17.94  max =   18.02  avg =   17.98
+            resnet50  min =   13.39  max =   13.81  avg =   13.51
+       resnet50_int8  min =    7.20  max =    7.31  avg =    7.23
+      squeezenet_ssd  min =    6.38  max =    6.47  avg =    6.41
+ squeezenet_ssd_int8  min =    5.21  max =    5.26  avg =    5.23
+       mobilenet_ssd  min =    5.54  max =    5.64  avg =    5.58
+  mobilenet_ssd_int8  min =    3.33  max =    3.37  avg =    3.35
+      mobilenet_yolo  min =   14.47  max =   14.75  avg =   14.64
+  mobilenetv2_yolov3  min =   10.36  max =   10.52  avg =   10.43
+         yolov4-tiny  min =   13.59  max =   13.80  avg =   13.66
+           nanodet_m  min =    5.09  max =    5.18  avg =    5.11
+    yolo-fastest-1.1  min =    2.81  max =    2.82  avg =    2.82
+      yolo-fastestv2  min =    2.85  max =    2.88  avg =    2.87
+  vision_transformer  min =   80.05  max =   86.92  avg =   83.11
+          FastestDet  min =    3.01  max =    3.03  avg =    3.03
+```
+
+
+
+
+# gpu
+
+
+```
 ```

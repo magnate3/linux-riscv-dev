@@ -279,6 +279,11 @@ onnx2ncnn/model.ncnn.param  min =   16.62  max =   21.99  avg =   18.83
 
 > ## int8 量化后 benchncnn test
 
+[量化参考quantized-int8-inference.md](https://github.com/Tencent/ncnn/blob/bdac11b74d769c7f399085c892dedbec78b8d278/docs/how-to-use-and-FAQ/quantized-int8-inference.md)  
+
+
+[鲲鹏920环境，yolov8n模型int8量化速度比默认的fp16慢了50%](https://github.com/Tencent/ncnn/issues/5443)    
+
 + 下载图片   
 ```
 git clone https://github.com/nihui/imagenet-sample-images.git
@@ -397,6 +402,8 @@ detection time: 88 ms
 
 # benchmark
 
+[perf-tools/ncnn-testsuite.sh](https://github.com/YingkunZhou/EdgeTransformerBench/blob/main/perf-tools/ncnn-testsuite.sh)
+
 > ## cpu
 ```
 ./benchmark/benchncnn 4 8 0 -1 1
@@ -449,4 +456,72 @@ cooling_down = 1
 
 
 ```
+./benchmark/benchncnn 4 8 0 0 1 param=onnx2ncnn/model.ncnn.param   shape=[227,227,3]
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = 0
+cooling_down = 1
+onnx2ncnn/model.ncnn.param  min =   16.49  max =   16.56  avg =   16.52
 ```
+
+# python
+
+
+
+```
+/pytorch/ncnn# git submodule init && git submodule update
+/pytorch/ncnn# python setup.py install
+```
+
+日志
+```
+byte-compiling /usr/local/lib/python3.10/dist-packages/ncnn/utils/download.py to download.cpython-310.pyc
+byte-compiling /usr/local/lib/python3.10/dist-packages/ncnn/utils/__init__.py to __init__.cpython-310.pyc
+byte-compiling /usr/local/lib/python3.10/dist-packages/ncnn/utils/visual.py to visual.cpython-310.pyc
+```
+
+## 测试
+
+
+
+
+```
+/pytorch/ncnn/python# python3 tests/benchmark.py 
+loop_count = 4
+num_threads = 32
+powersave = 0
+gpu_device = -1
+cooling_down = True
+          squeezenet  min =    2.73  max =    2.74  avg =    2.73
+
+```
+
+
+#   ultralytics
+
+
+```
+pip install ultralytics
+```
+
+
+# cifar10 测试
+
+
+
+```
+wget https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
+```
+
+#  lite.ai.toolkit
+
+```
+curl -o plane.jpg http://images.cocodataset.org/test2017/000000030207.jpg
+curl -o food.jpg http://images.cocodataset.org/test2017/000000228503.jpg
+curl -o sport.jpg http://images.cocodataset.org/test2017/000000133861.jpg
+curl -o dog.jpg https://raw.githubusercontent.com/pytorch/hub/master/images/dog.jpg
+```
+
+
+[lite.ai.toolkit](https://github.com/xlite-dev/lite.ai.toolkit/blob/7ce0c9810e977650c9f85a4dd1d391ebb975d04a/README.md)

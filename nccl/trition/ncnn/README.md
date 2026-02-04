@@ -516,6 +516,12 @@ wget https://www.cs.toronto.edu/~kriz/cifar-10-binary.tar.gz
 
 #  lite.ai.toolkit
 
++  imagenet1k_label_list
+
+    - [ImageNet1k](https://www.image-net.org)
+    > <img src="/readme_supply/imagenet1k_dataset.png" width=30% height=30%></img>
+    - [Cifar10](https://www.cs.toronto.edu/~kriz/cifar.html)
+    > <img src="/readme_supply/cifar10_dataset.png" width=20% height=20%></img>
 ```
 curl -o plane.jpg http://images.cocodataset.org/test2017/000000030207.jpg
 curl -o food.jpg http://images.cocodataset.org/test2017/000000228503.jpg

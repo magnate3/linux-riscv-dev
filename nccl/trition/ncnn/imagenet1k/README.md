@@ -11,6 +11,17 @@
  g++ readall.cpp  -o readall -I/usr/local/include/opencv4 -lopencv_core -lopencv_highgui -lopencv_imgcodecs -lopencv_imgproc
 ```
 
+
+# int8 quant
+
+
+```
+./bench_resnet 
+total jpeg: 1000
+right : 692 wrong: 308  accuracy : 0.692
+```
+
+
 #  imagenet1k 
 
     - [ImageNet1k](https://www.image-net.org)

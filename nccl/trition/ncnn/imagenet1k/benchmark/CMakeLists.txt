@@ -28,7 +28,9 @@ set(OpenCV_LIBS opencv_core
 
 add_executable(image_classifier image_classifier.cpp)
 add_executable(resnet resnet.cpp)
+add_executable(bench_resnet bench_resnet.cpp)
 add_executable(batch_resnet batch_resnet.cpp LoadData.cpp)
 target_link_libraries(image_classifier ncnn ${OpenCV_LIBS})
 target_link_libraries(resnet  ncnn ${OpenCV_LIBS} jsoncpp)
 target_link_libraries(batch_resnet  ncnn ${OpenCV_LIBS} jsoncpp)
+target_link_libraries(bench_resnet  ncnn ${OpenCV_LIBS} jsoncpp)

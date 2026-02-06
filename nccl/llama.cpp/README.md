@@ -159,7 +159,7 @@ mul mat (4 x 3) (transposed result):
 sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
 ```
 
-> ### cpu编译   
+> ### cpu编译(运行coredump)   
 ```
 #构建编译build文件
 cmake -B build #（如果使用vscode中cmake插件，则此步骤可能自动被执行）
@@ -203,6 +203,53 @@ ggml_gallocr_reserve_n: reallocating CUDA_Host buffer from size 0.00 MiB to 0.00
 ```
 
 
+```
+
+// lists of buffer types used for each layer
+using buft_list_t = std::vector<std::pair<ggml_backend_dev_t, ggml_backend_buffer_type_t>>;
+static  void debug_backend(std::vector<ggml_backend_ptr> & backends, std::map<ggml_backend_buffer_type_t, ggml_context *> & ctx_map) {
+        //const char * dev_name = "CPU";
+            auto get_ctx_for_buft = [&](ggml_backend_buffer_type_t buft) -> ggml_context * {
+        auto it = ctx_map.find(buft);
+        if (it == ctx_map.end()) {
+#if 0
+            // add a new context
+            struct ggml_init_params params = {
+                /*.mem_size   =*/ n_tensors*ggml_tensor_overhead(),
+                /*.mem_buffer =*/ NULL,
+                /*.no_alloc   =*/ true,
+            };
+            ggml_context * buft_ctx = ggml_init(params);
+            ctx_map[buft] = buft_ctx;
+            return buft_ctx;
+#else
+            return NULL;
+#endif
+
+        };
+        return it->second;
+    };
+        for (auto & backend : backends) {
+            auto * buft = ggml_backend_get_default_buffer_type(backend.get());
+            //auto backend_type = ggml_backend_dev_type(ggml_backend_get_device(backend.get()));
+            ggml_context * ctx = get_ctx_for_buft(buft);
+            ggml_backend_dev_t dev = ggml_backend_buft_get_device(buft);
+            //struct ggml_context * ctx = get_ctx_for_buft(ggml_backend_buffer_get_type(backend.get()));
+            if(ctx){
+                // skip contexts without tensors
+                if (ggml_get_first_tensor(ctx) == nullptr) {
+                    continue;
+                }
+                //ggml_backend_buffer_type_t buf_type = ggml_backend_get_default_buffer_type(backend);
+                printf("!!!!!!!!!!!!!! buffer type name: %s\n", ggml_backend_buft_name(buft));
+                if(NULL != dev)
+                      printf("backend device %s \n",ggml_backend_dev_name(dev));
+            }
+        }
+}
+```
+
+
 + 可视化
 
 ```
@@ -211,3 +258,50 @@ ggml_gallocr_reserve_n: reallocating CUDA_Host buffer from size 0.00 MiB to 0.00
 ```
 
 ![images](dev/llama.dot.png )
+
+
+> ## device
+
+
+ 
+
+```
+ cmake -S . -B build -DGGML_CUDA=ON
+  cmake --build build -j 12
+```
+
+```
+./build/test-device 
+GGML device examples
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 3090, compute capability 8.6, VMM: yes
+register_backend: registered backend CUDA (1 devices)
+register_device: registered device CUDA0 (NVIDIA GeForce RTX 3090)
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (Intel(R) Core(TM) i9-14900)
+device count: 2
+device name: CUDA0
+device description: NVIDIA GeForce RTX 3090
+backend name: CUDA0
+buffer type name: CUDA0
+buffer name: CUDA0
+device name: CPU
+device description: Intel(R) Core(TM) i9-14900
+backend name: CPU
+backend type: GGML_BACKEND_DEVICE_TYPE_CPU
+buffer type name: CPU
+buffer name: CPU
+```
+
+> ## 多设备调度
+
+
+```
+ggml_context * ctx = ctx_for_buft(buft);
+```
+
+```
+ ggml_backend_sched_new(model.backends.data(), model.backends.size())
+```

@@ -93,3 +93,23 @@ llama.cpp提供了perplexity可执行文件来验证模型的PPL精度，这里�
 ```
 ./perplexity -m models/Qwen/14B/ggml-model-Q4_0.gguf -f wikitext-2-raw/wiki.test.raw
 ```
+
+# dev
+
+
+```
+[root@centos7 docker]# docker run --rm  --name llama.cppdev --net=host    -itd    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0 -v /pytorch:/workspace -p 8088:8080  llamp.cpp:cpudev2 
+WARNING: Published ports are discarded when using host network mode
+6699a510e446d4f640b9e1e09d674dd0c60741bb4ed9ef522fe9bf617a45e44d
+[root@centos7 docker]# docker exec -it llama.cppdev  bash
+root@centos7:/#  
+```
+
+```
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DLLAMA_BUILD_TESTS=OFF -DGGML_CPU_ARM_ARCH=armv8-a
+make --build build -j $(nproc)
+```
+
+```
+root@centos7:/workspace/llama.cpp# ./build/bin/llama-server -m /workspace/qwen/models/  --host 0.0.0.0 --port 8080 -n 512
+```

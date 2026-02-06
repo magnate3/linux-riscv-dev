@@ -107,9 +107,107 @@ root@centos7:/#
 
 ```
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DLLAMA_BUILD_TESTS=OFF -DGGML_CPU_ARM_ARCH=armv8-a
-make --build build -j $(nproc)
+cmake --build build -j $(nproc)
 ```
 
 ```
 root@centos7:/workspace/llama.cpp# ./build/bin/llama-server -m /workspace/qwen/models/  --host 0.0.0.0 --port 8080 -n 512
 ```
+
+
+```
+root@centos7:/workspace/llama.cpp# ./build/bin/llama-server -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf  --host 0.0.0.0 --port 8080 -n 512
+main: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
+build: 7941 (11fb327bf) with GNU 11.4.0 for Linux aarch64
+system info: n_threads = 128, n_threads_batch = 128, total_threads = 128
+
+system_info: n_threads = 128 (n_threads_batch = 128) / 128 | CPU : NEON = 1 | ARM_FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+
+Running without SSL
+init: using 127 threads for HTTP server
+start: binding port with default address family
+main: loading model
+srv    load_model: loading model '/workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf'
+common_init_result: fitting params to device memory, for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on
+llama_params_fit_impl: no devices with dedicated memory found
+llama_params_fit: successfully fit params to free device memory
+llama_params_fit: fitting params to free memory took 0.54 seconds
+llama_model_loader: loaded meta data with 31 key-value pairs and 311 tensors from /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+```
+
+> ##  ggml-demo
+```
+root@centos7:/workspace/llama.cpp/ggml-demo/demo-sgemm# g++ simple-sgemm.cpp  -I /workspace/llama.cpp/ggml/include  -L /workspace/llama.cpp/build/bin/ -lggml -lggml-cpu -lggml-base -o  test
+root@centos7:/workspace/llama.cpp/ggml-demo/demo-sgemm# export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/workspace/llama.cpp/build/bin"
+root@centos7:/workspace/llama.cpp/ggml-demo/demo-sgemm# ./test 
+Using the CPU as backend to computing...
+main: compute buffer size: 0.0625 KB
+Enable the cpu parallel mode, and using 66 threads  
+compute: compute model in 3.88 ms
+mul mat (4 x 3) (transposed result):
+[ 61.00 56.00 51.00 111.00
+ 91.00 55.00 55.00 127.00
+ 43.00 30.00 29.00 65.00 ]
+```
+
+> ## spilt sched
+
+
+
+```
+sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+```
+
+> ### cpu编译   
+```
+#构建编译build文件
+cmake -B build #（如果使用vscode中cmake插件，则此步骤可能自动被执行）
+cmake --build build  -j 4
+```
+
+```
+/pytorch/GGML-Tutorial#  build/bin/split_graph -h
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (Intel(R) Core(TM) i9-14900)
+/pytorch/GGML-Tutorial/src/custom-model.cpp:246: GGML_ASSERT(!devices.empty() && "no gpu devices can be used!") failed
+/pytorch/GGML-Tutorial/build/ggml/src/libggml-base.so(+0x5ef21)[0x7e3eac5a1f21]
+```
+
+> ###  gpu编译  
+
+```
+cmake -B build -DGGML_CUDA=ON
+cmake --build build -j 12 #cuda编译较慢，尽可能选择更多core进行编译
+```
+
+```
+/pytorch/GGML-Tutorial# ./build/bin/split_graph 
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 3090, compute capability 8.6, VMM: yes
+register_backend: registered backend CUDA (1 devices)
+register_device: registered device CUDA0 (NVIDIA GeForce RTX 3090)
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (Intel(R) Core(TM) i9-14900)
+custom_model:        CUDA0 model buffer size =     1.22 MiB
+custom_model:          CPU model buffer size =     0.00 MiB
+custom_model: enumerating backends
+custom_model: backend_ptrs.size() = 2
+custom_model: max_nodes = 65536
+ggml_graph_dump_dot: dot -Tpng llama.dot -o llama.dot.png && open llama.dot.png
+ggml_backend_sched_alloc_splits: failed to allocate graph, reserving (backend_ids_changed = 1)
+ggml_gallocr_reserve_n: reallocating CUDA0 buffer from size 0.00 MiB to 0.00 MiB
+ggml_gallocr_reserve_n: reallocating CUDA_Host buffer from size 0.00 MiB to 0.00 MiB
+```
+
+
++ 可视化
+
+```
+ apt-get install graphviz
+ sudo dot -Tpng llama.dot -o llama.dot.png
+```
+
+![images](dev/llama.dot.png )

@@ -202,7 +202,7 @@ ggml_gallocr_reserve_n: reallocating CUDA0 buffer from size 0.00 MiB to 0.00 MiB
 ggml_gallocr_reserve_n: reallocating CUDA_Host buffer from size 0.00 MiB to 0.00 MiB
 ```
 
-
+新增debug   
 ```
 
 // lists of buffer types used for each layer

@@ -110,8 +110,69 @@ ggml_compute_forward_mul_mat
 
 > ## debug
 
+
+```
+env GGML_SCHED_DEBUG=2  ./build/simple-backend3
+```
+
 ```
  env GGML_SCHED_DEBUG=2  ./build/simple-backend3 
 ```
 
-# offload LLAMA_SUPPORTS_GPU_OFFLOAD
+#  调度器优先级
+
+
++  ggml_backend_buffer_set_usage(buf2, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
+```
+   print_buft(buf1);
+     ggml_backend_buffer_set_usage(buf1, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
+     //model.c = ggml_new_tensor_2d(cpu_ctx, GGML_TYPE_F32,  rows_A,cols_B);
+     model.c = ggml_new_tensor_2d(cpu_ctx, GGML_TYPE_F32, cols_C, rows_C);
+     model.d = ggml_new_tensor_2d(cpu_ctx, GGML_TYPE_F32, cols_C, rows_C);
+     //model.d = ggml_new_tensor_2d(cpu_ctx, GGML_TYPE_F32, rows_C, cols_C);
+     //model.c = ggml_new_tensor_1d(cpu_ctx, GGML_TYPE_F32, 1);
+     ggml_backend_buffer_t buf2 = ggml_backend_alloc_ctx_tensors_from_buft(cpu_ctx, model.cpu_buft);
+     if(buf2 == nullptr)
+     {
+             throw std::runtime_error(("unable to allocate buffer2"));
+     }
+     //backend_bufts2.emplace_back(buf1);
+     //backend_bufts2.emplace_back(buf2);
+     //model.sched = ggml_backend_sched_new(backends2,backend_bufts2.data(), 2, 32, false, true);
+     ggml_backend_buffer_set_usage(buf2, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
+```
+
+```
+
+ !!!!!!! node mul_mat_0 on  device CUDA0 
+
+ !!!!!!! node add_0 on  device CPU 
+
+ !!!!!!! node add_1 on  device CPU 
+
+ !!!!!!! backend  on  device CUDA0 
+
+ !!!!!!! backend  on  device CPU 
++++++++++++ splits: 2
+```
+此时splits: 2，cpu上有计算节点
+
+
+
++  不设置 ggml_backend_buffer_set_usage(buf2, GGML_BACKEND_BUFFER_USAGE_WEIGHTS);
+
+```
+
+ !!!!!!! node mul_mat_0 on  device CUDA0 
+
+ !!!!!!! node add_0 on  device CUDA0 
+
+ !!!!!!! node add_1 on  device CUDA0 
+
+ !!!!!!! backend  on  device CUDA0 
+
+ !!!!!!! backend  on  device CPU 
++++++++++++ splits: 1
+
+此时splits: 2，cpu上没有有计算节点，计算节点都在CUDA0 
+```

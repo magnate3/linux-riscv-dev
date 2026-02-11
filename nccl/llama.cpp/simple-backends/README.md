@@ -174,5 +174,7 @@ env GGML_SCHED_DEBUG=2  ./build/simple-backend3
  !!!!!!! backend  on  device CPU 
 +++++++++++ splits: 1
 
-此时splits: 2，cpu上没有有计算节点，计算节点都在CUDA0 
+
 ```
+
+此时splits: 1，cpu上没有有计算节点，计算节点都在CUDA0 

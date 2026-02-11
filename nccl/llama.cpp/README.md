@@ -1,5 +1,8 @@
 
 
+
+[GGML 入门：搞懂张量、内存池与计算图](https://www.laumy.tech/3147.html/ggml-%E5%85%A5%E9%97%A8%EF%BC%9A%E6%90%9E%E6%87%82%E5%BC%A0%E9%87%8F%E3%80%81%E5%86%85%E5%AD%98%E6%B1%A0%E4%B8%8E%E8%AE%A1%E7%AE%97%E5%9B%BE/)    
+
 # qwen
 
 ```
@@ -157,6 +160,10 @@ mul mat (4 x 3) (transposed result):
 
 ```
 sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+```
+arm64   
+```
+docker run --rm  --name llama.cppdev --net=host    -itd    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0 -v /pytorch:/workspace -p 8088:8080  llamp.cpp:cpudev2 
 ```
 
 > ### cpu编译(运行coredump)   

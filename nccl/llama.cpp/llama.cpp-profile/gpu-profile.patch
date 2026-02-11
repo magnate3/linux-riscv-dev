@@ -1,0 +1,40 @@
+diff --git a/ggml/src/ggml-cuda/ggml-cuda.cu b/ggml/src/ggml-cuda/ggml-cuda.cu
+index c6bdd4fb..29fedd4f 100644
+--- a/ggml/src/ggml-cuda/ggml-cuda.cu
++++ b/ggml/src/ggml-cuda/ggml-cuda.cu
+@@ -3346,6 +3346,7 @@ static int64_t get_op_batch_size(const ggml_tensor * op) {
+ static bool ggml_backend_cuda_device_offload_op(ggml_backend_dev_t dev, const ggml_tensor * op) {
+     const int min_batch_size = 32;
+ 
++    if (op->op == GGML_OP_MUL_MAT) return true;
+     return get_op_batch_size(op) >= min_batch_size;
+ 
+     GGML_UNUSED(dev);
+diff --git a/src/llama-context.cpp b/src/llama-context.cpp
+index e352d81e..129349a2 100644
+--- a/src/llama-context.cpp
++++ b/src/llama-context.cpp
+@@ -1398,6 +1398,7 @@ llm_graph_cb llama_context::graph_get_cb() const {
+             }
+         }
+ 
++        return;
+         // norm may be automatically assigned to the backend of the previous layer, increasing data transfer between backends
+         // FIXME: fix in ggml_backend_sched
+         const bool full_offload = model.params.n_gpu_layers > (int) model.hparams.n_layer;
+diff --git a/src/llama-model.cpp b/src/llama-model.cpp
+index 9b19da98..003f121b 100644
+--- a/src/llama-model.cpp
++++ b/src/llama-model.cpp
+@@ -1741,7 +1741,10 @@ bool llama_model::load_tensors(llama_model_loader & ml) {
+ 
+             // avoid using a host buffer when using mmap
+             auto * buft_dev = ggml_backend_buft_get_device(buft);
+-            if (ml.use_mmap && buft_dev && buft == ggml_backend_dev_host_buffer_type(buft_dev)) {
++            if (ml.use_mmap && buft_dev && buft == ggml_backend_dev_host_buffer_type(buft_dev)
++            || !strcmp(t_meta->name, "blk.0.attn_q.weight")
++            || !strcmp(t_meta->name, "blk.0.attn_norm.weight")
++            ) {
+                 auto * cpu_dev = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
+                 if (!cpu_dev) {
+                     throw std::runtime_error("no CPU backend found");

@@ -458,6 +458,14 @@ struct ggml_tensor * compute(simple_model & model, struct ggml_cgraph * gf) {
     ggml_backend_tensor_set(model.b, matrix_B, 0, ggml_nbytes(model.b));
     ggml_backend_tensor_set(model.c, matrix_C, 0, ggml_nbytes(model.c));
     ggml_backend_tensor_set(model.d, matrix_C, 0, ggml_nbytes(model.d));
+    if(ggml_backend_buffer_is_host(model.a->buffer))
+    {
+	  printf("model.a is host buffer\n");
+    }
+    if(ggml_backend_buffer_is_host(model.c->buffer))
+    {
+	  printf("model.c is host buffer\n");
+    }
     //ggml_set_f32(model.c, 3.0f);
 #else
     //if(tensor->backend != GGML_BACKEND_GPU)

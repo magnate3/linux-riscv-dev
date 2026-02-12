@@ -3,6 +3,9 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdio.h>
 #include "op128.h"
 
 #define WARP_SIZE 32
@@ -118,6 +121,9 @@ struct ncclShmemData {
     uint64_t  groups[NCCL_MAX_GROUPS];
   };
   uint64_t redOpArgs[NCCL_MAX_DIRECT_ARITY+1];
+  uint64_t comm;
+  uint64_t load_data;
+  uint64_t store_data;
 };
 __shared__ ncclShmemData ncclShmem;
 __device__ void ncclKernel(ncclShmemData *shd)  {
@@ -136,13 +142,111 @@ __global__ void kernelFunction(ncclShmemData *shd) {
 
 }
 
+// a copy of the volatile load/store from prims_ll
+template<typename U>
+__device__ static U load(U *src) {
+  union {
+    U elt;
+    uint8_t u1;
+    uint16_t u2;
+    uint32_t u4;
+    uint64_t u8;
+  };
+
+  if(sizeof(U) == 1)
+    asm("ld.volatile.global.b8 %0,[%1];" : "=r"(u4) : "l"(src));
+  else if(sizeof(U) == 2)
+    asm("ld.volatile.global.b16 %0,[%1];" : "=h"(u2) : "l"(src));
+  else if(sizeof(U) == 4)
+    asm("ld.volatile.global.b32 %0,[%1];" : "=r"(u4) : "l"(src));
+  else
+    asm("ld.volatile.global.b64 %0,[%1];" : "=l"(u8) : "l"(src));
+  return elt;
+}
+
+template<typename U>
+__device__ static void store(U *dst, U val) {
+  union {
+    U elt;
+    uint8_t u1;
+    uint16_t u2;
+    uint32_t u4;
+    uint64_t u8;
+  };
+
+  elt = val;
+  if(sizeof(U) == 1)
+    asm("st.volatile.global.b8 [%0],%1;" :: "l"(dst), "r"(u4));
+  else if(sizeof(U) == 2)
+    asm("st.volatile.global.b16 [%0],%1;" :: "l"(dst), "h"(u2));
+  else if(sizeof(U) == 4)
+    asm("st.volatile.global.b32 [%0],%1;" :: "l"(dst), "r"(u4));
+  else
+    asm("st.volatile.global.b64 [%0],%1;" :: "l"(dst), "l"(u8));
+}
+#if 0
+inline __device__ static void barrier(int nthreads) {
+    asm volatile ("bar.sync %1, %0;" :: "r"(nthreads), "r"(15));
+}
+#endif
+
+#if 0
+__device__ __forceinline__ static void threadBlockCopy(
+  uint64_t *dst, uint64_t const *src, uint64_t size, int tid, int nthreads) {
+  for (int i = tid; i < size; i += nthreads) {
+    dst[i] = src[i];
+  }
+}
+#else
+__device__ __forceinline__ static void threadBlockCopy(
+  uint64_t *dst, uint64_t const *src, uint64_t size, int tid, int nthreads) {
+  for (int i = 0; i < size; ++i) {
+    dst[i] = src[i];
+  }
+}
+#endif
+__device__ __forceinline__ void mscclRunInterpreter(struct ncclShmemData*cpu) {
+  const int tid = threadIdx.x;
+  //const int bid = blockIdx.x;
+  const int nthreads = blockDim.x;
+  //int bytes = 0;
+  // bytes = sizeof(uint64_t);
+  // initialize mscclShmem.mscclTB
+  uint64_t data = 0;
+  threadBlockCopy(
+    (uint64_t *)&ncclShmem.ll128warp, (uint64_t *)(cpu->ll128warp),
+    sizeof(ncclShmem.ll128warp)/sizeof(uint64_t), tid, nthreads);
+    __syncthreads(); 
+    data = load(&ncclShmem.load_data);
+    store(&ncclShmem.store_data,data);
+  threadBlockCopy(
+    (uint64_t *)&(cpu->store_data), (uint64_t *)(&ncclShmem.store_data),
+    sizeof(ncclShmem.store_data)/sizeof(uint64_t), tid, nthreads);
+#if 0
+   void *dst, *src;
+   dst = &ncclShmem.comm;
+   src = &cpu->comm;
+   copyToShmem16(tid%WARP_SIZE, dst, src, bytes);
+    __syncthreads(); // publish shmem
+#endif
+}
+
+__global__ void kernelFunction2(ncclShmemData *shd) {
+    mscclRunInterpreter(shd); 
+
+}
+struct ncclShmemData cpudata;
 int main() {
-    struct ncclShmemData cpudata;
+    cpudata.load_data = 0x40;
+    cpudata.store_data = 0x30;
     //printf("sizeof (struct ncclShmemData) : %d \n",sizeof(struct ncclShmemData));
     //ncclKernel(&cpudata);
     //ncclKernel<<<2, 2>>>(&cpudata);
     kernelFunction<<<1, 1024>>>(&cpudata); 
+    printf("load data: %" PRIu64  "    store data: %" PRIu64 "\n", cpudata.load_data,cpudata.store_data);
+    kernelFunction2<<<1, 1024>>>(&cpudata); 
     //ncclKernel<<<1, 1>>>(&cpudata); 
     cudaDeviceSynchronize();
+    printf("load data: %" PRIu64  "    store data: %" PRIu64 "\n", cpudata.load_data,cpudata.store_data);
     return 0;
 }

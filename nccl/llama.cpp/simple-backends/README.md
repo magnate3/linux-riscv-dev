@@ -178,3 +178,190 @@ env GGML_SCHED_DEBUG=2  ./build/simple-backend3
 ```
 
 此时splits: 1，cpu上没有有计算节点，计算节点都在CUDA0 
+
+>  ##  cudaMemcpyAsync
+
+
+```
+
+ !!!!!!! node mul_mat_0 on  device CUDA0 
+
+ !!!!!!! node add_0 on  device CUDA0 
+
+ !!!!!!! node add_1 on  device CUDA0 
+
+ !!!!!!! backend  on  device CUDA0 
+
+ !!!!!!! backend  on  device CPU 
++++++++++++ splits: 1
+```
+
+```
+(gdb) bt
+#0  0x00007ffff2a71fa4 in cudaMemcpyAsync () from /usr/local/cuda/targets/x86_64-linux/lib/libcudart.so.12
+#1  0x00007ffff32dc98e in ggml_backend_cuda_buffer_set_tensor (buffer=0x555556203aa0, tensor=0x5555558dd1a0, data=0x555555579020 <matrix_A>, offset=0, size=32)
+    at /pytorch/GGML-Tutorial/ggml/src/ggml-cuda/ggml-cuda.cu:581
+#2  0x00007ffff7d89015 in ggml_backend_tensor_set (tensor=0x5555558dd1a0, data=0x555555579020 <matrix_A>, offset=0, size=32) at /pytorch/GGML-Tutorial/ggml/src/ggml-backend.cpp:268
+#3  0x000055555556a2c6 in compute(simple_model&, ggml_cgraph*) ()
+#4  0x000055555556a78b in main ()
+(gdb) 
+```
+ggml_backend_tensor_copy --> gml_backend_tensor_set    
+```
+(gdb) bt
+#0  0x00007ffff2a71fa4 in cudaMemcpyAsync () from /usr/local/cuda/targets/x86_64-linux/lib/libcudart.so.12
+#1  0x00007ffff32dc98e in ggml_backend_cuda_buffer_set_tensor (buffer=0x5555564703f0, tensor=0x7fffebdcb5f0, data=0x555556470740, offset=0, size=48)
+    at /pytorch/GGML-Tutorial/ggml/src/ggml-cuda/ggml-cuda.cu:581
+#2  0x00007ffff7d89015 in ggml_backend_tensor_set (tensor=0x7fffebdcb5f0, data=0x555556470740, offset=0, size=48) at /pytorch/GGML-Tutorial/ggml/src/ggml-backend.cpp:268
+#3  0x00007ffff7d896f8 in ggml_backend_tensor_copy (src=0x7fffc966f1d0, dst=0x7fffebdcb5f0) at /pytorch/GGML-Tutorial/ggml/src/ggml-backend.cpp:378
+#4  0x00007ffff7d8d550 in ggml_backend_sched_compute_splits (sched=0x555555930560) at /pytorch/GGML-Tutorial/ggml/src/ggml-backend.cpp:1398
+#5  0x00007ffff7d8e1e3 in ggml_backend_sched_graph_compute_async (sched=0x555555930560, graph=0x5555562dfba0) at /pytorch/GGML-Tutorial/ggml/src/ggml-backend.cpp:1596
+#6  0x00007ffff7d8e156 in ggml_backend_sched_graph_compute (sched=0x555555930560, graph=0x5555562dfba0) at /pytorch/GGML-Tutorial/ggml/src/ggml-backend.cpp:1580
+#7  0x000055555556a519 in compute(simple_model&, ggml_cgraph*) ()
+#8  0x000055555556a78b in main ()
+(gdb) c
+```
+
+> ## ggml_backend_buffer_is_host
+
+
+
+```
+    if(ggml_backend_buffer_is_host(model.a->buffer))
+    {
+          printf("model.a is host buffer\n");
+    }
+    if(ggml_backend_buffer_is_host(model.c->buffer))
+    {
+          printf("model.c is host buffer\n");
+    }
+model.c is host buffer
+```
+
+> ## GGML_OP  GGML_OP_MUL_MAT_ID
+
+
+```
+// checks if the weight tensor can be used with the specified buffer type and device
+static bool weight_buft_supported(const llama_hparams & hparams, ggml_tensor * w, ggml_op op, ggml_backend_buffer_type_t buft, ggml_backend_dev_t dev) {
+    GGML_ASSERT(w != nullptr);
+
+    if (op == GGML_OP_NONE) {
+        return true;
+    }
+
+    ggml_init_params params = {
+        /*.mem_size   =*/ ggml_tensor_overhead()*8,
+        /*.mem_buffer =*/ NULL,
+        /*.no_alloc   =*/ true,
+    };
+    ggml_context_ptr ctx_ptr { ggml_init(params) };
+    if (!ctx_ptr) {
+        throw std::runtime_error(format("failed to create ggml context"));
+    }
+    ggml_context * ctx = ctx_ptr.get();
+
+    ggml_tensor * op_tensor = nullptr;
+
+    switch (op) {
+        case GGML_OP_GET_ROWS:
+            {
+                ggml_tensor * b = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, 512);
+                op_tensor = ggml_get_rows(ctx, w, b);
+            } break;
+        case GGML_OP_MUL_MAT:
+            {
+                ggml_tensor * b = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, w->ne[0], 512, w->ne[2], w->ne[3]);
+                op_tensor = ggml_mul_mat(ctx, w, b);
+            } break;
+        case GGML_OP_MUL_MAT_ID:
+            {
+                int n_expert_used = hparams.n_expert_used;
+                ggml_tensor * b = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, w->ne[0], n_expert_used, 512);
+                ggml_tensor * ids = ggml_new_tensor_2d(ctx, GGML_TYPE_I32, n_expert_used, 512);
+                op_tensor = ggml_mul_mat_id(ctx, w, b, ids);
+            } break;
+        case GGML_OP_ADD:
+            {
+                ggml_tensor * a = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, w->ne[0], w->ne[1], w->ne[2], w->ne[3]);
+                op_tensor = ggml_add(ctx, a, w);
+            } break;
+        case GGML_OP_MUL:
+            {
+                ggml_tensor * a = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, w->ne[0], w->ne[1], w->ne[2], w->ne[3]);
+                op_tensor = ggml_mul(ctx, a, w);
+            } break;
+        case GGML_OP_DIV:
+            {
+                ggml_tensor * a = ggml_new_tensor_1d(ctx, GGML_TYPE_F32, w->ne[0]);
+                op_tensor = ggml_div(ctx, a, w);
+            } break;
+        case GGML_OP_ROPE:
+            {
+                int n_embd_head = hparams.n_embd_head_v;
+                int n_head = hparams.n_head();
+                ggml_tensor * a = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, n_embd_head, n_head, 512);
+                ggml_tensor * b = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, 512);
+                op_tensor = ggml_rope_ext(
+                    ctx, a, b, w,
+                    0, 0, 0, 0, 0,
+                    0, 0, 0, 0
+                );
+
+            } break;
+        case GGML_OP_SSM_CONV:
+            {
+                // FIXME
+                ggml_tensor * conv_x = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, 12345, w->ne[1], 6789);
+                op_tensor = ggml_ssm_conv(ctx, conv_x, w);
+            } break;
+        case GGML_OP_SSM_SCAN:
+            {
+                // FIXME
+                const int64_t d_state      = w->ne[0];
+                const int64_t d_inner      = w->ne[1];
+                const int64_t n_seq_tokens = 512;
+                const int64_t n_seqs       = 1;
+                ggml_tensor * s  = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, d_state, d_inner, n_seqs);
+                ggml_tensor * x = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, d_inner, n_seq_tokens, n_seqs);
+                ggml_tensor * dt = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, d_inner, n_seq_tokens, n_seqs);
+                ggml_tensor * B = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, d_state, n_seq_tokens, n_seqs);
+                ggml_tensor * C = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, d_state, n_seq_tokens, n_seqs);
+                op_tensor = ggml_ssm_scan(ctx, s, x, dt, w, B, C);
+            } break;
+        case GGML_OP_RWKV_WKV6:
+            {
+                // FIXME
+                const int64_t S = 123;
+                const int64_t H = 123;
+                const int64_t n_tokens = 123;
+                const int64_t n_seqs = 123;
+                ggml_tensor  * k = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, S, H, n_tokens);
+                ggml_tensor  * v = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, S, H, n_tokens);
+                ggml_tensor  * r = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, S, H, n_tokens);
+                ggml_tensor  * tf = w;
+                ggml_tensor  * td = ggml_new_tensor_3d(ctx, GGML_TYPE_F32, S, H, n_tokens);
+                ggml_tensor  * state = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, S, n_seqs, S, H);
+                op_tensor = ggml_rwkv_wkv6(ctx, k, v, r, tf, td, state);
+            } break;
+        case GGML_OP_IM2COL:
+            {
+                const int n_embd = hparams.n_embd;
+                ggml_tensor * b = ggml_new_tensor_4d(ctx, GGML_TYPE_F32, n_embd, w->ne[1], 1, 1);
+                op_tensor = ggml_im2col(ctx, w, b, 1, 0, 0, 0, 1, 0, false, GGML_TYPE_F16);
+            } break;
+        default:
+            GGML_ABORT("%s: missing test for op %s for tensor %s", __func__, ggml_op_name(op), w->name);
+    }
+
+    // create a temporary dummy buffer for the weight so that supports_op can check the buffer type
+    GGML_ASSERT(w->buffer == nullptr);
+    w->buffer = ggml_backend_buft_alloc_buffer(buft, 0);
+    bool op_supported = ggml_backend_dev_supports_op(dev, op_tensor);
+    ggml_backend_buffer_free(w->buffer);
+    w->buffer = nullptr;
+
+    return op_supported;
+}
+
+```

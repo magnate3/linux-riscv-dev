@@ -1,7 +1,69 @@
 
 
+[Georgi Gerganov ggml 简介](https://huggingface.co/blog/zh/introduction-to-ggml)
 
 [GGML 入门：搞懂张量、内存池与计算图](https://www.laumy.tech/3147.html/ggml-%E5%85%A5%E9%97%A8%EF%BC%9A%E6%90%9E%E6%87%82%E5%BC%A0%E9%87%8F%E3%80%81%E5%86%85%E5%AD%98%E6%B1%A0%E4%B8%8E%E8%AE%A1%E7%AE%97%E5%9B%BE/)    
+
+[rwkv.cpp](https://github.com/RWKV/rwkv.cpp) 
+
+[GGML的CPU算子解读：矩阵乘法](https://www.laumy.tech/category/ai%e5%a4%a7%e6%a8%a1%e5%9e%8b/%e6%8e%a8%e7%90%86%e6%a1%86%e6%9e%b6/)   
+
+[深入理解GGML（二）基于计算图的并行计算](https://zhuanlan.zhihu.com/p/874527851)      
+
+
+# ggml
+
+```
+git clone https://github.com/ggml-org/ggml
+root@ubuntu:/pytorch/ggml# whereis nvcc
+nvcc: /usr/local/cuda-12.4/bin/nvcc
+root@ubuntu:/pytorch/ggml# cmake -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12.4/bin/nvcc -S . -B build
+cmake --build build  --config Release -j 8
+```
+
+[ggml-model-gpt-2-117M.bin](https://huggingface.co/ggerganov/ggml/tree/main)   
+
+
+```
+/pytorch/ggml# ./build/bin/gpt-2-backend -m models/gpt-2-117M/ggml-model-gpt-2-117M.bin -p "This is an example"
+main: seed = 1770867474
+gpt2_model_load: loading model from 'models/gpt-2-117M/ggml-model-gpt-2-117M.bin'
+gpt2_model_load: n_vocab = 50257
+gpt2_model_load: n_ctx   = 1024
+gpt2_model_load: n_embd  = 768
+gpt2_model_load: n_head  = 12
+gpt2_model_load: n_layer = 12
+gpt2_model_load: ftype   = 1
+gpt2_model_load: qntvr   = 0
+gpt2_model_load: using CPU backend
+gpt2_model_load: ggml tensor size    = 336 bytes
+gpt2_model_load: backend buffer size = 312.70 MB
+gpt2_model_load: memory size =   144.00 MB, n_mem = 24576
+gpt2_model_load: model size  =   239.08 MB
+extract_tests_from_file : No test file found.
+test_gpt_tokenizer : 0 tests failed out of 0 tests.
+main: compute buffer size: 9.47 MB
+main: prompt: 'This is an example'
+main: number of tokens in prompt = 4, first 8 tokens: 1212 318 281 1672 
+
+This is an example of how the state can be set for each state, but at the same time it's different for each individual state.
+
+This article has been translated into a new language.
+
+References
+
+Fahm, M. (2017). The state of the world. Oxford University Press.
+
+Jensen, L. (2015). "The State of the World". In W.J. Smith (ed.), The state of the world: global policy and the state of the world, 2nd edition. Oxford University Press.
+
+Lang, J. (2013). "The State of the World: The World Order is Back". American Journal of Political Science, 69, 521–535.<|endoftext|>
+
+main:     load time =   122.54 ms
+main:   sample time =    47.37 ms
+main:  predict time =   849.03 ms / 5.70 ms per token
+main:    total time =  1020.81 ms
+```
+
 
 # qwen
 
@@ -311,4 +373,24 @@ ggml_context * ctx = ctx_for_buft(buft);
 
 ```
  ggml_backend_sched_new(model.backends.data(), model.backends.size())
+```
+
+
+#  Mixture-of-Experts（MoE）
+
+```text
+Mixture-of-Experts（MoE）：对于MoE架构，源码提供了llm_build_moe_ffn函数。MoE层有多个专家FFN和一个门控网络选择权重。llm_build_moe_ffn先对输入cur通过门控网络权重gate_inp计算每个expert的logits（形状[n_expert, n_tokens]）​。然后根据gating_op选择Softmax或Sigmoid将其转换为各expert概率分布。可选地，加上exp_probs_b实现bias（DeepSeek V3中提出的偏置）。接着通过ggml_top_k选出概率最高的n_expert_used个专家索引。随后用ggml_get_rows提取对应专家的权重系数，再根据需要对这些权重归一化（按每token概率和为1）。这样得到每token实际参与计算的专家及其系数。之后会针对选中的每个专家分别计算其FFN输出（通过up_exps、down_exps等权重），并按概率加权求和为最终输出（代码未展示部分应包括这些步骤）。总之，该函数构建了MoE所需的复杂控制流，用GGML实现了Softmax、TopK选择和按行组装等操作。MoE部分较为复杂，但通过静态计算图同样可以执行，只是在执行时会动态地选择部分专家计算。
+```
+`ggml_top_k ggml_get_rows`
+
+
+```
+ // Select top-k experts
+    ggml_tensor * selected_experts = ggml_top_k(ctx0, probs, n_expert_used);
+    
+    // Compute expert weights
+    ggml_tensor * weights = ggml_get_rows(ctx0,
+        ggml_reshape_3d(ctx0, probs, 1, n_expert, n_tokens), 
+        selected_experts);
+    
 ```

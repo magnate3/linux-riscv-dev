@@ -21,6 +21,7 @@ root@ubuntu:/pytorch/ggml# cmake -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=/usr/local
 cmake --build build  --config Release -j 8
 ```
 
+## gpt-2
 [ggml-model-gpt-2-117M.bin](https://huggingface.co/ggerganov/ggml/tree/main)   
 
 
@@ -393,4 +394,152 @@ Mixture-of-Experts（MoE）：对于MoE架构，源码提供了llm_build_moe_ffn
         ggml_reshape_3d(ctx0, probs, 1, n_expert, n_tokens), 
         selected_experts);
     
+```
+
+# debug-kv
+
+[examples/debug-kv](https://github.com/The-Lyc/runkv/tree/450705d2548d5498eb863b7e5e357652ba4ed61e/examples/debug-kv)   
+
+```
+docker run --rm  --name llama.cppdev --net=host    -itd    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0 -v /pytorch:/workspace -p 8088:8080  llamp.cpp:cpudev2 
+```
+
+```
+root@centos7:/workspace/llama.cpp/examples/debug-kv# g++ common.cpp  sampling.cpp log.cpp debug_kv_single_thread.cpp   -I /workspace/llama.cpp/ggml/include  -I /workspace/llama.cpp/include  -L /workspace/llama.cpp/build/bin/ -lggml -lggml-cpu -lggml-base -lllama -lmtmd -o  test
+/usr/bin/ld: /tmp/ccvg6MZp.o: in function `common_init()':
+common.cpp:(.text+0xde0): undefined reference to `LLAMA_BUILD_NUMBER'
+/usr/bin/ld: common.cpp:(.text+0xde4): undefined reference to `LLAMA_BUILD_NUMBER'
+/usr/bin/ld: common.cpp:(.text+0xdec): undefined reference to `LLAMA_COMMIT'
+/usr/bin/ld: common.cpp:(.text+0xdf0): undefined reference to `LLAMA_COMMIT'
+/usr/bin/ld: common.cpp:(.text+0xdf8): undefined reference to `LLAMA_COMPILER'
+/usr/bin/ld: common.cpp:(.text+0xdfc): undefined reference to `LLAMA_COMPILER'
+/usr/bin/ld: common.cpp:(.text+0xe04): undefined reference to `LLAMA_BUILD_TARGET'
+/usr/bin/ld: common.cpp:(.text+0xe08): undefined reference to `LLAMA_BUILD_TARGET'
+collect2: error: ld returned 1 exit status
+```
+common库    
+```
+[root@centos7 llama.cpp]# ls build/common/
+build-info.cpp  CMakeFiles  cmake_install.cmake  libcommon.a  Makefile
+[root@centos7 llama.cpp]# 
+```
+
+改成   
+```
+root@centos7:/workspace/llama.cpp/examples/debug-kv# g++  debug_kv_single_thread.cpp   -I /workspace/llama.cpp/ggml/include  -I /workspace/llama.cpp/include  -I /workspace/llama.cpp/common  -L /workspace/llama.cpp/build/bin/ -lggml -lggml-cpu -lggml-base  -lllama -lmtmd  -L /workspace/llama.cpp/build/common -lcommon -o  test
+root@centos7:/workspace/llama.cpp/examples/debug-kv# 
+```
+
+
+
+
+
+```
+ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/workspace/llama.cpp/build/bin:/workspace/llama.cpp/build/common"
+ ./test  /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf 
+ 
+ 
+```
+
+
+
+```
+……
+============================================================
+  4. Tokenize Test Prompts
+============================================================
+  Prompt 1: "Hello, my name is Alice and I am a"
+    -> 10 tokens
+  Prompt 2: "The capital of France is Paris, which"
+    -> 8 tokens
+
+============================================================
+  5. Scenario A: Single Sequence Prefill
+============================================================
+  Processing Prompt 1 (seq_id = 0)
+
+  >>> Set breakpoint here: llama_kv_cache::find_slot <<<
+  >>> Inspect: ubatch.n_tokens, ubatch.seq_id <<<
+
+  Batch 1: n_tokens=10, seq_id=0
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+  Calling llama_decode() ...
+  Decode successful!
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  6. Scenario B: Continue Generation (Decode Phase)
+============================================================
+  Continue generation for seq_id=0 with next token
+  Observe: How KV cache appends new cell
+
+  Batch 2: n_tokens=1, seq_id=0, pos=10
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+  >>> Observe how find_slot() finds next free cell <<<
+
+
+  Calling llama_decode() ...
+  Decode successful!
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  7. Scenario C: Generate More Tokens
+============================================================
+  Generate 3 tokens sequentially, observe continuous cell allocation
+
+  Generate token 1: pos=11
+  Generate token 2: pos=12
+  Generate token 3: pos=13
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  8. Scenario D: Clear KV (Simulate Request Completion)
+============================================================
+  Clear KV cache for seq_id=0
+
+  >>> Observe: how llama_memory_seq_rm() frees cells <<<
+
+  llama_memory_seq_rm(seq_id=0): success
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  9. Scenario E: New Request Reuses Freed Space
+============================================================
+  Send new request (seq_id=0), should reuse previously freed space
+
+  Batch 4: n_tokens=6, seq_id=0
+
+  >>> Observe: how find_slot() finds previously freed space <<<
+
+
+  Calling llama_decode() ...
+  Decode successful!
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  10. Cleanup
+============================================================
+~llama_context:        CPU compute buffer size is  18.7970 MiB, matches expectation of  18.7970 MiB
+  Cleanup completed!
+
+
+============================================================
+  Debugging Tips
+============================================================
+  Key breakpoints:
+    1. llama_kv_cache::llama_kv_cache - constructor, observe initialization
+    2. llama_kv_cache::find_slot     - find free cells
+    3. llama_kv_cache::apply_ubatch  - update cell metadata
+    4. llama_kv_cache::cpy_k/cpy_v   - write K/V data
+    5. llama_kv_cache::seq_rm        - remove sequence
+
+  Key variables:
+    - kv_size: total number of cells
+    - n_stream: number of streams (unified=1)
+    - v_cells[s]: cell state for each stream
+    - v_heads[s]: search head for each stream
+    - ubatch.seq_id: sequence ID of tokens in batch
+    - sinfo.idxs: list of allocated cell indices
 ```

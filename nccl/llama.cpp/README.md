@@ -544,19 +544,3 @@ root@centos7:/workspace/llama.cpp/examples/debug-kv#
     - sinfo.idxs: list of allocated cell indices
 ```
 
-#  Let_us_learn_llama_cpp
-
-```
-cmake -B build
-cmake --build build
-```
-or
-
-```
-
-```bash
-mkdir build
-cd build
-cmake ..
-cmake --build . --config Release
-```

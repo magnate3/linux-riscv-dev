@@ -47,6 +47,7 @@ root@centos7:/workspace/Let_us_learn_llama_cpp/fundamentals-llama.cpp# ./simple-
 ```
 cmake .. -DLLAMA_CPP_DIR=/workspace/llama.cpp
 cmake -S . -B build -DLLAMA_CPP_DIR=/workspace/llama.cpp
+root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp# cmake --build build
 ```
 
 ```
@@ -65,6 +66,10 @@ root@centos7:/workspace/Let_us_learn_llama_cpp/code-examples/cpp# ./build/01-sim
 root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp# c++ -DGGML_BACKEND_SHARED -DGGML_SHARED -DGGML_USE_CPU -DLLAMA_SHARED -DLLAMA_USE_HTTPLIB -I/workspace/llama.cpp/common/. -I/workspace/llama.cpp/common/../vendor -I/workspace/llama.cpp/src/../include -I/workspace/llama.cpp/ggml/src/../include -O3 -DNDEBUG -Wmissing-declarations -Wmissing-noreturn -Wall -Wextra -Wpedantic -Wcast-qual -Wno-unused-function -Wno-array-bounds -Wextra-semi -o  passkey.o  -c 05-passkey.cpp
 root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp#  c++ -O3 -DNDEBUG passkey.o -o llama-passkey  /workspace/llama.cpp/build/common/libcommon.a /workspace/llama.cpp/build/bin/libllama.so.0.0.7941 /workspace/llama.cpp/build/bin/libggml.so.0.9.5  /workspace/llama.cpp/build/bin/libggml-cpu.so.0.9.5  /workspace/llama.cpp/build/bin/libggml-base.so.0.9.5  /workspace/llama.cpp/build/vendor/cpp-httplib/libcpp-httplib.a /usr/lib/aarch64-linux-gnu/libssl.so /usr/lib/aarch64-linux-gnu/libcrypto.so
 root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp# 
+```
+
+```
+ ./build/05-passkey  -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf
 ```
 
 #  Principle:Ggml org Llama cpp Context Window Management

@@ -137,9 +137,10 @@ function(add_learning_example target source)
     message(STATUS "Added learning example: ${target}")
 endfunction()
 
-function(add_full_example target source)
+#function(add_full_example target source)
+function(add_full_example target )
     set(GGML_RPC "OFF")
-    add_executable(${target} ${source})
+    #add_executable(${target} ${source})
 
     target_include_directories(${target} PRIVATE ${LLAMA_CPP_DIR}/common)
     target_include_directories(${target} PRIVATE ${LLAMA_CPP_DIR}/ggml/include)
@@ -187,15 +188,8 @@ endfunction()
 # Add examples
 # =============================================================================
 
-add_learning_example(01-simple-inference 01-simple-inference.cpp)
-add_learning_example(02-embeddings 02-embeddings.cpp)
-add_learning_example(03-custom-sampling 03-custom-sampling.cpp)
-add_learning_example(04-llama_test_batch_decode 04-llama_test_batch_decode.cpp)
-add_full_example(05-passkey 05-passkey.cpp)
-add_full_example(06-simple-chat 06-simple-chat.cpp)
-add_full_example(07-simple-chat 07-simple-chat.cpp)
-add_full_example(09-parallel 09-parallel.cpp)
-add_full_example(10-avllm_cli 10-avllm_cli.cpp)
+add_executable(08-simple-chat 08-simple-chat.cpp LLMEngine.cpp)
+add_full_example(08-simple-chat)
 
 # =============================================================================
 # Print build information

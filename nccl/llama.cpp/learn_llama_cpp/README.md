@@ -110,4 +110,60 @@ root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp#
 where are you from
 what can you do
 where is japan
+Who is your parent?
+what do you like?
+```
+
+
+#  parallel 
+
+
+```
+./build/09-parallel   -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf 
+build: 7941 (11fb327bf) with GNU 11.4.0 for Linux aarch64
+common_init_result: fitting params to device memory, for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on
+llama_params_fit_impl: no devices with dedicated memory found
+```
+
+
+#  10-avllm_cli
+```
+root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp# ./build/10-avllm_cli   -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf
+```
+
+```
+system >where are you from
+<think>
+Okay, the user asked where I am from. I need to answer that. First, I should mention my origin, which is a bit tricky. I'm from the United States, right? But maybe I should add more details to be specific. Let me make sure I'm honest and not making it too simple. I can say I'm from the United States. If they want more info, I can explain further. Keep the response friendly and straightforward.
+</think>
+
+I am from the United States. Let me know if you'd like more details about me!
+```
+
+# server
+
++ json   
+```
+不需要 apt-get install nlohmann-json3-dev
+```
+采用vendor/nlohmann/     
+
++ 准备loading.html.hpp   
+```
+cp ./build/tools/server/loading.html.hpp server/
+```
++ make   
+```
+root@centos7:/workspace/llama.cpp/server# cmake -S . -B  build
+root@centos7:/workspace/llama.cpp/server# cmake --build build
+Consolidate compiler generated dependencies of target server-context
+[ 45%] Built target server-context
+Consolidate compiler generated dependencies of target llama-server
+[100%] Built target llama-server
+root@centos7:/workspace/llama.cpp/server# 
+```
++ run   
+```
+root@centos7:/workspace/llama.cpp/server# ./build/llama-server  -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf -c 2048
+main: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
 ```

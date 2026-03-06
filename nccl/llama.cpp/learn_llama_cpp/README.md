@@ -144,9 +144,9 @@ I am from the United States. Let me know if you'd like more details about me!
 
 + json   
 ```
-不需要 apt-get install nlohmann-json3-dev
+不需要 apt-get install nlohmann-json3-dev,采用vendor/nlohmann/ 
 ```
-采用vendor/nlohmann/     
+    
 
 + 准备loading.html.hpp   
 ```

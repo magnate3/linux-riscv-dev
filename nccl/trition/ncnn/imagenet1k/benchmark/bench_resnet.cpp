@@ -138,7 +138,7 @@ static int detect_resnet(const cv::Mat& bgr, std::vector<float>& cls_scores)
 
     resnet.opt.use_vulkan_compute = false;
 
-#if 0
+#if 1
     // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
     resnet.load_param("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.param");
     resnet.load_model("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.bin");
@@ -229,13 +229,18 @@ std::string get_filename(const std::string& full_path) {
 int main(int argc, char** argv)
 {
     // Define the path and file pattern (e.g., all .jpg files in the 'images' folder)
-	std::string pattern = "/pytorch/ncnn/build/imagenet-sample-images/*.JPEG"; 
+    std::string pattern = "/pytorch/ncnn/build/imagenet-sample-images/*.JPEG"; 
     
     // Vector to store the list of filenames
     std::vector<std::string> filenames;
     int right = 0, wrong = 0;
     Json::Value  root;
-    get_label_json(root);
+    if(get_label_json(root))
+    {
+	    std::cout << "get images label fail!" << std::endl;
+
+	    return -1;
+    }
     // Use cv::glob to find all files matching the pattern
     cv::glob(pattern, filenames, false); // 'false' for non-recursive search
 
@@ -279,7 +284,7 @@ int main(int argc, char** argv)
 	   }
 	   else
 	   {
-                std::cout << filename <<"  Predicted class index is " << top1.first << " and actual class index is " << index << std::endl;
+                //std::cout << filename <<"  Predicted class index is " << top1.first << " and actual class index is " << index << std::endl;
 		++ wrong;
 	   }
 	}	

@@ -5,6 +5,12 @@ cmake -B build
 cmake --build build
 ```
 or
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Release
+```
 
 
 
@@ -74,4 +80,34 @@ root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp#
 
 #  Principle:Ggml org Llama cpp Context Window Management
 
-[Principle:Ggml org Llama cpp Context Window Management](https://leeroopedia.com/index.php/Principle:Ggml_org_Llama_cpp_Context_Window_Management)   
+[Principle:Ggml org Llama cpp Context Window Management](https://leeroopedia.com/index.php/Principle:Ggml_org_Llama_cpp_Context_Window_Management) 
+
+
+#  llama-simple-chat
+
+
+
+```
+root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp# /workspace/llama.cpp/build/bin/llama-simple-chat -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf -c  64
+..........................................................
+> where are you from
+<think>
+Okay, the user is asking "where are you from?" I need to respond to this question. First, I should acknowledge their question and explain that I'm a language model. It's important to clarify that I don't have a physical presence or location, but I can help with various tasks like answering questions, providing information, or assisting with other interactions. I should make sure my response is friendly and helpful, and explain that I don't have a physical location. Also, I should keep the tone conversational and not too formal.
+</think>
+
+I'm a language model, and I don't have a physical location. However, I can help you with questions, provide information, or assist with other tasks! Let me know how I can help!
+> what can you do
+<think>
+Okay, the user just asked, "what can you do?" I need to respond appropriately. Let me start by confirming that I can assist with various tasks. I should mention my capabilities, like answering questions, providing information, or helping with other interactions. It's important to stay friendly and open to further questions. I should keep the tone positive and helpful. Maybe add something about being available
+context size exceeded
+root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp# 
+``` 
+
+`context size exceeded` 
+
+
+```
+where are you from
+what can you do
+where is japan
+```

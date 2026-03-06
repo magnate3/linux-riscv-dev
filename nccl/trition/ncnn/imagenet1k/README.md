@@ -14,13 +14,19 @@
 
 # int8 quant
 
-
++ 量化后   
 ```
-./bench_resnet 
+/pytorch/ncnn/build/onnx2ncnn/test/build# ./bench_resnet 
 total jpeg: 1000
-right : 692 wrong: 308  accuracy : 0.692
+right : 692 wrong: 308  accuracy : 0.692 
 ```
 
++ 量化前
+```
+/pytorch/ncnn/build/onnx2ncnn/test/build# ./bench_resnet 
+total jpeg: 1000
+right : 750 wrong: 250  accuracy : 0.75
+```
 
 #  imagenet1k 
 

@@ -218,6 +218,18 @@ main: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
 #5  0x0000aaaaaaaa30bc in main ()
 (gdb) 
 ```
+build_attn --> llama_kv_cache_context::get_k    
+```
+(gdb) bt
+#0  0x0000ffffbe5a0c24 in llama_kv_cache_context::get_k(ggml_context*, int) const@plt () from /workspace/llama.cpp/build/bin/libllama.so.0
+#1  0x0000ffffbe6048d0 in llm_graph_context::build_attn(llm_graph_input_attn_kv*, ggml_tensor*, ggml_tensor*, ggml_tensor*, ggml_tensor*, ggml_tensor*, ggml_tensor*, ggml_tensor*, ggml_tensor*, float, int) const () from /workspace/llama.cpp/build/bin/libllama.so.0
+#2  0x0000ffffbe704588 in llm_build_qwen3::llm_build_qwen3(llama_model const&, llm_graph_params const&) () from /workspace/llama.cpp/build/bin/libllama.so.0
+#3  0x0000ffffbe64bf14 in llama_model::build_graph(llm_graph_params const&) const () from /workspace/llama.cpp/build/bin/libllama.so.0
+#4  0x0000ffffbe5d0070 in llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&) () from /workspace/llama.cpp/build/bin/libllama.so.0
+#5  0x0000ffffbe5d82cc in llama_context::decode(llama_batch const&) () from /workspace/llama.cpp/build/bin/libllama.so.0
+#6  0x0000ffffbe5d9720 in llama_decode () from /workspace/llama.cpp/build/bin/libllama.so.0
+#7  0x0000aaaaaaab3a8c in main ()
+```
 
 ## UBatch拆分算法
 llama.cpp提供了三种UBatch拆分策略：     

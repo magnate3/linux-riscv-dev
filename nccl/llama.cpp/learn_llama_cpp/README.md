@@ -78,6 +78,44 @@ root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp#
  ./build/05-passkey  -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf
 ```
 
+> ##   fill the KV cache
+```
+// fill the KV cache
+    for (int i = 0; i < n_ctx; i += n_batch) {
+        if (i > 0 && n_grp > 1) {
+            // if SelfExtend is enabled, we compress the position from the last batch by a factor of n_grp
+            const int ib = i/n_batch - 1;
+            const int bd = n_batch_grp*(n_grp - 1);
+
+            llama_memory_seq_add(mem, 0, n_past - n_batch,         n_past,         ib*bd);
+            llama_memory_seq_div(mem, 0, n_past - n_batch + ib*bd, n_past + ib*bd, n_grp);
+
+            n_past = llama_memory_seq_pos_max(mem, 0) + 1;
+        }
+
+        common_batch_clear(batch);
+
+        for (int j = 0; j < n_batch && i + j < n_tokens_all; j++) {
+            common_batch_add(batch, tokens_list[i + j], n_past++, { 0 }, false);
+        }
+
+        if (i + n_batch >= n_tokens_all) {
+            batch.logits[batch.n_tokens - 1] = true;
+        }
+
+        if (llama_decode(ctx, batch) != 0) {
+            LOG_INF("%s: llama_decode() failed\n", __func__);
+            return 1;
+        }
+
+        LOG_INF("%s: processed: [%6d, %6d)\n", __func__, i, std::min(i + n_batch, n_tokens_all));
+
+        if (i + n_batch >= n_tokens_all) {
+            break;
+        }
+    }
+```
+
 #  Principle:Ggml org Llama cpp Context Window Management
 
 [Principle:Ggml org Llama cpp Context Window Management](https://leeroopedia.com/index.php/Principle:Ggml_org_Llama_cpp_Context_Window_Management) 
@@ -166,4 +204,137 @@ root@centos7:/workspace/llama.cpp/server#
 ```
 root@centos7:/workspace/llama.cpp/server# ./build/llama-server  -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf -c 2048
 main: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
+```
+
+#  llama_decode
+
+```
+(gdb) bt
+#0  0x0000ffffbe5a3d24 in llama_kv_cache::find_slot(llama_ubatch const&, bool) const@plt () from /workspace/llama.cpp/build/bin/libllama.so.0
+#1  0x0000ffffbe616930 in llama_kv_cache::prepare(std::vector<llama_ubatch, std::allocator<llama_ubatch> > const&) () from /workspace/llama.cpp/build/bin/libllama.so.0
+#2  0x0000ffffbe61827c in llama_kv_cache::init_batch(llama_batch_allocr&, unsigned int, bool) () from /workspace/llama.cpp/build/bin/libllama.so.0
+#3  0x0000ffffbe5d81ec in llama_context::decode(llama_batch const&) () from /workspace/llama.cpp/build/bin/libllama.so.0
+#4  0x0000ffffbe5d9720 in llama_decode () from /workspace/llama.cpp/build/bin/libllama.so.0
+#5  0x0000aaaaaaaa30bc in main ()
+(gdb) 
+```
+
+## UBatch拆分算法
+llama.cpp提供了三种UBatch拆分策略：     
+1. 简单拆分（Simple Split）
+```
+llama_ubatch llama_batch_allocr::split_simple(uint32_t n_ubatch) {
+    std::vector<int32_t> idxs;
+    uint32_t cur_idx = 0;
+    
+    while (cur_idx < used.size() && used[cur_idx]) {
+        ++cur_idx;
+    }
+    
+    while (idxs.size() < n_ubatch && cur_idx < used.size()) {
+        idxs.push_back(cur_idx);
+        used[cur_idx] = true;
+        ++n_used;
+        ++cur_idx;
+    }
+    
+    return ubatch_add(idxs, idxs.size(), false);
+}
+```
+
+2. 均衡拆分（Equal Split）    
+```
+llama_ubatch llama_batch_allocr::split_equal(uint32_t n_ubatch, bool sequential) {
+    std::vector<seq_set_t> cur_seq_set;
+    
+    // 确定参与此ubatch的非重叠序列集
+    for (int32_t i = 0; i < batch.n_tokens; ++i) {
+        if (used[i]) continue;
+        
+        bool add = true;
+        for (uint32_t s = 0; s < cur_seq_set.size(); ++s) {
+            if (!(cur_seq_set[s] & seq_set[i]).none()) {
+                add = false;
+                break;
+            }
+        }
+        
+        if (add) {
+            cur_seq_set.push_back(seq_set[i]);
+            if (cur_seq_set.size() > n_ubatch) break;
+        }
+    }
+    
+    // 处理每个序列集的token
+    std::vector<idx_vec_t> idxs_per_seq(cur_seq_set.size());
+    // ... 具体实现
+}
+```
+
+3. 序列拆分（Sequence Split）    
+```
+llama_ubatch llama_batch_allocr::split_seq(uint32_t n_ubatch) {
+    uint32_t cur_idx = 0;
+    while (cur_idx < used.size() && used[cur_idx]) {
+        ++cur_idx;
+    }
+    
+    auto cur_seq_set = seq_set[cur_idx];
+    std::vector<int32_t> idxs;
+    
+    while (idxs.size() < n_ubatch) {
+        idxs.push_back(cur_idx);
+        used[cur_idx] = true;
+        ++n_used;
+        
+        // 查找下一个符合条件的token
+        do {
+            ++cur_idx;
+        } while (cur_idx < get_n_tokens() && 
+                (used[cur_idx] || 
+                 ((cur_seq_set & seq_set[cur_idx]) != seq_set[cur_idx])));
+        
+        if (cur_idx == get_n_tokens()) break;
+        cur_seq_set = seq_set[cur_idx];
+    }
+    
+    return ubatch_add(idxs, 1, true);
+}
+```
+llama.cpp通过智能内存管理实现连续推理：
+```
+llama_memory_context_ptr llama_memory_hybrid::init_batch(
+    llama_batch_allocr & balloc, 
+    uint32_t n_ubatch, 
+    bool embd_all) {
+    
+    std::vector<llama_ubatch> ubatches;
+    
+    while (true) {
+        llama_ubatch ubatch;
+        if (embd_all) {
+            ubatch = balloc.split_seq(n_ubatch);
+        } else {
+            ubatch = balloc.split_equal(n_ubatch, false);
+        }
+        
+        if (ubatch.n_tokens == 0) break;
+        ubatches.push_back(std::move(ubatch));
+    }
+    
+    // 准备循环和注意力ubatches
+    if (!mem_recr->prepare(ubatches)) {
+        LLAMA_LOG_ERROR("Failed to prepare recurrent ubatches");
+        return nullptr;
+    }
+    
+    auto heads_attn = mem_attn->prepare(ubatches);
+    if (!heads_attn) {
+        LLAMA_LOG_ERROR("Failed to prepare attention ubatches");
+        return nullptr;
+    }
+    
+    return std::make_shared<llama_memory_hybrid_context>(
+        this, std::move(heads_attn), std::move(ubatches));
+}
 ```

@@ -1,4 +1,15 @@
- #   run
+
+# bug
+
+
+```
+export LLAMA_BATCH_DEBUG=2
+export LLAMA_KV_CACHE_DEBUG=1
+```
+
+
+
+#   run
 
 ```
 cmake -B build
@@ -348,5 +359,37 @@ llama_memory_context_ptr llama_memory_hybrid::init_batch(
     
     return std::make_shared<llama_memory_hybrid_context>(
         this, std::move(heads_attn), std::move(ubatches));
+}
+```
+
+#  llama_kv_cache::slot_info  
+```
+:llama_kv_cache::slot_info llama_kv_cache::find_slot(const llama_ubatch & ubatch, bool cont) const
+bool llama_kv_cache::update(llama_context * lctx, bool do_shift, const stream_copy_info & sc_info)
+```
+
+
+```
+std::vector<uint32_t> v_heads;
+std::vector<llama_kv_cells> v_cells;
+
+```
+
+
+```
+bool llama_kv_cache_context::apply() {
+    assert(!llama_memory_status_is_fail(status));
+
+    // no ubatches -> this is a KV cache update
+    if (ubatches.empty()) {
+        kv->update(lctx, do_shift, sc_info);
+
+        return true;
+    }
+
+    kv->apply_ubatch(sinfos[i_cur], ubatches[i_cur]);
+    n_kv = kv->get_n_kv(sinfos[i_cur]);
+
+    return true;
 }
 ```

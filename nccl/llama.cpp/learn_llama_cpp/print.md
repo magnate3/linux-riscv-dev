@@ -26,6 +26,91 @@ static void llama_batch_print(const llama_batch *batch) {
 };
 ```
 
+
+
+```
+void llama_batch_allocr::ubatch_print(const llama_ubatch & ubatch, int debug) {
+    if (debug > 0) {
+        LLAMA_LOG_DEBUG("%s:   equal_seqs   = %d\n", __func__, ubatch.equal_seqs());
+        LLAMA_LOG_DEBUG("%s:   n_tokens     = %d\n", __func__, ubatch.n_tokens);
+        LLAMA_LOG_DEBUG("%s:   n_seq_tokens = %d\n", __func__, ubatch.n_seq_tokens);
+        LLAMA_LOG_DEBUG("%s:   n_seqs       = %d\n", __func__, ubatch.n_seqs);
+        LLAMA_LOG_DEBUG("%s:   n_seqs_unq   = %d\n", __func__, ubatch.n_seqs_unq);
+
+        std::stringstream ss_seq_id_unq;
+        std::stringstream ss_seq_idx;
+
+        ss_seq_id_unq << "[ ";
+        ss_seq_idx << "[";
+
+        for (uint32_t s = 0; s < ubatch.n_seqs_unq; ++s) {
+            ss_seq_id_unq << ubatch.seq_id_unq[s] << " ";
+        }
+
+        for (uint32_t s = 0; s < LLAMA_MAX_SEQ; ++s) {
+            if (ubatch.seq_idx[s] >= 0) {
+                ss_seq_idx << ubatch.seq_idx[s]%10;
+            } else {
+                ss_seq_idx << ".";
+            }
+        }
+
+        ss_seq_id_unq << "]";
+        ss_seq_idx    << "]";
+
+        LLAMA_LOG_DEBUG("%s:   token      = %p\n", __func__, (void *) ubatch.token);
+        LLAMA_LOG_DEBUG("%s:   embd       = %p\n", __func__, (void *) ubatch.embd);
+        LLAMA_LOG_DEBUG("%s:   pos        = %p\n", __func__, (void *) ubatch.pos);
+        LLAMA_LOG_DEBUG("%s:   n_seq_id   = %p\n", __func__, (void *) ubatch.n_seq_id);
+        LLAMA_LOG_DEBUG("%s:   seq_id     = %p\n", __func__, (void *) ubatch.seq_id);
+        LLAMA_LOG_DEBUG("%s:   seq_id_unq = %s\n", __func__, ss_seq_id_unq.str().c_str());
+        LLAMA_LOG_DEBUG("%s:   seq_idx    = %s\n", __func__, ss_seq_idx.str().c_str());
+        LLAMA_LOG_DEBUG("%s:   output     = %p\n", __func__, (void *) ubatch.output);
+        LLAMA_LOG_DEBUG("%s:   n_outputs  = %d\n", __func__, n_outputs);
+
+        if (debug > 1) {
+            int seq_id_max = 0;
+            for (uint32_t i = 0; i < ubatch.n_tokens; ++i) {
+                for (int s = 0; s < ubatch.n_seq_id[i]; ++s) {
+                    for (int s = 0; s < ubatch.n_seq_id[i]; ++s) {
+                        seq_id_max = std::max(seq_id_max, ubatch.seq_id[i][s]);
+                    }
+                }
+            }
+            ++seq_id_max;
+
+            LLAMA_LOG_DEBUG("%s:   token     = [\n", __func__);
+            for (uint32_t i = 0; i < ubatch.n_tokens; ++i) {
+                std::vector<int8_t> seq_id(seq_id_max);
+
+                for (int s = 0; s < ubatch.n_seq_id[i]; ++s) {
+                    seq_id[ubatch.seq_id[i][s]] = 1;
+                }
+
+                std::stringstream ss;
+                for (int s = 0; s < seq_id_max; ++s) {
+                    if (seq_id[s]) {
+                        ss << s%10;
+                    } else {
+                        ss << ".";
+                    }
+                }
+
+                if (ubatch.token) {
+                    LLAMA_LOG_DEBUG("%s:  %4d: id = %6d (%16s), pos = %4d, n_seq_id = %2d, seq_id = [%s], output = %d\n",
+                            __func__, i, ubatch.token[i], vocab->token_to_piece(ubatch.token[i]).c_str(),
+                            ubatch.pos[i], ubatch.n_seq_id[i], ss.str().c_str(), ubatch.output[i]);
+                } else {
+                    LLAMA_LOG_DEBUG("%s:  %4d: [embd], pos = %4d, n_seq_id = %2d, seq_id = [%s], output = %d\n",
+                            __func__, i, ubatch.pos[i], ubatch.n_seq_id[i], ss.str().c_str(), ubatch.output[i]);
+                }
+            }
+            LLAMA_LOG_DEBUG("%s:   ]\n", __func__);
+        }
+    }
+}
+```
+
 ```
 const char * llama_print_system_info(void) {
     static std::string s;

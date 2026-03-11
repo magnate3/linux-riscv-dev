@@ -363,6 +363,7 @@ llama_memory_context_ptr llama_memory_hybrid::init_batch(
 ```
 
 #  llama_kv_cache::slot_info  
+
 ```
 :llama_kv_cache::slot_info llama_kv_cache::find_slot(const llama_ubatch & ubatch, bool cont) const
 bool llama_kv_cache::update(llama_context * lctx, bool do_shift, const stream_copy_info & sc_info)
@@ -393,3 +394,49 @@ bool llama_kv_cache_context::apply() {
     return true;
 }
 ```
+
+# kv cell
+
+
+```
+void llama_kv_cache::set_input_k_idxs(ggml_tensor * dst, const llama_ubatch * ubatch, const slot_info & sinfo) const {
+    const uint32_t n_tokens = ubatch->n_tokens;
+    GGML_ASSERT(n_tokens == (int64_t) sinfo.size()*sinfo.n_stream());
+
+    GGML_ASSERT(ggml_backend_buffer_is_host(dst->buffer));
+    int64_t * data = (int64_t *) dst->data;
+
+    for (uint32_t s = 0; s < sinfo.n_stream(); ++s) {
+        const int64_t offs = sinfo.strm[s]*get_size();
+
+        for (uint32_t i = 0; i < sinfo.size(); ++i) {
+            data[s*sinfo.size() + i] = offs + sinfo.idxs[s][i];
+        }
+    }
+}
+
+```
+
+```cpp
+// 1. Compute K values for Layer 1
+ggml_tensor * k_cur_l1 = compute_k_layer_1(hidden);  // [128, 32, 3]
+
+// 2. Use same cell indices {5, 6, 7}
+k_idxs->data = {5, 6, 7};
+
+// 3. Write to Layer 1's K cache (note: different tensor)
+cpy_k(ctx, k_cur_l1, k_idxs, il=1);
+// Executes: layers[1].k[..., 5] = k_cur_l1[..., 0]  // Write to Layer 1's tensor
+//           layers[1].k[..., 6] = k_cur_l1[..., 1]
+//           layers[1].k[..., 7] = k_cur_l1[..., 2]
+
+// 4. Read Layer 1's K cache
+ggml_tensor * k_l1 = get_k(ctx, il=1, n_kv=10);
+// Returns: layers[1].k[..., 0:10]  // Read only from Layer 1
+```
+
+#  KV Cache复用    
+
+
+
+KV Cache复用是一种大模型推理优化技术，通过缓存已计算的系统提示词、多轮对话历史或长文档的Key/Value向量，在后续请求中直接重用，避免重复计算。它能显著降低首字延迟（TTFT）高达5倍，减少显存消耗，特别适用于RAG、高并发和对话场景。主流框架如vLLM (PagedAttention)、SGLang (RadixAttention) 利用RadixTree或Hash结构实现Prefix Caching（前缀缓存），将相同的前缀缓存直接应用到不同请求中。

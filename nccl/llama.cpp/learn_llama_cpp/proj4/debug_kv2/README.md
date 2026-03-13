@@ -1,6 +1,12 @@
 
 
 
+# debug kv3
+
+```
+cmake -DDEBUG_LLAMA_CPP=ON -S . -B build
+cmake --build build -j64
+```
 
 + 1
 
@@ -8,6 +14,25 @@
 ```
 ubatch.n_tokens == sinfo.n_stream()*sinfo.size()
 
+```
+
+sinfo.size    
+```
+    if (n_stream > 1) {
+        LM_GGML_ASSERT(n_tokens % ubatch.n_seqs_unq == 0);
+
+        n_seqs   = ubatch.n_seqs_unq;
+        n_tokens = n_tokens / n_seqs;
+    }
+
+    slot_info res = {
+        /*.s0   =*/ LLAMA_MAX_SEQ,
+        /*.s1   =*/ 0,
+        /*.strm =*/ { },
+        /*.idxs =*/ { },
+    };
+
+    res.resize(n_seqs);
 ```
 
 + 2

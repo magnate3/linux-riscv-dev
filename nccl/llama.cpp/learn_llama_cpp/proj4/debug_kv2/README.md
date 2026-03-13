@@ -53,6 +53,14 @@ ubatch.n_tokens == sinfo.n_stream()*sinfo.size()
     std::string prompt2 = "What is the capital of France? the the capital of France is the largetst city of France";
 ```
 
++ 5 apply_ubatch之后debug_cells
+
+```
+        // now emplace the ubatch
+        apply_ubatch(sinfo_new, ubatch);
+        debug_cells(ubatch,sinfo_new);
+```
+
 + run 
 ```
 prompt1: What is the capital of Sweden?

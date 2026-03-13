@@ -4,9 +4,11 @@
 
 + 1
 
-···
+
+```
 ubatch.n_tokens == sinfo.n_stream()*sinfo.size()
-···
+
+```
 
 + 2
 

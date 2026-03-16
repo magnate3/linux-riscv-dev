@@ -89,6 +89,22 @@ root@centos7:/workspace/Let_us_learn_llama_cpp/proj2/cpp#
  ./build/05-passkey  -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf
 ```
 
+
+> ###  debug llama_memory_seq_add with  llama-passkey
+
+ --grp-attn-n 2   
+```
+Thread 1 "llama-passkey" hit Breakpoint 1, 0x0000ffffbe5d19e0 in llama_memory_seq_add () from /workspace/llama.cpp/build/bin/libllama.so.0
+(gdb) 
+(gdb) 
+(gdb) 
+(gdb) 
+(gdb) bt
+#0  0x0000ffffbe5d19e0 in llama_memory_seq_add () from /workspace/llama.cpp/build/bin/libllama.so.0
+#1  0x0000aaaaaaacea2c in main ()
+(gdb) set args -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf  --grp-attn-n 2
+```
+
 > ##   fill the KV cache
 ```
 // fill the KV cache

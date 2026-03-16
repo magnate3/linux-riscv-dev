@@ -6,6 +6,8 @@
 ```
 cmake -DDEBUG_LLAMA_CPP=ON -S . -B build
 cmake --build build -j64
+export LLAMA_KV_CACHE_DEBUG=1
+./build/debug_kv  &> log.txt
 ```
 
 + 1

@@ -24,6 +24,9 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <numeric>
+#include <filesystem> // C++17 标准库
+
+namespace fs = std::filesystem;
 
 #define CV_FONT_HERSHEY_SIMPLEX         0
 #include <iostream>
@@ -32,9 +35,14 @@
 #include <regex>
 #include <json/json.h>
 #define UNKNOWN_CLASS -1
+#define STR_UNKNOWN_CLASS "unkonw_class"
+#define NUM_CLASS 200
 
+#define VAL_DATA_PATH "/pytorch/prune/tinyimagenet/torchvision/tinyimagenet/tiny-imagenet-200/val/"
+//#define VAL_DATA_PATH "/pytorch/prune/tinyimagenet/torchvision/tinyimagenet/tiny-imagenet-200/test/"
+#define CLASS_FILE "/pytorch/prune/tinyimagenet/label_to_tiny_class.json"
+//#define CLASS_FILE "./class_to_index.json"
 
-#define CLASS_FILE "./class_to_index.json"
 int config_to_json() {
   std::ifstream infile;
   infile.open("synset.txt");
@@ -126,6 +134,15 @@ int get_class_index(std::string &text,Json::Value & root)
     }
     return index;
 }
+std::string get_tiny_class(std::string cls_inx,Json::Value & root)
+{
+    std::string cls = STR_UNKNOWN_CLASS;
+    if(!root[cls_inx].isNull()){
+         cls = root[cls_inx].asString();
+         //std::cout << "key<label code> " <<  label_code << "  vaule<class index> "<< root[label_code].asInt() << std::endl;
+    }
+    return cls;
+}
 long getTimeUsec()
 {
 
@@ -144,12 +161,10 @@ static int detect_resnet(const cv::Mat& bgr, std::vector<float>& cls_scores)
     resnet.load_param("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.param");
     resnet.load_model("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.bin");
 #elif 1
-    //resnet.load_param("/pytorch/prune/finetune/model.ncnn.param");
-    //resnet.load_model("/pytorch/prune/finetune/model.ncnn.bin");
-    //resnet.load_param("/pytorch/prune/models/model.ncnn.param");
-    //resnet.load_model("/pytorch/prune/models/model.ncnn.bin");
-    resnet.load_param("/pytorch/prune/ncnn/model.ncnn.param");
-    resnet.load_model("/pytorch/prune/ncnn/model.ncnn.bin");
+    //resnet.load_param("/pytorch/prune/ncnn/model.ncnn.param");
+    //resnet.load_model("/pytorch/prune/ncnn/model.ncnn.bin");
+    resnet.load_param("/pytorch/prune/models/model.ncnn.param");
+    resnet.load_model("/pytorch/prune/models/model.ncnn.bin");
 #else
     resnet.load_param("/pytorch/ncnn/build/int8-quant/resnet-int8.param");
     resnet.load_model("/pytorch/ncnn/build/int8-quant/resnet-int8.bin");
@@ -174,14 +189,21 @@ static int detect_resnet(const cv::Mat& bgr, std::vector<float>& cls_scores)
 //ex.extract("resnetv17_dense0_fwd", out);
 
     ex.extract("out0", out);
-    //std::cout <<"output size: "<< out.total()<< std::endl;
+#if 1
+    //std::cout <<"output size: "<< out.total()  << ", out.w:  " << out.w << std::endl;
     //ex.extract("resnetv24_stage4_activation8", out);
     cls_scores.resize(out.w);
     for (int j = 0; j < out.w; j++)
     {
         cls_scores[j] = out[j];
     }
-
+#else
+    cls_scores.resize(NUM_CLASS);
+    for (int j = 0; j < NUM_CLASS; j++)
+    {
+        cls_scores[j] = out[j];
+    }
+#endif
     return 0;
 }
 
@@ -234,6 +256,68 @@ std::string get_filename(const std::string& full_path) {
     // Otherwise, the input string is just a filename
     return full_path;
 }
+int traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & wrong )
+{
+    // Vector to store the list of filenames
+    std::vector<std::string> filenames;
+    std::string pattern = VAL_DATA_PATH + sub + "/images/*.JPEG"; 
+    //std::string pattern =  sub + "/images/*.JPEG"; 
+    if (sub.empty())
+    {
+	   return -1;
+    }
+    // Use cv::glob to find all files matching the pattern
+    cv::glob(pattern, filenames, false); // 'false' for non-recursive search
+     std::cout << "pattern: " << pattern << std::endl;
+    // Vector to store the loaded images
+    //std::vector<cv::Mat> images;
+    size_t count = filenames.size(); // Number of files found
+
+    if (count == 0) {
+	    std::cout << "No images found in the directory!" << std::endl;
+        return -1;
+    }
+    std::cout << "total jpeg: "  << count << std::endl;
+    // Loop through the filenames and load each image
+    for (unsigned int i = 0; i < count; i++) {
+	cv::Mat img = cv::imread(filenames[i]); // Read the image
+        //std::string filename = get_filename(filenames[i]);
+        // Error handling: check if the image loaded successfully
+        if (img.empty()) { 
+		std::cout << "Error: Could not read image " << filenames[i] << std::endl;
+            continue; // Skip to the next iteration
+        }
+        
+        std::vector<float> cls_scores;
+        long time = getTimeUsec();
+        detect_resnet(img, cls_scores);
+        time = getTimeUsec() - time;
+        //printf("detection time: %ld ms\n",time/1000);
+        //print_topk(cls_scores, 3);
+	auto top1 = topk(cls_scores, 1)[0];
+	std::string predict = get_tiny_class(std::to_string(top1.first),labels);
+        //std::cout << "  Predicted class index is " << top1.first << "  class  is " << predict << " real class " << sub << std::endl;
+	if(STR_UNKNOWN_CLASS != predict)
+	{
+            auto cls = std::string("class index ") + std::to_string(top1.first) + " prob. " + std::to_string(top1.second);
+	    if(sub == predict)
+	    {
+	         ++ right;
+	    }
+	    else
+	    {
+                 //std::cout << filename <<"  Predicted class index is " << top1.first << " and actual class index is " << index << std::endl;
+	         ++ wrong;
+	    }
+	}
+	else
+        {
+	         ++ wrong;
+	}
+    }
+    std::cout << "right : "  << right << " wrong: " << wrong << "  accuracy : "  << ((float)right/(float)(right+wrong))  << std::endl;
+    return 0;
+}
 int main(int argc, char** argv)
 {
     // Define the path and file pattern (e.g., all .jpg files in the 'images' folder)
@@ -249,53 +333,25 @@ int main(int argc, char** argv)
 
 	    return -1;
     }
-    // Use cv::glob to find all files matching the pattern
-    cv::glob(pattern, filenames, false); // 'false' for non-recursive search
+    std::string path = VAL_DATA_PATH;
+    try {
+        for (const auto & entry : fs::directory_iterator(path)) {
+	    if(fs::is_directory(entry.path())) {
 
-    // Vector to store the loaded images
-    //std::vector<cv::Mat> images;
-    size_t count = filenames.size(); // Number of files found
-
-    if (count == 0) {
-	    std::cout << "No images found in the directory!" << std::endl;
-        return -1;
-    }
-    std::cout << "total jpeg: "  << count << std::endl;
-    // Loop through the filenames and load each image
-    for (unsigned int i = 0; i < count; i++) {
-	cv::Mat img = cv::imread(filenames[i]); // Read the image
-        std::string filename = get_filename(filenames[i]);
-        // Error handling: check if the image loaded successfully
-        if (img.empty()) { 
-		std::cout << "Error: Could not read image " << filenames[i] << std::endl;
-            continue; // Skip to the next iteration
+	        fs::path relPath = fs::relative(entry.path(), path);
+                std::cout << entry.path() << " " << relPath.string() << std::endl;
+                //traverse_subdir(root,entry.path());
+                traverse_subdir(root,relPath.string(),right,wrong);
+	    }
         }
-        
-	//std::cout << "jpeg: "  << filename<<std::endl;
-        std::vector<float> cls_scores;
-        long time = getTimeUsec();
-        detect_resnet(img, cls_scores);
-        time = getTimeUsec() - time;
-        //printf("detection time: %ld ms\n",time/1000);
-        //print_topk(cls_scores, 3);
-        int index = get_class_index(filename,root);
-	if(UNKNOWN_CLASS==index)
-	{
-	}
-        else
-	{
-	   auto top1 = topk(cls_scores, 1)[0];
-           auto cls = std::string("class index ") + std::to_string(top1.first) + " prob. " + std::to_string(top1.second);
-	   if(index == top1.first)
-	   {
-		++ right;
-	   }
-	   else
-	   {
-                //std::cout << filename <<"  Predicted class index is " << top1.first << " and actual class index is " << index << std::endl;
-		++ wrong;
-	   }
-	}	
+
+        //// 2. 递归遍历所有子目录
+        //std::cout << "\n--- 递归遍历 ---" << std::endl;
+        //for (const auto & entry : fs::recursive_directory_iterator(path)) {
+        //    std::cout << entry.path() << std::endl;
+        //}
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
     }
     std::cout << "right : "  << right << " wrong: " << wrong << "  accuracy : "  << ((float)right/(float)(right+wrong))  << std::endl;
     return 0;

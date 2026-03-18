@@ -187,7 +187,8 @@ train_sampler
         acc = evaluate(model, criterion, data_loader_test, device=device)
 ```
 
-+ imagenet
++ imagenet resnet50
+
 ```
 
 def get_model(name: str, num_classes, pretrained=False, target_dataset='cifar', **kwargs):
@@ -200,6 +201,36 @@ def get_model(name: str, num_classes, pretrained=False, target_dataset='cifar', 
         model = GRAPH_MODEL_DICT[name](num_classes=num_classes)
     return model
 ```
+
+
+```
+MODEL_DICT = {
+    'resnet18': models.cifar.resnet.resnet18,
+    'resnet34': models.cifar.resnet.resnet34,
+    'resnet50': models.cifar.resnet.resnet50,
+    'resnet101': models.cifar.resnet.resnet101,
+    'resnet152': models.cifar.resnet.resnet152,
+```
+
+```
+IMAGENET_MODEL_DICT={
+    "resnet50": models.imagenet.resnet50,
+    "densenet121": models.imagenet.densenet121,
+    "mobilenet_v2": models.imagenet.mobilenet_v2,
+    "mobilenet_v2_w_1_4": partial( models.imagenet.mobilenet_v2,  width_mult=1.4 ),
+    "googlenet": models.imagenet.googlenet,
+    "inception_v3": models.imagenet.inception_v3,
+    "squeezenet1_1": models.imagenet.squeezenet1_1,
+    "vgg19_bn": models.imagenet.vgg19_bn,
+    "vgg16_bn": models.imagenet.vgg16_bn,
+    "mnasnet1_0": models.imagenet.mnasnet1_0,
+    "alexnet": models.imagenet.alexnet,
+    "regnet_x_1_6gf": models.imagenet.regnet_x_1_6gf,
+    "resnext50_32x4d": models.imagenet.resnext50_32x4d,
+    "vit_b_16": models.imagenet.vit_b_16,
+}
+```
+
 
 如下tiny-imagenet-200采用有bug
 ```
@@ -241,6 +272,7 @@ print(idx_to_class[84])
 ```
 
 + 执行bench_resnet_tiny 
+
 ```
 :/pytorch/ncnn/build/onnx2ncnn/test# ./build/bench_resnet_tiny 
 "/pytorch/prune/tinyimagenet/torchvision/tinyimagenet/tiny-imagenet-200/val/n04265275" n04265275
@@ -251,6 +283,7 @@ total jpeg: 50
 
 
 # prune （不进行微调）  
+参考demo_prune.py   
 
 ```
 root@ubuntu:/pytorch/prune# python3 res50_prune_no_fine.py

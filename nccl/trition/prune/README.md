@@ -290,8 +290,22 @@ root@ubuntu:/pytorch/prune# python3 res50_prune_no_fine.py
 root@ubuntu:/pytorch/prune# pnnx ncnn/model.onnx 
 ```
 
++ prune后推理正确率
+
 ```
 root@ubuntu:/pytorch/ncnn/build/onnx2ncnn/test# ./build/bench_resnet
 total jpeg: 1000
 right : 588 wrong: 412  accuracy : 0.588
+```
+
++ prune后推理时间
+
+```
+/pytorch/ncnn/build/benchmark/benchncnn 4 8 0 0 1  param=./models/model.ncnn.param  shape=[227,227,3]
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = 0
+cooling_down = 1
+./models/model.ncnn.param  min =   10.89  max =   10.98  avg =   10.94
 ```

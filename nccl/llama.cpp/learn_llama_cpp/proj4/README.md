@@ -19,3 +19,7 @@ c++ -std=c++17 -I /workspace/llama.cpp/include -I  /workspace/llama.cpp/ggml/inc
 cmake --build build -j64
 ```
 
+```
+./build/simple-chat -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf  -c 2028
+./build/main  -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf   -p "Your very long prompt goes here..." -c 4096 --temp 0.7
+```

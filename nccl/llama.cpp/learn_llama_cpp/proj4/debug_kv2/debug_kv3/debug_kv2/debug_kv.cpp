@@ -779,7 +779,7 @@ int main(int argc, char** argv) {
     std::vector<std::string> seq_1_output;
     std::vector<std::string> seq_2_output;
 
-#if 0
+#if 1
     while (decode_calls--) {
         llama_batch update_batch = llama_batch_init(2, 0, 2);
         update_batch.token[0] = sp_token_seq1;

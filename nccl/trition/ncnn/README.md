@@ -289,10 +289,14 @@ onnx2ncnn/model.ncnn.param  min =   16.62  max =   21.99  avg =   18.83
 git clone https://github.com/nihui/imagenet-sample-images.git
 ```
 
+[imagenet-sample-images](https://github.com/EliSchwartz/imagenet-sample-images/blob/master/gallery.md)   
+
 +  imagelist.txt
 ```
 find imagenet-sample-images/ -type f > imagelist.txt
 ```
+
+
 
 
 + 生成resnet50.table     

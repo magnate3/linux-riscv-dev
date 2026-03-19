@@ -47,6 +47,9 @@ find ./ -name n02395406_hog.JPEG
 ./imagenet-sample-images/n02395406_hog.JPEG
 ```
 
+[imagenet-sample-images](https://github.com/EliSchwartz/imagenet-sample-images/blob/master/gallery.md) 
+
+
 > ## 测试 n02395406_hog.JPEG
 
 ```

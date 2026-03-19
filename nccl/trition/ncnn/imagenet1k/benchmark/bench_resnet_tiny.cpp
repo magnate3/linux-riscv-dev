@@ -40,8 +40,9 @@ namespace fs = std::filesystem;
 
 #define VAL_DATA_PATH "/pytorch/prune/tinyimagenet/torchvision/tinyimagenet/tiny-imagenet-200/val/"
 //#define VAL_DATA_PATH "/pytorch/prune/tinyimagenet/torchvision/tinyimagenet/tiny-imagenet-200/test/"
-#define CLASS_FILE "/pytorch/prune/tinyimagenet/label_to_tiny_class.json"
+//#define CLASS_FILE "/pytorch/prune/tinyimagenet/label_to_tiny_class.json"
 //#define CLASS_FILE "./class_to_index.json"
+#define CLASS_FILE "./index_to_class.json"
 
 int config_to_json() {
   std::ifstream infile;
@@ -105,7 +106,7 @@ int get_label_json(Json::Value & root)
 	in.close();
 	return 0;
 }
-std::string get_label(std::string &text) {
+std::string get_label(const std::string &text) {
     //std::string text = "n02395406_hog.JPEG";
     std::regex pattern(R"(^([^_]+)_([^.]+)\.JPEG$)"); // 定义分组
     std::smatch matches;
@@ -122,7 +123,7 @@ std::string get_label(std::string &text) {
 
     return std::string("");
 }
-int get_class_index(std::string &text,Json::Value & root)
+int get_class_index(const std::string &text,Json::Value & root)
 {
     std::string label = get_label(text); 
     int index = UNKNOWN_CLASS;
@@ -161,10 +162,10 @@ static int detect_resnet(const cv::Mat& bgr, std::vector<float>& cls_scores)
     resnet.load_param("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.param");
     resnet.load_model("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.bin");
 #elif 1
-    //resnet.load_param("/pytorch/prune/ncnn/model.ncnn.param");
-    //resnet.load_model("/pytorch/prune/ncnn/model.ncnn.bin");
-    resnet.load_param("/pytorch/prune/models/model.ncnn.param");
-    resnet.load_model("/pytorch/prune/models/model.ncnn.bin");
+    resnet.load_param("/pytorch/prune/ncnn/model.ncnn.param");
+    resnet.load_model("/pytorch/prune/ncnn/model.ncnn.bin");
+    //resnet.load_param("/pytorch/prune/models/model.ncnn.param");
+    //resnet.load_model("/pytorch/prune/models/model.ncnn.bin");
 #else
     resnet.load_param("/pytorch/ncnn/build/int8-quant/resnet-int8.param");
     resnet.load_model("/pytorch/ncnn/build/int8-quant/resnet-int8.bin");

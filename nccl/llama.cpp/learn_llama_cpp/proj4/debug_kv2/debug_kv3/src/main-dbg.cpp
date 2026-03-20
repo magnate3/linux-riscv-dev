@@ -86,7 +86,10 @@ static void sigint_handler(int signo) {
 int main(int argc, char ** argv) {
     common_params params;
     g_params = &params;
-    if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_CLI, print_usage)) {
+    //if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_CLI, print_usage)) {
+    //if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_SERVER, print_usage)) {
+    //if (!common_params_parse(argc, argv, params,  LLAMA_EXAMPLE_CLI, print_usage)) {
+    if (!common_params_parse(argc, argv, params,  LLAMA_EXAMPLE_COMPLETION, print_usage)) {
         return 1;
     }
 
@@ -252,7 +255,7 @@ int main(int argc, char ** argv) {
                 return 1;
             }
             session_tokens.resize(n_token_count_out);
-            LOG_INF("%s: loaded a session with prompt size of %d tokens\n", __func__, (int)session_tokens.size());
+            printf("%s: loaded a session with prompt size of %d tokens\n", __func__, (int)session_tokens.size());
         }
     }
 
@@ -479,8 +482,10 @@ int main(int argc, char ** argv) {
     // number of grouped KV tokens so far (used only if params.grp_attn_n > 1)
     int ga_i = 0;
 
-    const int ga_n = params.grp_attn_n;
+    const int ga_n = 1;
+    //const int ga_n = params.grp_attn_n;
     const int ga_w = params.grp_attn_w;
+    params.ctx_shift = 1;
 
     if (ga_n != 1) {
         GGML_ASSERT(ga_n > 0                    && "grp_attn_n must be positive");                     // NOLINT
@@ -588,12 +593,12 @@ int main(int argc, char ** argv) {
 
                 if (n_past + (int) embd.size() >= n_ctx) {
                     if (!params.ctx_shift){
-                        LOG_DBG("\n\n%s: context full and context shift is disabled => stopping\n", __func__);
+                        printf("\n\n%s: context full and context shift is disabled => stopping\n", __func__);
                         break;
                     }
 
                     if (params.n_predict == -2) {
-                        LOG_DBG("\n\n%s: context full and n_predict == -%d => stopping\n", __func__, params.n_predict);
+                        printf("\n\n%s: context full and n_predict == -%d => stopping\n", __func__, params.n_predict);
                         break;
                     }
 
@@ -608,11 +613,11 @@ int main(int argc, char ** argv) {
 
                     n_past -= n_discard;
 
-                    LOG_DBG("after swap: n_past = %d\n", n_past);
+                    printf("after swap: n_past = %d\n", n_past);
 
-                    LOG_DBG("embd: %s\n", string_from(ctx, embd).c_str());
+                    printf("embd: %s\n", string_from(ctx, embd).c_str());
 
-                    LOG_DBG("clear session path\n");
+                    printf("clear session path\n");
                     path_session.clear();
                 }
             } else {

@@ -116,7 +116,7 @@ function(add_learning_example target source)
 
     # Enable C++17 features
     target_compile_features(${target} PRIVATE cxx_std_17)
-
+    target_compile_options(${target} PRIVATE -g)
     # Add compiler warnings
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(${target} PRIVATE
@@ -196,7 +196,12 @@ add_full_example(06-simple-chat 06-simple-chat.cpp)
 add_full_example(07-simple-chat 07-simple-chat.cpp)
 add_full_example(09-parallel 09-parallel.cpp)
 add_full_example(10-avllm_cli 10-avllm_cli.cpp)
-
+add_full_example(11-prefix 11-prefix.cpp)
+add_full_example(12-prefix 12-prefix.cpp)
+set(SOURCES 13-worker.cpp  llama_model_impl.cpp )
+add_full_example(13-worker ${SOURCES})
+add_full_example(14-prefix 14-prefix.cpp)
+add_full_example(15-prefix 15-prefix.cpp)
 # =============================================================================
 # Print build information
 # =============================================================================

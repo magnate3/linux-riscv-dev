@@ -486,8 +486,8 @@ int main() {
      //process_first_turn(ctx,prefix_tokens,streams,n_prefix); 
      //process_first_turn(ctx,streams,n_prefix); 
      // *************************
-     process_first_turn(ctx,vocab,streams,n_prefix,cparams.n_ctx); 
-     //process_first_turn_2(ctx,vocab,streams,n_prefix,cparams.n_ctx); 
+     //process_first_turn(ctx,vocab,streams,n_prefix,cparams.n_ctx); 
+     process_first_turn_2(ctx,vocab,streams,n_prefix,cparams.n_ctx); 
      //process_first_turn(batch,ctx,streams,n_prefix); 
      // 遍历 batch 找到需要采样的 token
 #if 1

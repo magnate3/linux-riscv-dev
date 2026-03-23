@@ -69,49 +69,11 @@ static void llama_batch_add(struct llama_batch & batch, llama_token id, llama_po
     batch.n_tokens++;
 }
 
-void process_sec_turn(llama_context * ctx,const struct llama_vocab* vocab,std::vector<Stream> & streams, int n_prefix) {
-}
-void process_decode(llama_batch & batch,llama_context * ctx,const struct llama_vocab* vocab,std::vector<Stream> & streams, int n_ctx) {
-#if 1
-        // 遍历 batch 找到需要采样的 token
-        for (int i = 0; i < batch.n_tokens; ++i) {
-            // 只有标记了 logits 为 true 的位置才能调用 llama_get_logits_ith
-            if (batch.logits[i]) {
-                int slot_id = batch.seq_id[i][0]; // 获取该 logits 属于哪个流
-                struct Stream & s = streams[slot_id -1];
-                float * logits = llama_get_logits_ith(ctx, i);
-                
-                 // 贪婪采样
-                 llama_token next_token = 0;
-                 float max_p = -1e10;
-                 for (int v = 0; v < llama_vocab_n_tokens(vocab); ++v) {
-                     if (logits[v] > max_p) { max_p = logits[v]; next_token = v; }
-                 }
-
-                 // 转换并输出
-                 std::string piece = token_to_piece(vocab, next_token);
-                 printf("[Stream %d]: %s\n", s.id, piece.c_str());
-                 fflush(stdout);
-
-                 // 检查结束条件
-                 if (next_token == llama_vocab_eos(vocab) || s.n_past >= n_ctx) {
-                     s.active = false;
-                     s.completed = true;
-                     // 释放该槽位的 KV 缓存，让出显存
-                     //llama_kv_cache_seq_rm(ctx, s.slot_id, -1, -1);
-                     llama_memory_seq_rm (llama_get_memory(ctx),s.slot_id, -1, -1);
-                     printf("[Stream %d]: generation finsh and kv cache free\n", s.id);
-                 } else {
-                     // 将新生成的 Token 放入下一轮处理队列
-                     s.pending_tokens.push_back(next_token);
-                 }
-            }
-        }
-#endif
+void process_sec_turn(llama_context * ctx,std::vector<Stream> & streams, int n_prefix) {
 }
 // 假设 n_prefix 是公共前缀(ID 0)的长度
 //void process_first_turn(struct llama_batch & batch, llama_context * ctx, std::vector<Stream> & streams, int n_prefix) {
-void process_first_turn(llama_context * ctx,const struct llama_vocab* vocab,std::vector<Stream> & streams, int n_prefix,int n_ctx) {
+void process_first_turn(llama_context * ctx,std::vector<Stream> & streams, int n_prefix) {
     int n_parallel = streams.size(); 
     llama_batch batch = llama_batch_init(4096, 0, N_SEQ_MAX);
     //llama_batch batch = llama_batch_init(2048, 0, N_SEQ_MAX);
@@ -130,7 +92,6 @@ void process_first_turn(llama_context * ctx,const struct llama_vocab* vocab,std:
         // 将 ID 0 的前缀状态同步到当前流的 ID 中
         // 注意：确保你的 type_k/v 是 F16，否则这里可能断言失败
         //llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, 0, n_prefix);
-        llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, -1, -1);
 
         // --- 核心修复 3: 构造 Batch ---
         llama_batch_clear(batch);
@@ -140,19 +101,16 @@ void process_first_turn(llama_context * ctx,const struct llama_vocab* vocab,std:
             // 因为物理克隆已经完成了“继承”，逻辑耦合反而会引发冲突
            //  // 确保位置 (pos) 从 n_prefix 严格开始，不要包含重复的 BOS (Token 1)
             //llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {s.slot_id}, is_last);
-            llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {s.slot_id}, is_last);
+            llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {0,   s.slot_id}, is_last);
         }
-#if 1
         if (batch.n_tokens > 0) {
             if (llama_decode(ctx, batch) != 0) {
             printf("Stream decode failed!\n");
             continue;
             }
         }
-#endif
+
         s.n_past = n_prefix + s.pending_tokens.size();
-        s.pending_tokens.clear();
-        process_decode(batch,ctx,vocab,streams,n_ctx);
     }
 #if 0 
     if (batch.n_tokens > 0) {
@@ -165,7 +123,7 @@ void process_first_turn(llama_context * ctx,const struct llama_vocab* vocab,std:
 #endif
     //llama_memory_seq_cp(llama_get_memory(ctx), 0, 1, 0, n_prefix);
        // 清理本次处理完的输入
-    //for (auto & s : streams) { if (s.is_prefill) s.pending_tokens.clear(); }
+    for (auto & s : streams) { if (s.is_prefill) s.pending_tokens.clear(); }
     llama_batch_free(batch);
 }
 
@@ -224,7 +182,7 @@ void process_first_turn(llama_context * ctx,std::vector<llama_token> & prefix_to
 void process_first_turn(struct llama_batch & batch, llama_context * ctx, std::vector<Stream> & streams, int n_prefix) {
 
     //llama_batch_clear(batch);
-    printf("%s %d \n",__func__,__LINE__); 
+    
     for (auto & s : streams) {
         if (!s.active) continue;
 
@@ -236,7 +194,7 @@ void process_first_turn(struct llama_batch & batch, llama_context * ctx, std::ve
         // --- 核心修复 2: 执行物理克隆 ---
         // 将 ID 0 的前缀状态同步到当前流的 ID 中
         // 注意：确保你的 type_k/v 是 F16，否则这里可能断言失败
-        llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, -1, -1);
+        //llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, 0, n_prefix);
 
         // --- 核心修复 3: 构造 Batch ---
         llama_batch_clear(batch);
@@ -245,19 +203,11 @@ void process_first_turn(struct llama_batch & batch, llama_context * ctx, std::ve
             // 【重要】：这里只传 {s.slot_id}，不要传 {0, s.slot_id}
             // 因为物理克隆已经完成了“继承”，逻辑耦合反而会引发冲突
            //  // 确保位置 (pos) 从 n_prefix 严格开始，不要包含重复的 BOS (Token 1)
-            llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {s.slot_id}, is_last);
+            llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {0,   s.slot_id}, is_last);
         }
-    if (batch.n_tokens > 0) {
-        // 执行当前流的 Pre-fill
-        if (llama_decode(ctx, batch) != 0) {
-            printf("Stream decode failed!\n");
-            continue;
-        }
-    }
 
         s.n_past = n_prefix + s.pending_tokens.size();
     }
-#if 0
     if (batch.n_tokens > 0) {
         // 执行当前流的 Pre-fill
         if (llama_decode(ctx, batch) != 0) {
@@ -265,7 +215,7 @@ void process_first_turn(struct llama_batch & batch, llama_context * ctx, std::ve
             //continue;
         }
     }
-#endif 
+    
        // 清理本次处理完的输入
     for (auto & s : streams) { if (s.is_prefill) s.pending_tokens.clear(); }
 }
@@ -309,7 +259,7 @@ int main() {
     printf("[System] common prefix : %d tokens\n", n_prefix);
     // 4. 初始化多个并发流 (模拟两个用户同时提问)
     std::vector<Stream> streams(2);
-    std::string queries[] = {"talk a story about lakers ", "who is the best superstar of lakers?"};
+    std::string queries[] = {"talk a story about lakers ", " who is the best superstar of lakers?"};
 
     for (int i = 0; i < 2; ++i) {
         streams[i].id = i;
@@ -357,7 +307,7 @@ int main() {
             //llama_memory_seq_rm(llama_get_memory(ctx), s.slot_id, -1, -1);
             if(s.is_prefill)  {
                     llama_memory_seq_rm(llama_get_memory(ctx), s.slot_id, -1, -1);
-                    llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, -1, -1);
+                    ///llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, 0, n_prefix);
             }
             for (size_t i = 0; i < s.pending_tokens.size(); ++i) {
                 // 只有每个流输入序列的最后一个 Token 才需要计算 Logits 用于推理
@@ -426,41 +376,41 @@ int main() {
 #else
      //process_first_turn(ctx,prefix_tokens,streams,n_prefix); 
      //process_first_turn(ctx,streams,n_prefix); 
-     // *************************
-     process_first_turn(ctx,vocab,streams,n_prefix,cparams.n_ctx); 
+     //process_first_turn(ctx,streams,n_prefix); 
      //process_first_turn(batch,ctx,streams,n_prefix); 
-     // 遍历 batch 找到需要采样的 token
-#if 1
-    // 5. 【主循环】连续批处理 (Continuous Batching)
-    while (true) {
-        llama_batch_clear(batch);
-        bool has_work = false;
+        // 对有输出需求的流进行采样
+    for (auto & s : streams) {
+        if (!s.active) continue;
 
-        // 收集所有流待处理的 Token (不管是 Pre-fill 还是上一轮生成的)
-        for (auto & s : streams) {
-            if (!s.active) continue;
-            has_work = true;
-            for (size_t i = 0; i < s.pending_tokens.size(); ++i) {
-                // 只有每个流输入序列的最后一个 Token 才需要计算 Logits 用于推理
-                bool is_last = (i == s.pending_tokens.size() - 1);
-                    llama_batch_add(batch, s.pending_tokens[i], s.n_past + i, {s.slot_id}, is_last);
+        // --- 核心修复 1: 物理抹除目标槽位状态 ---
+        // 这一步消除所有潜在的 "diverged" 历史
+        //llama_kv_cache_seq_rm(ctx, s.slot_id, -1, -1);
+        //llama_memory_seq_rm(llama_get_memory(ctx), s.slot_id, -1, -1);
+
+        // --- 核心修复 2: 执行物理克隆 ---
+        // 将 ID 0 的前缀状态同步到当前流的 ID 中
+        // 注意：确保你的 type_k/v 是 F16，否则这里可能断言失败
+        //llama_memory_seq_cp(llama_get_memory(ctx), 0, s.slot_id, 0, n_prefix);
+
+        // --- 核心修复 3: 构造 Batch ---
+        llama_batch_clear(batch);
+        for (size_t i = 0; i < s.pending_tokens.size(); ++i) {
+            bool is_last = (i == s.pending_tokens.size() - 1);
+            // 【重要】：这里只传 {s.slot_id}，不要传 {0, s.slot_id}
+            // 因为物理克隆已经完成了“继承”，逻辑耦合反而会引发冲突
+           //  // 确保位置 (pos) 从 n_prefix 严格开始，不要包含重复的 BOS (Token 1)
+            //llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {s.slot_id}, is_last);
+            llama_batch_add(batch, s.pending_tokens[i], n_prefix + i, {0,   s.slot_id}, is_last);
+        }
+        if (batch.n_tokens > 0) {
+            if (llama_decode(ctx, batch) != 0) {
+            printf("Stream decode failed!\n");
+            continue;
             }
-            s.n_past += s.pending_tokens.size();
-            s.pending_tokens.clear();
         }
 
-        if (!has_work || batch.n_tokens == 0) break;
-
-         if (batch.n_tokens > 0) {
-             // 执行单次批处理推理
-             if (llama_decode(ctx, batch) != 0) {
-                  printf("decode stream failed\n");
-                 break;
-             }
-         }
-         process_decode(batch,ctx,vocab,streams,cparams.n_ctx); 
-      }
-#endif
+        s.n_past = n_prefix + s.pending_tokens.size();
+    }
 #endif
     llama_batch_free(batch);
     llama_free(ctx);

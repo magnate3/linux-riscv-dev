@@ -202,6 +202,7 @@ set(SOURCES 13-worker.cpp  llama_model_impl.cpp )
 add_full_example(13-worker ${SOURCES})
 add_full_example(14-prefix 14-prefix.cpp)
 add_full_example(15-prefix 15-prefix.cpp)
+add_full_example(16-prefix 16-prefix.cpp)
 # =============================================================================
 # Print build information
 # =============================================================================

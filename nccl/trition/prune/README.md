@@ -309,3 +309,43 @@ gpu_device = 0
 cooling_down = 1
 ./models/model.ncnn.param  min =   10.89  max =   10.98  avg =   10.94
 ```
+
+#  使用 ImageNet-v2 进行结构化剪枝
+
+在边缘设备上对 ResNet50 进行端到端加速时，使用 ImageNet-v2 作为数据集是一个极具性价比的选择。ImageNet-v2 是为了测试模型泛化性而开发的独立测试集，包含 1000 个类别，每类 10 张图片（共 10,000 张）。 对于剪枝任务，它的主要作用是作为校准集（Calibration Set）来评估通道重要性，或者作为极轻量级的微调集。       
++ 1. 为什么用 ImageNet-v2 剪枝？
+极速校准：结构化剪枝（如基于 L1 范数）通常需要通过一小部分数据来观察激活值或梯度。ImageNet-v2 的 1 万张图片远快于 ImageNet-1K 的 120 万张。    
+覆盖全类别：它完整覆盖了 ResNet50 预训练时的 1000个类，确保剪枝后的模型不会在某些特定类别上出现精度崩塌。        
+```
+针对端到端加速的建议
+V2 权重的优势：PyTorch 官方提供的 IMAGENET1K_V2 权重（Top-1 80.8%）比 V1（76.1%）精度更高。在更高起点的模型上剪枝，最终边缘端精度更好。
+微调限制：由于 ImageNet-v2 数据量较少（每类仅 10 张），严禁进行长周期的全量微调，否则模型会极快地产生过拟合。建议只微调 1-2 个 Epoch，或者使用学习率极低（如 1e-5）的训练。
+
+量化转换：剪枝后的模型导出为 ONNX 后，利用 TensorRT 开启 INT8 量化。结构化剪枝减小了计算密度，量化减小了位宽，两者叠加可实现 4-8 倍的边缘端加速。
+```
+
++ 标签偏移 (Label Offset)：
+ImageNet-v2 的文件夹是 0, 1, 2...。如果你的 PyTorch 训练时的 class_to_idx 是按 WordNet ID 排序的，那么文件夹 0 可能并不对应索引 0。       
+
+
+```
+pip install -U huggingface_hub
+ export HF_ENDPOINT=https://hf-mirror.com
+```
+
+```
+cat download.py 
+from huggingface_hub import hf_hub_download
+
+file_path = hf_hub_download(
+    repo_id="vaishaal/ImageNetV2",
+    filename="imagenetv2-matched-frequency.tar.gz",
+    repo_type="dataset",
+    local_dir="./imagenetv2"
+)
+print(f"download to: {file_path}")
+```
+
+```
+ls imagenetv2-matched-frequency-format-val/
+```

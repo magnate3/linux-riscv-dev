@@ -190,6 +190,8 @@ endfunction()
 #add_learning_example(01-simple-inference 01-simple-inference.cpp)
 set(SOURCES main.cpp )
 add_full_example(main ${SOURCES})
+set(SOURCES main2.cpp )
+add_full_example(main2 ${SOURCES})
 # =============================================================================
 # Print build information
 # =============================================================================

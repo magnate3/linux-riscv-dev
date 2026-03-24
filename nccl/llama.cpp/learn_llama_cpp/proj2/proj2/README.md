@@ -37,3 +37,31 @@ graph_reserve: reserving a graph for ubatch with n_tokens =  512, n_seqs =  8, n
 [Stream 0]: 4
 [Stream 1]:  l
 ```
+
+#  ./build/16-prefix 
+
+判断cache是否reuse
+
+```
+    for (int j = 0; j < 3; ++j) {
+        for (int i = 0; i < n_past_prefix; ++i) {
+             if(is_pos_cached(ctx, j, i)){
+                 printf("slot %d pos %d cached \n",j,i);
+             }
+        }
+    }
+```
+
+```
+slot 0 pos 4 cached 
+slot 1 pos 0 cached 
+slot 1 pos 1 cached 
+slot 1 pos 2 cached 
+slot 1 pos 3 cached 
+slot 1 pos 4 cached 
+slot 2 pos 0 cached 
+slot 2 pos 1 cached 
+slot 2 pos 2 cached 
+slot 2 pos 3 cached 
+slot 2 pos 4 cached 
+```

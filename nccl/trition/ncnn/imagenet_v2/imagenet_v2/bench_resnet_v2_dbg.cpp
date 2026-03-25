@@ -13,6 +13,7 @@
 // specific language governing permissions and limitations under the License.
 
 #include "net.h"
+#include "cpu.h"
 
 #include <algorithm>
 #include <opencv2/core/core.hpp>
@@ -152,30 +153,8 @@ long getTimeUsec()
     gettimeofday(&t,0);
     return (long)((long)t.tv_sec*1000*1000 + t.tv_usec);
 }
-static int detect_resnet(const cv::Mat& bgr, std::vector<float>& cls_scores)
+static int detect_resnet(ncnn::Net & resnet , const cv::Mat& bgr, std::vector<float>& cls_scores)
 {
-    ncnn::Net resnet;
-
-    resnet.opt.use_vulkan_compute = false;
-
-#if 0
-    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
-    resnet.load_param("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.param");
-    resnet.load_model("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.bin");
-    //ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_BGR, bgr.cols, bgr.rows, 224, 224);
-#elif 1
-    //resnet.load_param("/pytorch/prune/finetune/model.ncnn.param");
-    //resnet.load_model("/pytorch/prune/finetune/model.ncnn.bin");
-    //resnet.load_param("/pytorch/prune/ncnn/model.ncnn.param");
-    //resnet.load_model("/pytorch/prune/ncnn/model.ncnn.bin");
-    //resnet.load_param("/pytorch/prune/models/model.ncnn.param");
-    //resnet.load_model("/pytorch/prune/models/model.ncnn.bin");
-    resnet.load_param("/pytorch/prune/ncnn/resnet50_pruned_v2.ncnn.param");
-    resnet.load_model("/pytorch/prune/ncnn/resnet50_pruned_v2.ncnn.bin");
-#else
-    resnet.load_param("/pytorch/ncnn/build/int8-quant/resnet-int8.param");
-    resnet.load_model("/pytorch/ncnn/build/int8-quant/resnet-int8.bin");
-#endif
 
                                          
     // ResNet50 官方预处理：Resize(256) -> CenterCrop(224)
@@ -271,7 +250,7 @@ std::string get_filename(const std::string& full_path) {
     // Otherwise, the input string is just a filename
     return full_path;
 }
-int v2_traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & wrong )
+int v2_traverse_subdir(ncnn::Net & resnet,Json::Value & labels, std::string sub, int& right ,int & wrong )
 {
     // Vector to store the list of filenames
     std::vector<std::string> filenames;
@@ -283,7 +262,7 @@ int v2_traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & 
     }
     // Use cv::glob to find all files matching the pattern
     cv::glob(pattern, filenames, false); // 'false' for non-recursive search
-     std::cout << "pattern: " << pattern << std::endl;
+    //std::cout << "pattern: " << pattern << std::endl;
     // Vector to store the loaded images
     //std::vector<cv::Mat> images;
     size_t count = filenames.size(); // Number of files found
@@ -305,7 +284,7 @@ int v2_traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & 
         
         std::vector<float> cls_scores;
         long time = getTimeUsec();
-        detect_resnet(img, cls_scores);
+        detect_resnet(resnet,img, cls_scores);
         time = getTimeUsec() - time;
         //printf("detection time: %ld ms\n",time/1000);
         //print_topk(cls_scores, 3);
@@ -334,7 +313,7 @@ int v2_traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & 
 	         ++ wrong;
 	}
 #else
-            std::cout << "  Predicted class index is " << top1.first << "  class  is " << predict << " real class " << real<< std::endl;
+            //std::cout << "  Predicted class index is " << top1.first << "  class  is " << predict << " real class " << real<< std::endl;
 	    if(real == predict)
 	    {
 	         ++ right;
@@ -349,7 +328,7 @@ int v2_traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & 
     std::cout << "right : "  << right << " wrong: " << wrong << "  accuracy : "  << ((float)right/(float)(right+wrong))  << std::endl;
     return 0;
 }
-int traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & wrong )
+int traverse_subdir(ncnn::Net & resnet,Json::Value & labels, std::string sub, int& right ,int & wrong )
 {
     // Vector to store the list of filenames
     std::vector<std::string> filenames;
@@ -383,7 +362,7 @@ int traverse_subdir(Json::Value & labels, std::string sub, int& right ,int & wro
         
         std::vector<float> cls_scores;
         long time = getTimeUsec();
-        detect_resnet(img, cls_scores);
+        detect_resnet(resnet,img, cls_scores);
         time = getTimeUsec() - time;
         //printf("detection time: %ld ms\n",time/1000);
         //print_topk(cls_scores, 3);
@@ -415,7 +394,29 @@ int main(int argc, char** argv)
 {
     // Define the path and file pattern (e.g., all .jpg files in the 'images' folder)
     std::string pattern = "/pytorch/ncnn/build/imagenet-sample-images/*.JPEG"; 
-    
+    ncnn::Net resnet;
+
+    resnet.opt.use_vulkan_compute = false;
+
+#if 0
+    // the ncnn model https://github.com/nihui/ncnn-assets/tree/master/models
+    resnet.load_param("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.param");
+    resnet.load_model("/pytorch/ncnn/build/onnx2ncnn/model.ncnn.bin");
+    //ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_BGR, bgr.cols, bgr.rows, 224, 224);
+#elif 1
+    //resnet.load_param("/pytorch/prune/finetune/model.ncnn.param");
+    //resnet.load_model("/pytorch/prune/finetune/model.ncnn.bin");
+    //resnet.load_param("/pytorch/prune/ncnn/model.ncnn.param");
+    //resnet.load_model("/pytorch/prune/ncnn/model.ncnn.bin");
+    //resnet.load_param("/pytorch/prune/models/model.ncnn.param");
+    //resnet.load_model("/pytorch/prune/models/model.ncnn.bin");
+    resnet.load_param("/pytorch/prune/ncnn/resnet50_pruned_v2.ncnn.param");
+    resnet.load_model("/pytorch/prune/ncnn/resnet50_pruned_v2.ncnn.bin");
+#else
+    resnet.load_param("/pytorch/ncnn/build/int8-quant/resnet-int8.param");
+    resnet.load_model("/pytorch/ncnn/build/int8-quant/resnet-int8.bin");
+#endif
+    ncnn::set_omp_num_threads(8);
     // Vector to store the list of filenames
     std::vector<std::string> filenames;
     int right = 0, wrong = 0;
@@ -434,7 +435,7 @@ int main(int argc, char** argv)
 	        fs::path relPath = fs::relative(entry.path(), path);
                 std::cout << entry.path() << " " << relPath.string() << std::endl;
                 //traverse_subdir(root,entry.path());
-                v2_traverse_subdir(root,relPath.string(),right,wrong);
+                v2_traverse_subdir(resnet,root,relPath.string(),right,wrong);
 	    }
         }
 

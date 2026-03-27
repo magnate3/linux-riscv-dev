@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <cstdio>
+#include <iostream>
 std::vector<llama_token>  llama_tokenize(const llama_context * ctx,std::string text, bool add_bos) {
     const llama_model * model = llama_get_model(ctx);
     const llama_vocab * vocab = llama_model_get_vocab(model);
@@ -284,6 +285,42 @@ int main() {
         // 修正并同步
         tokens.push_back(next_token);
         n_past += n_accept + 1;
+        if (next_token == llama_vocab_eos(vocab_tgt)){
+              goto fail1;
+        }
+        // Autoregressive Inference
+#if 1      
+        if (n_accept == n_draft) {
+             llama_batch b_dft = llama_batch_init(1, 0, 1);
+             b_dft.n_tokens = 1;
+             b_dft.token[0] = next_token;
+             b_dft.pos[0]   = n_past-1;
+             b_dft.n_seq_id[0] = 1;
+             b_dft.seq_id[0][0] = 0;
+             b_dft.logits[0] = true;
+
+            if (llama_decode(ctx_dft, b_dft) != 0) {
+                fprintf(stderr, "Draft decode failed at pos %d\n", b_dft.pos[0]);
+                llama_batch_free(b_dft);
+                goto fail1;
+            }
+            llama_batch_free(b_dft);
+             llama_batch b_tgt = llama_batch_init(1, 0, 1);
+             b_tgt.n_tokens = 1;
+             b_tgt.token[0] = next_token;
+             b_tgt.pos[0]   = n_past-1;
+             b_tgt.n_seq_id[0] = 1;
+             b_tgt.seq_id[0][0] = 0;
+             b_tgt.logits[0] = true;
+
+            if (llama_decode(ctx_tgt, b_tgt) != 0) {
+                fprintf(stderr, "Target decode failed at pos %d\n", b_tgt.pos[0]);
+                llama_batch_free(b_tgt);
+                goto fail1;
+            }
+            llama_batch_free(b_tgt);
+        }
+#endif
         // 【核心修复】清理 KV Cache 残留，确保 Y = X + 1
         llama_memory_seq_rm(llama_get_memory(ctx_dft),0, n_past, -1);
         llama_memory_seq_rm(llama_get_memory(ctx_tgt),0, n_past, -1);
@@ -316,6 +353,7 @@ int main() {
         printf("Accept part: %d/%d | Total: %zu\n", n_accept, n_draft, tokens.size());
         llama_batch_free(b_tgt);
     }
+    std::cout << custom_common_detokenize(ctx_dft,tokens,true) << std::endl;
 fail1:
     llama_free(ctx_tgt); llama_model_free(model_tgt);
     llama_free(ctx_dft); llama_model_free(model_dft);

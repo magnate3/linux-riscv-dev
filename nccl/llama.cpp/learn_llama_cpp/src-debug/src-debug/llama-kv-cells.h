@@ -455,6 +455,13 @@ public:
         has_shift = true;
     }
 
+    std::vector<llama_pos> & get_cells_pos() { return pos;}
+    //std::map<llama_pos, int>  & get_cells_seq_pos() { return seq_pos;}
+    int get_seq_pos(llama_seq_id s, llama_pos p){
+        auto it = seq_pos[s].find(p);
+        assert(it != seq_pos[s].end());
+        return seq_pos[s][p];
+    }
 private:
     bool has_shift = false;
 

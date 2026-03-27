@@ -199,9 +199,12 @@ public:
     void set_input_kq_mask   (ggml_tensor * dst, const llama_ubatch * ubatch, bool causal_attn) const;
     void set_input_pos_bucket(ggml_tensor * dst, const llama_ubatch * ubatch) const;
 
+    void debug_cells( const llama_ubatch & ubatch,const slot_info & sinfo);
+    void debug_cells( const llama_ubatch & ubatch);
     void debug_set_input_k_idxs(ggml_tensor * dst, const llama_ubatch * ubatch, const slot_info & sinfo) const;
     void debug_set_input_v_idxs(ggml_tensor * dst, const llama_ubatch * ubatch, const slot_info & sinfo) const;
     struct llama_memory_i * get_kv() {return this;} 
+    std::vector<llama_kv_cells> &  get_kv_cells() {return v_cells;} 
     void debug_apply_ubatch(const slot_info & sinfo, const llama_ubatch & ubatch);
 private:
     const llama_model & model;

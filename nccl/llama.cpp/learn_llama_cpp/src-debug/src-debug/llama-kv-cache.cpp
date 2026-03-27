@@ -582,6 +582,10 @@ llama_kv_cache::slot_info_vec_t llama_kv_cache::prepare(const std::vector<llama_
 #if DEBUG_KV_IN_CLASS
         debug_set_input_k_idxs(NULL,&ubatch, sinfo_new);
         debug_set_input_v_idxs(NULL,&ubatch, sinfo_new);
+        //debug_apply_ubatch(sinfo_new,ubatch);
+        //debug_cells(ubatch);
+        //debug_cells(ubatch,sinfo_new);
+        //std::cout << std::count_if(v_cells.begin(), v_cells.end(), [](const llama_kv_cells& cell) { return !cell.is_empty(); }) << std::endl;
 #endif
         if (sinfo_new.empty()) {
             success = false;
@@ -606,6 +610,10 @@ llama_kv_cache::slot_info_vec_t llama_kv_cache::prepare(const std::vector<llama_
 
         // now emplace the ubatch
         apply_ubatch(sinfo_new, ubatch);
+#if DEBUG_KV_IN_CLASS
+//#if 0
+        debug_cells(ubatch,sinfo_new);
+#endif
     }
 
     GGML_ASSERT(!states.empty() || !success);
@@ -714,9 +722,8 @@ llama_kv_cache::slot_info llama_kv_cache::find_slot(const llama_ubatch & ubatch,
             const auto stream_id = seq_to_stream[seq_id];
             const auto & cells = v_cells[stream_id];
             const uint32_t head_cur = v_heads[stream_id];
-
-            LLAMA_LOG_DEBUG("%s: stream[%d], n = %5d, used = %5d, head = %5d, size = %5d, n_swa = %5d\n",
-                    __func__, stream_id, cells.used_max_p1(), cells.get_used(), head_cur, get_size(), n_swa);
+            LLAMA_LOG_DEBUG("%s: seq_id[%d],stream[%d], n = %5d, used = %5d, head = %5d, size = %5d, n_swa = %5d\n",
+                    __func__,seq_id , stream_id, cells.used_max_p1(), cells.get_used(), head_cur, get_size(), n_swa);
 
             if ((debug == 2 && n_swa > 0) || debug > 2) {
                 std::string ss;
@@ -808,7 +815,6 @@ llama_kv_cache::slot_info llama_kv_cache::find_slot(const llama_ubatch & ubatch,
         res.idxs[s].reserve(n_tokens);
 
         const auto & cells = v_cells[seq_to_stream[seq_id]];
-
         uint32_t head_cur = v_heads[seq_to_stream[seq_id]];
 
         // if we have enough unused cells before the current head ->
@@ -946,6 +952,11 @@ void llama_kv_cache::apply_ubatch(const slot_info & sinfo, const llama_ubatch & 
 
             for (int32_t s = 0; s < ubatch.n_seq_id[i]; s++) {
                 cells.seq_add(idx, ubatch.seq_id[i][s]);
+//#if DEBUG_KV_IN_CLASS
+#if 0
+                std::cout <<__func__<< "cells addr "  << &cells <<  " seq_add: " <<   "idx " << idx << " seq " << ubatch.seq_id[i][s] << std::endl; 
+#endif
+
             }
         }
     }
@@ -2325,6 +2336,116 @@ void llama_kv_cache::debug_set_input_v_idxs(ggml_tensor * dst, const llama_ubatc
     }
 }
 
+void llama_kv_cache::debug_cells( const llama_ubatch & ubatch, const slot_info & sinfo) {
+    std::cout<< __func__<< " ubatch.n_seqs_unq " << ubatch.n_seqs_unq << " ubatch.n_tokens: " << ubatch.n_tokens <<  " sinfo.n_stream: "  << sinfo.n_stream() << " sinfo.size: " << sinfo.size() << std::endl;
+#if 1
+     debug_cells(ubatch);
+#else
+     for (uint32_t s = 0; s < ubatch.n_seqs_unq; ++s) {
+            const auto seq_id = ubatch.seq_id_unq[s];
+            const auto stream_id = seq_to_stream[seq_id];
+            const auto & cells = v_cells[stream_id];
+            const uint32_t head_cur = v_heads[stream_id];
+            LLAMA_LOG_DEBUG("%s: seq_id[%d],stream[%d], n = %5d, used = %5d, head = %5d, size = %5d, n_swa = %5d\n",
+                    __func__, seq_id,stream_id, cells.used_max_p1(), cells.get_used(), head_cur, get_size(), n_swa);
+     }
+#endif
+    for (uint32_t s = 0; s < sinfo.n_stream(); ++s) {
+
+        for (uint32_t ii = 0; ii < sinfo.size(); ++ii) {
+            const uint32_t i = s*sinfo.size() + ii;
+
+            auto & cells = v_cells[sinfo.strm[s]];
+
+            const auto idx = sinfo.idxs[s][ii];
+
+            if (!cells.is_empty(idx)) {
+                assert(cells.seq_count(idx) == 1);
+
+                const llama_seq_id seq_id = cells.seq_get(idx);
+                const llama_pos    pos    = cells.pos_get(idx); 
+                const auto stream_id = seq_to_stream[seq_id];
+                //const std::vector<llama_pos> & vec =  cells.get_cells_pos();
+                //const auto pos_val = vec[pos];
+                //const auto & seq_pos = cells.get_cells_seq_pos();
+	        std::cout<< "stream_id " << stream_id << " seq_id " << seq_id << " pos " << pos << " seq_pos val " << cells.get_seq_pos(seq_id,pos) << std::endl;
+	        //std::cout<< "stream_id " << stream_id << " seq_id " << seq_id << " pos " << pos << std::endl;
+           }
+      
+       }
+    }
+}
+void llama_kv_cache::debug_cells( const llama_ubatch & ubatch) {
+     for (uint32_t s = 0; s < ubatch.n_seqs_unq; ++s) {
+            const auto seq_id = ubatch.seq_id_unq[s];
+            const auto stream_id = seq_to_stream[seq_id];
+            const auto & cells = v_cells[stream_id];
+            const uint32_t head_cur = v_heads[stream_id];
+
+            LLAMA_LOG_DEBUG("%s: seq_id[%d],stream[%d], n = %5d, used = %5d, head = %5d, size = %5d, n_swa = %5d\n,cell addr %p ",
+                    __func__, seq_id,stream_id, cells.used_max_p1(), cells.get_used(), head_cur, get_size(), n_swa,&v_cells[stream_id]);
+#if 1
+            if ((debug == 2 && n_swa > 0) || debug > 2) {
+#else
+            {
+#endif
+                std::string ss;
+                for (uint32_t i = 0; i < cells.size(); ++i) {
+                    if (cells.is_empty(i)) {
+                        ss += '.';
+                    } else {
+                        assert(cells.seq_count(i) >= 1);
+                        //ss += "cells[" + std::to_string(i)+"]";
+                        if (cells.seq_count(i) == 1) {
+                            ss += std::to_string(cells.seq_get(i));
+                        } else {
+                            ss += 'M';
+                        }
+                    }
+                    if (i%256 == 255) {
+                        ss += " *";
+                        ss += '\n';
+                    }
+                }
+                LLAMA_LOG_DEBUG("\n  seq data :%s\n", ss.c_str());
+            }
+#if 1
+            if ((debug == 2 && n_swa > 0) || debug > 2) {
+#else
+            {
+#endif
+                std::string ss;
+                for (uint32_t i = 0; i < cells.size(); ++i) {
+                    std::string cur;
+                    if (cells.is_empty(i)) {
+                        cur = '.';
+                    } else {
+                        //cur = "cells[" +  std::to_string(i) + "]" +  std::to_string(cells.pos_get(i));
+                        cur = std::to_string(cells.pos_get(i));
+                    }
+                    const int n = cur.size();
+                    for (int j = 0; j < 5 - n; ++j) {
+                        cur += ' ';
+                    }
+                    ss += cur;
+                    if (i%256 == 255) {
+                        ss += " *";
+                    }
+                    if (i%64 == 63) {
+                        ss += '\n';
+                    }
+                }
+                LLAMA_LOG_DEBUG("\n pos data: %s\n", ss.c_str());
+            }
+            for (int s = 0; s <  LLAMA_MAX_SEQ; ++s) {
+                if (cells.seq_pos_min(s) < 0) {
+                    continue;
+                }
+
+                LLAMA_LOG_DEBUG("%s: stream[%d] min[%d] = %5d, max[%d] = %5d\n", __func__, stream_id, s, cells.seq_pos_min(s), s, cells.seq_pos_max(s));
+            }
+     }
+}
 void llama_kv_cache::debug_apply_ubatch(const slot_info & sinfo, const llama_ubatch & ubatch) {
     // keep track of the max sequence position that we would overwrite with this ubatch
     // for non-SWA cache, this would be always empty
@@ -2334,7 +2455,11 @@ void llama_kv_cache::debug_apply_ubatch(const slot_info & sinfo, const llama_uba
     }
 
     assert(ubatch.n_tokens == sinfo.n_stream()*sinfo.size());
+
+    std::cout<<__func__<<  " ubatch.n_tokens: " << ubatch.n_tokens <<  " sinfo.n_stream: "  << sinfo.n_stream() << " sinfo.size: " << sinfo.size() << std::endl;
+    //debug_cells(ubatch);
     for (uint32_t s = 0; s < sinfo.n_stream(); ++s) {
+
         for (uint32_t ii = 0; ii < sinfo.size(); ++ii) {
             const uint32_t i = s*sinfo.size() + ii;
 
@@ -2342,7 +2467,37 @@ void llama_kv_cache::debug_apply_ubatch(const slot_info & sinfo, const llama_uba
 
             const auto idx = sinfo.idxs[s][ii];
 
+            if (!cells.is_empty(idx)) {
+                assert(cells.seq_count(idx) == 1);
+
+                const llama_seq_id seq_id = cells.seq_get(idx);
+                const llama_pos    pos    = cells.pos_get(idx); 
+	        std::cout<< "seq index " << seq_id << " pos " << pos << "\n ";
+           }
+      
        }
+#if 0
+	std::cout<< "stream index " << s << " cell and idx  pos data======== \n ";
+        auto & cells = v_cells[sinfo.strm[s]];
+        auto pos = cells.get_cells_pos();
+        for (uint32_t i = 0; i < cells.size(); ++i) {
+            std::cout<<  "cells" << i << " pos :"  << std::endl;
+            for (uint32_t j = 0; j < pos.size(); ++j) {
+                   if(-1 != pos[j]){
+
+                        std::cout<<  pos[j] <<  "," ;
+                   }
+            }
+            std::cout << std::endl;
+        }
+        for (uint32_t ii = 0; ii < sinfo.size(); ++ii) {
+            const uint32_t i = s*sinfo.size() + ii;
+
+            const auto idx = sinfo.idxs[s][ii];
+            std::cout<<"idx: " <<idx << "\tpos: " << pos[idx] <<  "," ;     
+       }
+#endif
+        std::cout << std::endl;
    }
 #if 0
     for (uint32_t s = 0; s < sinfo.n_stream(); ++s) {

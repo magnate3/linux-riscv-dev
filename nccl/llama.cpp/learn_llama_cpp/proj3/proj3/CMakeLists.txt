@@ -193,6 +193,8 @@ set(SOURCES big_small_co.cpp )
 add_full_example(big_small_co ${SOURCES})
 set(SOURCES big_small_co2.cpp )
 add_full_example(big_small_co2 ${SOURCES})
+set(SOURCES speculative.cpp)
+add_full_example(speculative ${SOURCES})
 # =============================================================================
 # Print build information
 # =============================================================================

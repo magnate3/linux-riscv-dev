@@ -274,4 +274,13 @@ n_past += 1;
 ```
 填充后的关键点   
 +  RoPE 旋转位置编码：llama.cpp 内部会根据 batch.pos[0] 对 KV 数据应用 RoPE 旋转。这意味着你指定的 pos 必须准确，否则模型会“忘记”上下文顺序。   
-+  KV Cache 复用：llama_decode 内部逻辑是增量式的。它会检索之前 [0, n_past-1] 位置的所有 KV 数据，与当前新计算的 KV 拼接，参与 Attention 计算。    
++  KV Cache 复用：llama_decode 内部逻辑是增量式的。它会检索之前 [0, n_past-1] 位置的所有 KV 数据，与当前新计算的 KV 拼接，参与 Attention 计算。  
+
+
+#  speculative  
+
+
+
+```
+./build/speculative -m /workspace/qwen/models/Meta-Llama-3-8B-Instruct-GGUF/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf   --model-draft //workspace/qwen/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf   -p "where is the capital of france \n" -n 200  -c 4096    --draft 5  
+```  

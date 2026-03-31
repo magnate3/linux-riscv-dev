@@ -7,8 +7,116 @@
 #include <vector>
 #include <cstring>
 #define TGT_STREAM 8
-#define TGT_STREAM2 4
+#define TGT_STREAM4 4
+#define TGT_STREAM3 3
+#define TGT_STREAM2 2
+#define TGT_STREAM1 1
 #define N_SEQ_MAX (TGT_STREAM +1)
+void print_kv_physical_info(struct llama_context * ctx) {
+    // 1. 访问内部的 kv_self 结构
+    // kv_self 包含了所有关于物理 Cell 的元数据和 Tensor 指针
+    //auto & kv = ctx->kv_self;
+    struct llama_memory_i * mem=  llama_get_memory(ctx)->get_kv();
+    if(NULL == mem)
+    {
+	 std::cout << "memory is NULL " <<std::endl;
+	 return ;
+    }
+    llama_kv_cache * kv =  dynamic_cast<llama_kv_cache*>(mem);
+    const uint32_t n_ctx  = ctx->n_ctx();
+    std::vector<llama_kv_cells> & v_cells = kv->get_kv_cells();
+    for (int32_t i = 0; i < n_ctx; ++i) {
+        auto & cells = v_cells[i];
+        if( cells.size() <=0){
+            continue;
+        }
+        for (uint32_t i = 0; i < cells.size(); ++i) {
+             if(cells.seq_count(i)>=1){
+                 printf(" cells[%d] seq count %d \n",i, cells.seq_count(i));
+             }
+        }
+   }
+}
+void print_kv_physical_info(struct llama_context * ctx, const int32_t target_s1, const int32_t target_s2,llama_pos p0, llama_pos p1) {
+    // 1. 访问内部的 kv_self 结构
+    // kv_self 包含了所有关于物理 Cell 的元数据和 Tensor 指针
+    //auto & kv = ctx->kv_self;
+    struct llama_memory_i * mem=  llama_get_memory(ctx)->get_kv();
+    if(NULL == mem)
+    {
+	 std::cout << "memory is NULL " <<std::endl;
+	 return ;
+    }
+    //if(mem->get_status() != LLAMA_MEMORY_STATUS_SUCCESS)
+    //{
+    //     std::cout << "memory is not in successful status " <<std::endl;
+    //}
+    llama_kv_cache * kv =  dynamic_cast<llama_kv_cache*>(mem);
+    const uint32_t n_ctx  = ctx->n_ctx();
+    std::vector<llama_kv_cells> & v_cells = kv->get_kv_cells();
+    int out = false;
+    //std::vector<llama_kv_cells> & v_cells = llama_get_memory(ctx)->get_kv_cells();
+    for (int32_t i = 0; i < n_ctx; ++i) {
+        if(target_s1 != i && target_s2 != i){
+            continue;
+        }
+        //const auto & cells = v_cells[i];
+        auto & cells = v_cells[i];
+        //if(cells.get_used()<=0){
+        if(cells.size()<=0){
+            continue;
+        }
+        for (uint32_t i = 0; i < cells.size(); ++i) {
+             out = false;
+             if (!cells.pos_in(i, p0, p1)) {
+                  continue;
+             }
+             else {
+                 printf(" cells pos[%d] pos_in %d-%d \t",i,p0,p1);
+                 out = true;
+             }
+             if(cells.seq_count(i)>=1){
+                 printf(" cells seq count %d \t",cells.seq_count(i));
+                 out = true;
+             }
+#if 1
+             //for(int s = p0; s < p1; ++s){ 
+              //std::vector<llama_pos> & cells_pos =  cells.get_cells_pos();
+              //for (uint32_t s = 0; s < cells_pos.size(); ++s) {
+              for (uint32_t s = 0; s < LLAMA_MAX_SEQ; ++s) {
+                 if (cells.seq_has(s, target_s1) && cells.seq_has(s, target_s2)) {
+                     // cells.pos_get(idx)
+                     printf(" cells seq[%d] has stream %d,%d \t",s,target_s1,target_s2);
+                     out = true;
+                 }
+                 else {
+                     //printf("\n");
+                 }
+             }
+#else
+              //using seq_set_t = std::bitset<LLAMA_MAX_SEQ>;
+
+              //// the bitset seq[i] tells us which sequences are currently occupying the i-th cell
+              //std::vector<seq_set_t> seq;
+              for (uint32_t s = 0; s < LLAMA_MAX_SEQ; ++s) {
+                 if (cells.seq_has(s, target_s1)) {
+                     // cells.pos_get(idx)
+                     printf(" cells seq[%d] has stream %d\t",s,target_s1);
+                     out = true;
+                 }
+                 if (cells.seq_has(s, target_s2)) {
+                     // cells.pos_get(idx)
+                     printf(" cells seq[%d] has stream %d\t",s,target_s2);
+                     out = true;
+                 }
+             }
+#endif
+             if(out){
+                 printf("\n");
+             }
+        }
+     }
+}
 void print_kv_physical_info(struct llama_context * ctx, const int32_t target_s,llama_pos p0, llama_pos p1) {
     // 1. 访问内部的 kv_self 结构
     // kv_self 包含了所有关于物理 Cell 的元数据和 Tensor 指针
@@ -32,18 +140,21 @@ void print_kv_physical_info(struct llama_context * ctx, const int32_t target_s,l
             continue;
         }
         const auto & cells = v_cells[i];
+        //if(cells.get_used()<=0){
+        if(cells.size()<=0){
+            continue;
+        }
         for (uint32_t i = 0; i < cells.size(); ++i) {
              if (!cells.pos_in(i, p0, p1)) {
                  continue;
              }
-             printf(" cells[%d] pos_in %d-%d \t",i,p0,p1);
-             if (cells.seq_has(i, target_s)) {
-                 printf(" cells[%d] has stream %d \n",i,target_s);
+             if(cells.seq_count(i)>=1){
+                 printf(" cells seq count %d \t",cells.seq_count(i));
              }
-        }
-        //if(cells.get_used()<=0){
-        if(cells.size()<=0){
-            continue;
+             printf(" cells pos[%d] pos_in %d-%d \t",i,p0,p1);
+             if (cells.seq_has(i, target_s)) {
+                 printf(" cells seq[%d] has stream %d \n",i,target_s);
+             }
         }
 
         {
@@ -167,7 +278,11 @@ int main() {
     // 关键：针对 CPU 逻辑核心数进行优化（通常设为物理核心数）
     c_params.n_threads = 8; 
     c_params.n_threads_batch = 8;
+    //c_params.kv_unified= true;
+    //c_params.kv_unified= false;
 
+    c_params.n_batch = 80;
+    c_params.n_ubatch = 32;
     c_params.n_seq_max = N_SEQ_MAX;
     llama_context * ctx_dft = llama_init_from_model(model_dft, c_params);
     auto tokenize = [&](const llama_vocab * vocab,std::string& text, bool add_bos) {
@@ -179,7 +294,10 @@ int main() {
        // 5. 准备 Prompt 和初始 Token
     std::string prompt = "The capital of France is";
     std::vector<llama_token> tokens = tokenize(vocab_dft, prompt, true);
-    
+    int prefix_len = tokens.size();
+
+    std::string sub = "where is Paris";
+    std::vector<llama_token> tokens_sub = tokenize(vocab_dft, sub, true);
     int n_past = 0;
     llama_pos pos1=0,pos2=0;
        // 大小模型必须同步完成 Prefill，建立相同的 KV Cache 基础
@@ -194,7 +312,11 @@ int main() {
     batch_pre.n_tokens =  tokens.size();
     if (llama_decode(ctx_dft, batch_pre) != 0) {
         fprintf(stderr, "Draft decode failed at pos \n");
-        goto fail1;
+        llama_batch_free(batch_pre);
+        llama_free(ctx_dft); 
+        llama_model_free(model_dft);
+        llama_backend_free();
+        exit(0);
     }
 #if 0
     n_past = tokens.size(); 
@@ -208,18 +330,79 @@ int main() {
 #else
     n_past = tokens.size(); 
     printf("n_past %d \n",n_past);
-    print_kv_physical_info(ctx_dft,TGT_STREAM,0,n_past -1);
+    //print_kv_physical_info(ctx_dft,TGT_STREAM,0,n_past -1);
     pos1 = 0;
     pos2 = 2;
     llama_memory_seq_cp(llama_get_memory(ctx_dft),TGT_STREAM,TGT_STREAM2,-1, -1);
-    //print_kv_physical_info(ctx_dft,TGT_STREAM,0,n_past -1);
+    llama_memory_seq_cp(llama_get_memory(ctx_dft),TGT_STREAM,TGT_STREAM4,-1, -1);
+    print_kv_physical_info(ctx_dft,TGT_STREAM4,TGT_STREAM2,pos1,n_past -1);
+    llama_memory_seq_rm(llama_get_memory(ctx_dft),TGT_STREAM2,prefix_len, -1);
+    llama_batch batch_sub = llama_batch_init(tokens_sub.size(), 0, N_SEQ_MAX);
+#if 1
+    for (size_t i = 0; i < tokens_sub.size(); ++i) {
+        batch_sub.token[i] = tokens_sub[i];
+        batch_sub.pos[i]   = i+prefix_len;
+        batch_sub.n_seq_id[i] = 1;
+        batch_sub.seq_id[i][0] = TGT_STREAM2;
+        batch_sub.logits[i] = (i == tokens_sub.size() - 1); // 只有最后一位需要 logits
+    }
+    batch_sub.n_tokens =  tokens_sub.size();
+    if (llama_decode(ctx_dft, batch_sub) != 0) {
+        fprintf(stderr, "Draft decode failed at pos \n");
+        llama_batch_free(batch_pre);
+        llama_batch_free(batch_sub);
+        llama_free(ctx_dft); 
+        llama_model_free(model_dft);
+        llama_backend_free();
+        return -1;
+    }
+    print_kv_physical_info(ctx_dft,TGT_STREAM,0,n_past -1);
     //print_kv_physical_info(ctx_dft,TGT_STREAM,0,n_past -1);
     //print_kv_physical_info(ctx_dft,TGT_STREAM2,0,n_past -1);
     //llama_memory_seq_rm (llama_get_memory(ctx_dft),TGT_STREAM2, pos1, pos2);
-    print_kv_physical_info(ctx_dft,TGT_STREAM,pos2,n_past -1);
-    print_kv_physical_info(ctx_dft,TGT_STREAM2,pos2,n_past -1);
+    //print_kv_physical_info(ctx_dft,TGT_STREAM,pos1,n_past -1);
+    //print_kv_physical_info(ctx_dft,TGT_STREAM2,pos1,n_past -1);
+    //print_kv_physical_info(ctx_dft,TGT_STREAM2,pos2,n_past -1);
+    //print_kv_physical_info(ctx_dft,TGT_STREAM,TGT_STREAM2,pos1,n_past -1);
+    //llama_memory_seq_rm(llama_get_memory(ctx_dft),TGT_STREAM2,-1, -1);
+    //llama_memory_seq_cp(llama_get_memory(ctx_dft),TGT_STREAM,TGT_STREAM2,-1, -1);
+    print_kv_physical_info(ctx_dft,TGT_STREAM2,0,tokens.size()  + tokens_sub.size() -1);
+    print_kv_physical_info(ctx_dft,TGT_STREAM,TGT_STREAM2,pos1,n_past -1);
+#endif
+#if 0
+    llama_batch batch_sub2 = llama_batch_init(tokens.size() + tokens_sub.size(), 0, N_SEQ_MAX);
+    batch_sub2.n_tokens = 0;
+    for (size_t i = 0; i < tokens.size(); ++i) {
+        batch_sub2.token[i] = tokens[i];
+        batch_sub2.pos[i]   = i;
+        batch_sub2.n_seq_id[i] = 1;
+        batch_sub2.seq_id[i][0] = TGT_STREAM1;
+        batch_sub2.logits[i] = (i == tokens.size() - 1); // 只有最后一位需要 logits
+    }
+    batch_sub2.n_tokens =  tokens.size();
+    int index = tokens.size();
+    for (size_t i = 0; i < tokens_sub.size(); ++i) {
+        batch_sub2.token[index] = tokens_sub[i];
+        batch_sub2.pos[index]   = index;
+        batch_sub2.n_seq_id[index] = 1;
+        batch_sub2.seq_id[index][0] = TGT_STREAM3;
+        batch_sub2.logits[index] = (i == tokens_sub.size() - 1); // 只有最后一位需要 logits
+        ++ index;
+    }
+    batch_sub2.n_tokens +=  tokens_sub.size();
+    if (llama_decode(ctx_dft, batch_sub2) != 0) {
+        fprintf(stderr, "Draft decode batch_sub2 failed \n");
+        goto fail1;
+    }
+    pos1 = 0;
+    print_kv_physical_info(ctx_dft,TGT_STREAM1,TGT_STREAM3,pos1,tokens.size() + tokens_sub.size());
+    //print_kv_physical_info(ctx_dft,TGT_STREAM1,pos1,tokens.size());
+    llama_batch_free(batch_sub2);
+#endif
 #endif
 fail1:
+    llama_batch_free(batch_pre);
+    llama_batch_free(batch_sub);
     llama_free(ctx_dft); 
     llama_model_free(model_dft);
     llama_backend_free();

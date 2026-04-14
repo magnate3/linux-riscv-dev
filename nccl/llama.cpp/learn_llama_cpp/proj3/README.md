@@ -279,7 +279,7 @@ n_past += 1;
 
 #  speculative  
 
-
+n_seq_dft   
 
 ```
 ./build/speculative -m /workspace/qwen/models/Meta-Llama-3-8B-Instruct-GGUF/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf   --model-draft //workspace/qwen/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf   -p "where is the capital of france \n" -n 200  -c 4096    --draft 5  

@@ -207,8 +207,6 @@ public:
     std::vector<llama_kv_cells> &  get_kv_cells() {return v_cells;} 
     void debug_apply_ubatch(const slot_info & sinfo, const llama_ubatch & ubatch);
     std::vector<std::pair<ggml_context_ptr, ggml_backend_buffer_ptr>> & debug_ggml_ctx() { return ctxs_bufs;};
-    // maps from a sequence id to a stream id
-    std::vector<uint32_t> seq_to_stream;
 private:
     const llama_model & model;
     const llama_hparams & hparams;
@@ -251,6 +249,8 @@ private:
 
     std::vector<llama_kv_cells> v_cells;
 
+    // maps from a sequence id to a stream id
+    std::vector<uint32_t> seq_to_stream;
 
     // pending stream copies that will be applied during the next update
     stream_copy_info sc_info;

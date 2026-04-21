@@ -361,6 +361,114 @@ load_backend: loaded CPU backend from /workspace/llama.cpp/backend/libggml-cpu.s
 ![images](test1.png)
 
 
+```
+./build/test-backend-ops -o MUL_MAT,SOFT_MAX
+```
+
+> ### llm_build_kqv
+打开test_cases   
+```
+
+#if 1
+    // these tests are disabled to save execution time, sbut they can be handy for debugging
+    test_cases.emplace_back(new test_llama(2, true));
+    test_cases.emplace_back(new test_llama(1));
+    test_cases.emplace_back(new test_llama(2));
+    test_cases.emplace_back(new test_falcon(1));
+    test_cases.emplace_back(new test_falcon(2));
+#endi
+```
+
+```
+root@15231aa7adb5:/workspace/proj4# ./build/test-backend-ops -o test_llama
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA A10, compute capability 8.6, VMM: yes
+load_backend: loaded CUDA backend from /workspace/llama.cpp/backend/libggml-cuda.so
+load_backend: loaded CPU backend from /workspace/llama.cpp/backend/libggml-cpu.so
+Testing 2 devices
+
+ backend dev count 2 
+Backend 1/2: CUDA0
+  Device description: NVIDIA A10
+  Device memory: 22731 MB (22371 MB free)
+
+build_graph:6773 llm_build_kqv 
+build_graph:6773 llm_build_kqv 
+build_graph:6773 llm_build_kqv 
+build_graph:6898 llm_build_kqv 
+build_graph:6898 llm_build_kqv 
+  0/0 tests passed
+  Backend CUDA0: OK
+Backend 2/2: CPU
+  Skipping CPU backend
+2/2 backends passed
+OK
+```
+
++ ./build/test-backend-ops -o LLAMA  
+```
+root@15231aa7adb5:/workspace/proj4# ./build/test-backend-ops -o LLAMA     
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA A10, compute capability 8.6, VMM: yes
+load_backend: loaded CUDA backend from /workspace/llama.cpp/backend/libggml-cuda.so
+load_backend: loaded CPU backend from /workspace/llama.cpp/backend/libggml-cpu.so
+Testing 2 devices
+
+ backend dev count 2 
+Backend 1/2: CUDA0
+  Device description: NVIDIA A10
+  Device memory: 22731 MB (22371 MB free)
+
+build_graph:6773 llm_build_kqv 
+  LLAMA(n_tokens=2): OK
+build_graph:6773 llm_build_kqv 
+[MUL] ERR = 0.002547754 > 0.002000000 [MUL_MAT] ERR = 0.002681683 > 0.002000000 [ADD] ERR = 0.002681733 > 0.002000000 [RMS_NORM] ERR = 0.002682335 > 0.002000000 [MUL] ERR = 0.002737652 > 0.002000000 [MUL_MAT] ERR = 0.002871310 > 0.002000000   LLAMA(n_tokens=1): FAIL
+build_graph:6773 llm_build_kqv 
+[MUL] ERR = 0.002007339 > 0.002000000 [MUL_MAT] ERR = 0.002267195 > 0.002000000 [ADD] ERR = 0.002267321 > 0.002000000 [RMS_NORM] ERR = 0.002262843 > 0.002000000 [MUL] ERR = 0.002207863 > 0.002000000 [MUL_MAT] ERR = 0.002369892 > 0.002000000   LLAMA(n_tokens=2): FAIL
+build_graph:6898 llm_build_kqv 
+build_graph:6898 llm_build_kqv 
+  1/3 tests passed
+
+Failing tests:
+  LLAMA(n_tokens=1)
+  LLAMA(n_tokens=2)
+  Backend CUDA0: FAIL
+Backend 2/2: CPU
+  Skipping CPU backend
+1/2 backends passed
+FAIL
+root@15231aa7adb5:/workspace/proj4#
+```
+
+```
+oot@15231aa7adb5:/workspace/proj4# ./build/test-backend-ops -o FALCON
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA A10, compute capability 8.6, VMM: yes
+load_backend: loaded CUDA backend from /workspace/llama.cpp/backend/libggml-cuda.so
+load_backend: loaded CPU backend from /workspace/llama.cpp/backend/libggml-cpu.so
+Testing 2 devices
+
+ backend dev count 2 
+Backend 1/2: CUDA0
+  Device description: NVIDIA A10
+  Device memory: 22731 MB (22371 MB free)
+
+build_graph:6773 llm_build_kqv 
+build_graph:6773 llm_build_kqv 
+build_graph:6773 llm_build_kqv 
+build_graph:6898 llm_build_kqv 
+  FALCON(n_tokens=1): OK
+build_graph:6898 llm_build_kqv 
+  FALCON(n_tokens=2): OK
+  2/2 tests passed
+  Backend CUDA0: OK
+Backend 2/2: CPU
+  Skipping CPU backend
+2/2 backends passed
+OK
+root@15231aa7adb5:/workspace/proj4# 
+```
+
 # local/llama.cpp:server-cuda
 
 

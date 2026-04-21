@@ -361,3 +361,6 @@ for (size_t i = 0; i < user_b_tokens.size(); ++i) {
 }
 llama_decode(ctx, batch);
 ```
+
+#   build kv
+调用llm_build_kv_store存储,再调用llm_build_kqv获取输出

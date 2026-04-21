@@ -27,6 +27,10 @@ root@ubuntu:/app#
 ```
 
 ```
+CMAKE_CUDA_ARCHITECTURES=86
+```
+
+```
 sudo docker build -t local/llama.cpp:server-cuda  --build-arg CUDA_DOCKER_ARCH=86  -f cuda.Dockerfile .
 ```
 
@@ -168,7 +172,24 @@ sudo docker run --rm  --name llama.cpprun --net=host    -itd    -e UID=root    -
 
 
 ```
-./test-backend-ops perf -o MUL_MAT -b CUDA0 -p "type_a=q4_0.*m=4096.*n=2.*k=14336"
+root@b94a0915eac3:/workspace/proj4# ./build/test-backend-ops perf -o MUL_MAT -b CUDA0 -p "type_a=q4_0.*m=4096.*n=2.*k=14336"
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA A10, compute capability 8.6, VMM: yes
+load_backend: loaded CUDA backend from /workspace/llama.cpp/backend/libggml-cuda.so
+load_backend: loaded CPU backend from /workspace/llama.cpp/backend/libggml-cpu.so
+Testing 2 devices
+
+ backend dev count 2 
+Backend 1/2: CUDA0
+  Device description: NVIDIA A10
+  Device memory: 22731 MB (22371 MB free)
+
+  MUL_MAT(type_a=q4_0,type_b=f32,m=4096,n=2,k=14336,bs=[1,1],nr=[1,1],per=[0,1,2,3],k_v=0,o=1):                13632 runs -    74.57 us/run - 234.88 MFLOP/run -   3.15 TFLOPS
+  Backend CUDA0: OK
+Backend 2/2: CPU
+  Skipping
+2/2 backends passed
+OK
 ```
 
 > ###  host 11.6.2-devel-ubuntu20.04
@@ -283,4 +304,77 @@ DCMAKE_EXPORT_COMPILE_COMMANDS=ON \  -DGGML_LLAMAFILE=OFF \  ..
 ```
 GGML_CPU_ARM_ARCH
 ```
- 
+
+#  GGML_BACKEND_DL=ON
+
+
+```
+#include "ggml-backend.h"
+
+// 加载指定目录下的所有后端
+ggml_backend_load_all_from_path("/opt/ggml/backends");
+
+// 或者通过环境变量 GGML_BACKEND_PATH 指定路径
+const char* backend_path = getenv("GGML_BACKEND_PATH");
+if (backend_path) {
+    ggml_backend_load_all_from_path(backend_path);
+}
+
+```
+
+
+
+```
+root@b94a0915eac3:/workspace/proj4# ./build/gpu_cpu_memcp 
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA A10, compute capability 8.6, VMM: yes
+load_backend: loaded CUDA backend from /workspace/llama.cpp/build/bin/libggml-cuda.so
+load_backend: loaded CPU backend from /workspace/llama.cpp/build/bin/libggml-cpu.so
+load_backend: failed to load /workspace/llama.cpp/build/bin: /workspace/llama.cpp/build/bin: cannot read file data: Is a directory
+ cpu --> gpu success 
+  root@b94a0915eac3:/workspace/proj4# 
+```
+
++ 将libggml-cuda.so、libggml-cpu.so放到一个目录  
+```
+root@b94a0915eac3:/workspace/proj4# mkdir /workspace/llama.cpp/backend   
+root@b94a0915eac3:/workspace/proj4# ln -sf /workspace/llama.cpp/build/bin/libggml-cuda.so  /workspace/llama.cpp/backend/libggml-cuda.so
+root@b94a0915eac3:/workspace/proj4# ln -sf /workspace/llama.cpp/build/bin/libggml-cpu.so  /workspace/llama.cpp/backend/libggml-cpu.so
+root@b94a0915eac3:/workspace/proj4# 
+```
+
++ 取消unset  GGML_BACKEND_PATH
+```
+root@b94a0915eac3:/workspace/proj4# unset  GGML_BACKEND_PATH          
+```
+
+```                     
+root@b94a0915eac3:/workspace/proj4# ./build/gpu_cpu_memcp 
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA A10, compute capability 8.6, VMM: yes
+load_backend: loaded CUDA backend from /workspace/llama.cpp/backend/libggml-cuda.so
+load_backend: loaded CPU backend from /workspace/llama.cpp/backend/libggml-cpu.so
+ cpu --> gpu success 
+  root@b94a0915eac3:/workspace/proj4# 
+```
+
+![images](test1.png)
+
+
+# local/llama.cpp:server-cuda
+
+
+```
+sudo docker run -v ~/pytorch:/workspace --gpus all -it  local/llama.cpp:server-cuda   bash
+```
+
+
+```
+root@511e390a44c3:/workspace/proj4#  ls /app
+AGENTS.md       CMakePresets.json  Makefile     build   convert_hf_to_gguf.py          cuda.Dockerfile  flake.nix  grammars  media     poetry.lock         requirements.txt  tools
+AUTHORS         CODEOWNERS         README.md    ci      convert_hf_to_gguf_update.py   docs             full       include   models    pyproject.toml      scripts           ty.toml
+CLAUDE.md       CONTRIBUTING.md    SECURITY.md  cmake   convert_llama_ggml_to_gguf.py  examples         ggml       lib       mypy.ini  pyrightconfig.json  src               vendor
+CMakeLists.txt  LICENSE            benches      common  convert_lora_to_gguf.py        flake.lock       gguf-py    licenses  pocs      requirements        tests
+root@511e390a44c3:/workspace/proj4# 
+```
+![images](test2.png)

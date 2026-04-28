@@ -232,3 +232,99 @@ decode: failed to initialize batch
 llama_decode: failed to decode, ret = -1
 main : failed to eval, return code 1
 ```
+
+
+#  ggml_set_rows
+
+```
+// 假设我们要把 new_data 插入到 kv_cache 的第 10 行
+int row_idx = 10;
+
+// 1. 创建索引张量 (只有一个元素)
+struct ggml_tensor * ids = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, 1);
+((int32_t *) ids->data)[0] = row_idx;
+
+// 2. 调用 set_rows
+// 这会告诉计算图：把 new_data 的数据填到 kv_cache 的 ids 指定位置
+struct ggml_tensor * result = ggml_set_rows(ctx, kv_cache, new_data, ids);
+
+// 3. 执行计算图
+// 在实际执行阶段，GGML 后端会根据后端类型（CPU/CUDA）调用对应的拷贝内核
+
+```
+推理时：模型算出新的 Token 向量，通过 ggml_set_rows（或类似的 view 操作）将新向量插入到 KV 缓存张量的“当前空位”中。   
+分叉时：如果你决定从当前对话开启一个新分支（比如 Beam Search 分裂），你会调用 llama_memory_seq_cp。这个函数会扫描 KV 缓存，找到之前的历史记录，利用 CPU 的 memcpy 或 GPU 的拷贝指令，把旧数据复制给新序列 ID 对应的内存区域。 
+
+ggml_compute_forward_cpy，这是 ggml_cpy 算子在 CPU 上的核心，里面大量使用了 memcpy 来处理张量数据搬运.      
+
+```
+llama_memory_seq_cp
+→ kv_cache.seq_cp (在 llama-kv-cache.cpp 中)
+→ ggml_backend_tensor_copy (如果是跨设备或显存内拷贝)
+或者
+→ memcpy (如果是 CPU 上的物理单元拷贝)  
+``` 
+
+
+
+```
+llama_kv_cache::seq_cp(llama_seq_id seq_id_src, llama_seq_id seq_id_dst, llama_pos p0, llama_pos p1) {
+// enqueue the copy operation - the buffer copy will be performed during the next update
+    sc_info.ssrc.push_back(s0);
+    sc_info.sdst.push_back(s1);
+}
+
+```
+
+
+```
+bool llama_kv_cache::update(llama_context * lctx, bool do_shift, const stream_copy_info & sc_info) {
+
+            for (uint32_t il = 0; il < layers.size(); ++il) {
+                const auto & layer = layers[il];
+
+                ggml_backend_tensor_copy(layer.k_stream[ssrc], layer.k_stream[sdst]);
+
+                if (layer.v_stream[ssrc]) {
+                    ggml_backend_tensor_copy(layer.v_stream[ssrc], layer.v_stream[sdst]);
+                }
+            }
+}
+```
+
+
+#  build_attn_inp_kv_impl
+```
+static std::unique_ptr<llm_graph_input_attn_kv> build_attn_inp_kv_impl(
+           ggml_context * ctx0,
+     const llama_ubatch & ubatch,
+    const llama_hparams & hparams,
+    const llama_cparams & cparams,
+    const llama_kv_cache_context * mctx_cur) {
+
+    auto inp = std::make_unique<llm_graph_input_attn_kv>(hparams, cparams, mctx_cur);
+
+    {
+        GGML_ASSERT(hparams.swa_type == LLAMA_SWA_TYPE_NONE && "Use llama_kv_cache_iswa for SWA");
+
+        const auto n_kv     = mctx_cur->get_n_kv();
+        const auto n_tokens = ubatch.n_tokens;
+        const auto n_stream = cparams.kv_unified ? 1 : ubatch.n_seqs_unq;
+
+        inp->self_k_idxs = mctx_cur->build_input_k_idxs(ctx0, ubatch);
+        inp->self_v_idxs = mctx_cur->build_input_v_idxs(ctx0, ubatch);
+
+        inp->self_kq_mask = ggml_new_tensor_4d(ctx0, GGML_TYPE_F32, n_kv, n_tokens/n_stream, 1, n_stream);
+        ggml_set_input(inp->self_kq_mask);
+
+        inp->self_kq_mask_cnv = cparams.flash_attn ? ggml_cast(ctx0, inp->self_kq_mask, GGML_TYPE_F16) : inp->self_kq_mask;
+    }
+
+    return inp;
+}
+```
+
+
+```
+./build/sample_tree_kv_dbg2 -m /workspace/qwen/models/Llama-3.2-1B-Instruct-Q4_K_M.gguf -p "Hello my name is" -np 4 2>&1 | tee log.log 
+```

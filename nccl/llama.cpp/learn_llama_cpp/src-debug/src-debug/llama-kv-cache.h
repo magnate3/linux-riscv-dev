@@ -205,11 +205,12 @@ public:
     void debug_set_input_v_idxs(ggml_tensor * dst, const llama_ubatch * ubatch, const slot_info & sinfo) const;
     struct llama_memory_i * get_kv() {return this;} 
     std::vector<llama_kv_cells> &  get_kv_cells() {return v_cells;} 
+    stream_copy_info  &  get_stream_copy_info () {return sc_info;} 
     void debug_apply_ubatch(const slot_info & sinfo, const llama_ubatch & ubatch);
     std::vector<std::pair<ggml_context_ptr, ggml_backend_buffer_ptr>> & debug_ggml_ctx() { return ctxs_bufs;};
     // maps from a sequence id to a stream id
     std::vector<uint32_t> seq_to_stream;
-private:
+public:
     const llama_model & model;
     const llama_hparams & hparams;
 
@@ -289,6 +290,8 @@ private:
 
     bool state_read_meta(llama_io_read_i & io, uint32_t strm, uint32_t cell_count,       slot_info & sinfo, llama_seq_id dest_seq_id = -1);
     bool state_read_data(llama_io_read_i & io, uint32_t strm, uint32_t cell_count, const slot_info & sinfo);
+public:
+    std::vector<kv_layer>  & get_kv_layer() {return layers;} 
 };
 
 class llama_kv_cache_context : public llama_memory_context_i {

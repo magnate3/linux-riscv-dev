@@ -1,0 +1,62 @@
+# Nano-vLLM Docker Image
+# A lightweight vLLM implementation built from scratch
+# Supports: linux/amd64
+
+# Use NVIDIA CUDA base image with Python 3.10
+#FROM nvidia/cuda:12.1.0-devel-ubuntu22.04
+FROM  nvcr.io/nvidia/cuda:11.6.2-devel-ubuntu20.04
+ENV DEBIAN_FRONTEND=noninteractive
+# Build arguments for metadata
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=0.2.0
+ARG MAX_JOBS=4
+ARG TORCH_VERSION=2.4.0
+ARG TORCH_CUDA=cu116
+ARG FLASH_ATTN_VERSION=2.8.3
+ARG DOWNLOAD_MODEL=1
+
+# Labels for the image
+LABEL org.opencontainers.image.title="Nano-vLLM" \
+      org.opencontainers.image.description="A lightweight vLLM implementation built from scratch" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.source="https://github.com/warjiang/nano-vllm" \
+      org.opencontainers.image.licenses="MIT"
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PIP_ROOT_USER_ACTION=ignore
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV MAX_JOBS=${MAX_JOBS}
+
+# Install system dependencies
+#RUN apt-get update && apt install software-properties-common -y && add-apt-repository ppa:deadsnakes/ppa -y && apt-get update
+
+RUN mkdir -p /opt/env
+ENV VIRTUAL_ENV=/opt/env
+#RUN echo 'deb http://archive.ubuntu.com/ubuntu jammy main universe' > /etc/apt/sources.list.d/jammy-temp.list 
+RUN echo 'deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports/ jammy main restricted universe multiverse' > /etc/apt/sources.list.d/jammy-temp.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends python3.10 python3.10-venv git \
+    && python3.10 -m venv /opt/env \
+    && rm -rf /var/lib/apt/lists/*
+#RUN python3.10 -m venv $VIRTUAL_ENV 
+ENV PATH="/opt/env/bin:${PATH}"
+RUN apt-get update && apt-get install -y \
+    git \
+    wget \
+    curl \
+    vim \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Default command
+CMD ["bash"]
+#CMD ["python", "example.py"]

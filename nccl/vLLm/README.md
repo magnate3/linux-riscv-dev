@@ -6,7 +6,12 @@
 
 [vLLM框架：大语言模型推理的高效机制](https://www.cnblogs.com/zackstang/p/19036108)   
 
-[大模型推理Continuous Batching技术](https://zhuanlan.zhihu.com/p/1910225311997629198)      
+[大模型推理Continuous Batching技术](https://zhuanlan.zhihu.com/p/1910225311997629198)    
+
+[Continuous Batching 与 Selective Batching 实现](https://zhuanlan.zhihu.com/p/1945666696598787814)     
+# attention and ffn
+
+![images](att.png)
 
 #  cpu
 
@@ -456,3 +461,16 @@ root@33325e2641a8:/vllm-workspace#
 
 {"id":"chatcmpl-b0bbd290744779c6","object":"chat.completion","created":1778055639,"model":"/models/Qwen2___5-0___5B-Instruct","choices":[{"index":0,"message":{"role":"assistant","content":"San Francisco is the capital and most populous city of California, United States. It is located on the San Francisco Peninsula in the northern part of the state. The city has a diverse population with a mix of Asian, African American, Native American, Hispanic, and Pacific Islander communities. San Francisco is known for its iconic Golden Gate Bridge, which connects the city to Marin County and the San Francisco Bay Area. The city is also famous for its wine industry, including the world-renowned San Franciscoail vineyards.","refusal":null,"annotations":null,"audio":null,"function_call":null,"tool_calls":[],"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null}],"service_tier":null,"system_fingerprint":null,"usage":{"prompt_tokens":33,"total_tokens":137,"completion_tokens":104,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"kv_transfer_params":null}[root@centos7 ~]# 
 ```
+# vllm
+# # SequenceGroup：请求的“家庭”单位
+ 为什么需要SequenceGroup？
+在传统的大模型推理 中，我们通常认为一个请求就是一个prompt。但在实际场景中，事情要复杂得多。比如：   
++ 并行采样（Parallel Sampling）：你给模型一个prompt，希望它生成3个不同的回复    
++  束搜索（Beam Search）：在翻译任务中，模型需要维护多个候选序列    
++ 流式生成：一边生成一边返回结果    
+这些场景都有一个共同点：一个输入可能对应多个输出序列。vLLM用SequenceGroup来管理这种“一对多”的关系。       
+让我用一个实际例子来说明。假设你在使用一个创意写作助手，你输入：“写一个关于AI的短故事开头”，同时设置n=3（生成3个不同版本）。在vLLM内部，这会创建一个SequenceGroup，包含：    
+
++ 1个输入序列（你的prompt）    
++ 3个输出序列（3个不同的故事开头）   
+ 

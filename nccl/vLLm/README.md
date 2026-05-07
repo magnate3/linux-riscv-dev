@@ -4,7 +4,9 @@
 
 [vLLM Scheduler逻辑难啃？先手搓一个基础调度器](https://zhuanlan.zhihu.com/p/1988193790129902960) 
 
-[vLLM框架：大语言模型推理的高效机制](https://www.cnblogs.com/zackstang/p/19036108)      
+[vLLM框架：大语言模型推理的高效机制](https://www.cnblogs.com/zackstang/p/19036108)   
+
+[大模型推理Continuous Batching技术](https://zhuanlan.zhihu.com/p/1910225311997629198)      
 
 #  cpu
 
@@ -292,6 +294,71 @@ curl http://localhost:8000/v1/chat/completions \
 ```
 vLLM 在运行 CPU 推理时，底层会调用 torch.compile 生成高性能的 C++ 代码。生成代码后，它需要调用系统里的 g++ 并引用 cpp_prefix.h 来完成最后的编译。但 Docker 镜像为了减小体积，删除了这些 .h 文件，导致了“无米之炊”。    
 
+```
+# 查找 torch 安装路径
+TORCH_PATH=$(python3 -c "import torch; print(torch.__path__[0])")
+
+# 检查头文件是否真的缺失
+ls $TORCH_PATH/include/torch/csrc/inductor/cpp_prefix.h
+```
+
+```
+[root@centos7 ~]# docker exec -it vllm-sch2 bash
+root@005f644d5732:/vllm# export PATH="/vllm/venv/bin:$PATH"
+root@005f644d5732:/vllm# python3 -c 'import torch; print(torch.__version__)'
+2.10.0+cpu
+root@005f644d5732:/vllm# TORCH_PATH=$(python3 -c "import torch; print(torch.__path__[0])")
+root@005f644d5732:/vllm# ls $TORCH_PATH/include/torch/csrc/inductor/cpp_prefix.h
+ls: cannot access '/vllm/venv/lib/python3.12/site-packages/torch/include/torch/csrc/inductor/cpp_prefix.h': No such file or directory
+```
+
+```
+root@1091f37a2ac3:/vllm# ls /vllm/venv/lib/python3.12/site-packages/torch/include/torch/
+ls: cannot access '/vllm/venv/lib/python3.12/site-packages/torch/include/torch/': No such file or directory
+root@1091f37a2ac3:/vllm# ls /vllm/venv/lib/python3.12/site-packages/torch/include/      
+ATen
+root@1091f37a2ac3:/vllm# ls /vllm/venv/lib/python3.12/site-packages/torch/       
+```
+
++   pip3  install  torch==2.10.0 for cpu
+```
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3 get-pip.py
+ pip3  install --force-reinstall torch==2.10.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+```
+
+```
+Successfully installed MarkupSafe-3.0.3 filelock-3.25.2 fsspec-2026.2.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.6.1 numpy-2.4.3 pillow-12.1.1 setuptools-70.2.0 sympy-1.14.0 torch-2.10.0+cpu torchaudio-2.11.0+cpu torchvision-0.25.0+cpu typing-extensions-4.15.0
+root@1091f37a2ac3:/vllm# ls /vllm/venv/lib/python3.12/site-packages/torch/include/torch/
+csrc  custom_class.h  custom_class_detail.h  extension.h  headeronly  library.h  script.h
+root@1091f37a2ac3:/vllm# 
+```
+
+
+```
+rm -rf /var/lib/apt/lists/* 
+ apt-get clean
+find /vllm/venv -depth -type d -name "__pycache__"  -exec rm -vrf {}  \;
+```
+
+> ## docker安装 torch==2.10.0 for cpu
+```
+root@1091f37a2ac3:/vllm# ls /vllm/venv/lib/python3.12/site-packages/torch/include/torch/
+csrc  custom_class.h  custom_class_detail.h  extension.h  headeronly  library.h  script.h
+root@1091f37a2ac3:/vllm#  curl http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/models/Qwen2___5-0___5B-Instruct",
+    "messages": [
+      {"role": "user", "content": "hello"}
+    ]
+  }'
+{"id":"chatcmpl-ba21106b1755ae07","object":"chat.completion","created":1778123830,"model":"/models/Qwen2___5-0___5B-Instruct","choices":[{"index":0,"message":{"role":"assistant","content":"Hello! How can I assist you today?","refusal":null,"annotations":null,"audio":null,"function_call":null,"tool_calls":[],"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null}],"service_tier":null,"system_fingerprint":null,"usage":{"prompt_tokens":30,"total_tokens":40,"completion_tokens":10,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"kv_transfer_params":null}root@1091f37a2ac3:/vllm# 
+```
+
+```
+docker run -e VLLM_CPU_KVCACHE_SPACE=4  -e  VLLM_USE_V1=0 -d  -p 8080:8000 -v /pytorch/qwen/models/:/models -v /pytorch:/workspace --shm-size=4g  --name vllm-sch2 vllm-cpu-018-noavx512:torch    --model /models/Qwen2___5-0___5B-Instruct   --host  127.0.0.1 --port 8000   --dtype float32   --enforce-eager   --distributed-executor-backend uni --kv-cache-dtype auto --enable-chunked-prefill false  --max_model_len  1024 
+```
 
 > ## Qwen/Qwen2.5-0.5B-Instruct
 
@@ -320,10 +387,26 @@ Python 3.12.13 (main, Mar 10 2026, 18:15:41) [Clang 21.1.4 ] on linux
 Type "help", "copyright", "credits" or "license" for more information.
 ```
 
++ torch
 ```
  python3 -c 'import torch; print(torch.__version__)'
 2.10.0+cpu
 ```
+
+```
+[root@centos7 ~]# docker exec -it  vllm-sch bash
+root@33325e2641a8:/vllm-workspace# export PATH="/vllm/venv/bin:$PATH"
+root@33325e2641a8:/vllm-workspace#  python3 -c 'import torch; print(torch.__version__)'
+2.10.0+cpu
+root@33325e2641a8:/vllm-workspace# TORCH_PATH=$(python3 -c "import torch; print(torch.__path__[0])")
+root@33325e2641a8:/vllm-workspace# ls $TORCH_PATH/include/torch/csrc/inductor/cpp_prefix.h
+/opt/venv/lib/python3.12/site-packages/torch/include/torch/csrc/inductor/cpp_prefix.h
+root@33325e2641a8:/vllm-workspace# 
+```
+
+
+
+
 +  vllm --version
 ```
 root@33325e2641a8:/vllm-workspace#  pip show vllm

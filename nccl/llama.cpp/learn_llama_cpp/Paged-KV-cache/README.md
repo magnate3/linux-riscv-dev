@@ -301,7 +301,7 @@ Both drivers use the same prompt pool, the same greedy sampling configuration, a
 
 # paged-kv
 
-> ## ggml_paged_attn  and  ggml_compute_forward_paged_attn
+> ## ggml_paged_attn  and  cpu ggml_compute_forward_paged_attn/  cuda ggml_cuda_op_paged_attn
 ```
 ggml_tensor * llm_graph_context::build_attn_mha_paged(
          ggml_tensor * q,               // [n_embd_head, n_head, n_tokens]
@@ -357,6 +357,11 @@ struct ggml_tensor * result = ggml_new_tensor(ctx, q->type, ggml_n_dims(q), q->n
 ```
 
 > ## llama_kv_cache_paged
+
+
+```
+llama_kv_cache_paged::init_batch
+```
 
 ```
 bool llama_kv_cache_paged::allocate(int32_t num_tokens, llama_sequence_group & group) {

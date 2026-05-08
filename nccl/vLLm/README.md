@@ -462,7 +462,87 @@ root@33325e2641a8:/vllm-workspace#
 {"id":"chatcmpl-b0bbd290744779c6","object":"chat.completion","created":1778055639,"model":"/models/Qwen2___5-0___5B-Instruct","choices":[{"index":0,"message":{"role":"assistant","content":"San Francisco is the capital and most populous city of California, United States. It is located on the San Francisco Peninsula in the northern part of the state. The city has a diverse population with a mix of Asian, African American, Native American, Hispanic, and Pacific Islander communities. San Francisco is known for its iconic Golden Gate Bridge, which connects the city to Marin County and the San Francisco Bay Area. The city is also famous for its wine industry, including the world-renowned San Franciscoail vineyards.","refusal":null,"annotations":null,"audio":null,"function_call":null,"tool_calls":[],"reasoning":null},"logprobs":null,"finish_reason":"stop","stop_reason":null,"token_ids":null}],"service_tier":null,"system_fingerprint":null,"usage":{"prompt_tokens":33,"total_tokens":137,"completion_tokens":104,"prompt_tokens_details":null},"prompt_logprobs":null,"prompt_token_ids":null,"kv_transfer_params":null}[root@centos7 ~]# 
 ```
 # vllm
-# # SequenceGroup：请求的“家庭”单位
+
+##  prefix share 
+
+问题：多个 prompt 可能共享相同的系统提示（system prompt），重复计算浪费时间。    
+
+解法：将 token 序列按固定大小分块，对每个块内容计算 hash。相同 hash 的块复用同一份 KV Cache，跳过重复计算。    
+
+体现在代码中：     
+1.  BlockManager.allocate() 中检查 hash 是否命中    
+2. ModelRunner.prepare_prefill() 中跳过 num_cached_tokens 个 token    
+
+`核心思想`      
+将 token 序列按 block_size 切分，对每个 block 的 token 内容计算 hash（使用 xxHash）。如果两个序列有相同的前缀 tokens，它们对应的 blocks 就有相同的 hash，可以共享 KV Cache。  
+
+> ### 链式哈希（Hash Chain）
+链式哈希（Hash Chain）是用于管理KV Cache（键值缓存）以实现高效“前缀缓存”（Prefix Caching）的一种核心技术。它常用于vLLM等推理引擎中，通过为缓存块生成唯一标识，实现跨请求的KV Cache复用，从而显著降低大模型推理的延迟（特别是首token延迟）并提高吞吐量   
+
+![images](hash.png)
+
+> ### BlockManager: 内存的分配与调度
+BlockManager负责对所有Block进行统一管理。在进行初始化时，会创建一整个物理块池，并维护关键的数据结构
+```python
+class BlockManager:
+    def __init__(self, num_blocks: int, block_size: int):
+        self.block_size = block_size
+        self.blocks: list[Block] = [Block(i) for i in range(num_blocks)]
+        self.hash_to_block_id: dict[int, int] = dict()
+        self.free_block_ids: deque[int] = deque(range(num_blocks))
+        self.used_block_ids: set[int] = set()
+```
+- blocks: 所有存储Block的列表
+- hash_to_block_id: 用于存储hash -> block_id的映射，用于快速查找具有特定内容的块
+- free_block_ids和used_block_ids: 分别用于追踪哪些块是空闲的，哪些块正在被使用，从而进行高效的分配与回收
+
+> ####  allocate: 基于hash实现前缀缓存
+allocate是BlockManager的核心方法，它负责根据token_ids的hash值来分配一个合适的Block，从而实现前缀缓存
+```python
+def allocate(self, seq: Sequence):
+    """
+    Allocate blocks for a sequence.
+    """
+    # Make sure the it's the first time to allocate blocks
+    assert not seq.block_table
+    h = -1
+    cache_miss = False
+
+    # seq.num_blocks is the number of blocks needed to store the sequence,
+    # this can be calcualted statically
+    for i in range(seq.num_blocks):
+        token_ids = seq.block(i)
+        # Only compute the hash if the block is full
+        h = self.compute_hash(token_ids, h) if len(token_ids) == self.block_size else -1
+
+        block_id = self.hash_to_block_id.get(h, -1)
+        if block_id == -1 or self.blocks[block_id].token_ids != token_ids:
+            # Cache miss, or the block is not the same as existing one
+            cache_miss = True
+
+        if cache_miss:
+            # Allocate new block if cache miss
+            block_id = self.free_block_ids[0]
+            block = self._allocate_block(block_id)
+        else:
+            seq.num_cached_tokens += self.block_size
+            if block_id in self.used_block_ids:
+                block = self.blocks[block_id]
+                block.ref_count += 1
+            else:
+                # Maybe hash table has the block_id but used_block_ids is cleared
+                block = self._allocate_block(block_id)
+
+        if h != -1:
+            # Update the hash value of block
+            block.update(h, token_ids)
+            self.hash_to_block_id[h] = block_id
+        seq.block_table.append(block_id)
+```
+
+
+## SequenceGroup
+
  为什么需要SequenceGroup？
 在传统的大模型推理 中，我们通常认为一个请求就是一个prompt。但在实际场景中，事情要复杂得多。比如：   
 + 并行采样（Parallel Sampling）：你给模型一个prompt，希望它生成3个不同的回复    

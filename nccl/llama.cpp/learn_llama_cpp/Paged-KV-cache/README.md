@@ -301,6 +301,61 @@ Both drivers use the same prompt pool, the same greedy sampling configuration, a
 
 # paged-kv
 
+> ## ggml_paged_attn  and  ggml_compute_forward_paged_attn
+```
+ggml_tensor * llm_graph_context::build_attn_mha_paged(
+         ggml_tensor * q,               // [n_embd_head, n_head, n_tokens]
+         ggml_tensor * k_cur,           // [n_embd_head, n_head_kv, n_tokens]
+         ggml_tensor * v_cur,           // [n_embd_head, n_head_kv, n_tokens]
+         ggml_tensor * k_cache,         // master K buffer
+         ggml_tensor * v_cache,         // master V buffer
+         ggml_tensor * block_table,     // [max_blocks, batch_size]
+         ggml_tensor * write_slots,     // [n_tokens]
+         ggml_tensor * context_lens,    // [batch_size]
+         ggml_tensor * batch_offsets,   // [batch_size]
+         ggml_tensor * batch_lens,      // [batch_size]
+               float   kq_scale,
+                 int   block_size,
+                 int   max_blocks) const {
+
+    // Paged attention kernel (write) assumes dense layout [n_tokens. n_heads_kv, head_dim].
+    // Architectures like (Falcon, GPT-2, etc.) produce KV as views into a fused QKV tensor
+    // We force contiguity before passing to kernel.
+    // This can be optimized in phase 2.
+    k_cur = ggml_cont(ctx0, k_cur);
+    v_cur = ggml_cont(ctx0, v_cur);
+    q     = ggml_cont(ctx0, q);
+
+    ggml_tensor * cur = ggml_paged_attn(ctx0,
+                                        q, k_cur, v_cur, k_cache, v_cache,
+                                        block_table, write_slots, context_lens, batch_offsets, batch_lens,
+                                        kq_scale, block_size, max_blocks);
+    return cur;
+}
+```
+
+```
+struct ggml_tensor * result = ggml_new_tensor(ctx, q->type, ggml_n_dims(q), q->ne);
+    result->op = GGML_OP_PAGED_ATTN;
+    result->src[0] = q;
+    result->src[1] = k_new;
+    result->src[2] = v_new;
+    result->src[3] = k_cache;
+    result->src[4] = v_cache;
+    result->src[5] = block_table;
+    result->src[6] = write_slots;
+    result->src[7] = context_lens;
+    result->src[8] = batch_offsets;
+    result->src[9] = batch_lens;
+
+    // Storing hyperparams directly in op_params
+    float * op_params_f = (float *)result->op_params;
+    op_params_f[0] = scale;
+    int32_t * op_params_i = (int32_t *)(op_params_f + 1);
+    op_params_i[0] = block_size;
+    op_params_i[1] = max_blocks;
+```
+
 > ## llama_kv_cache_paged
 
 ```
@@ -375,3 +430,119 @@ void llama_paged_scheduler_impl::update(const llama_batch &              batch,
     }
 }
 ```
+
+
++ 根据block table计算物理地址 
+```
+int32_t llama_paged_scheduler_impl::calculate_global_slot_index(int32_t                 token_pos,
+                                                                std::vector<uint32_t> & block_table) {
+    GGML_ASSERT(block_size && "block_size needs to be greater than 0");
+    const int32_t block_table_id = token_pos / block_size;
+    const int32_t offset         = token_pos % block_size;
+
+    const size_t block_table_size = block_table.size();
+    if ((size_t) block_table_id >= block_table_size) {
+        LLAMA_LOG_ERROR("%s: block_table_id=%d is OOB for pos=%d. Block table size=%ld.\n", __func__, block_table_id,
+                        token_pos, block_table_size);
+        LLAMA_LOG_ERROR("%s: block_table_contents: [ ", __func__);
+        for (size_t id = 0; id < block_table_size; ++id) {
+            LLAMA_LOG_ERROR("%d ", block_table[id]);
+            if (id == block_table_size - 1) {
+                LLAMA_LOG_ERROR("]\n");
+            }
+        }
+        GGML_ASSERT(false && "block_table_id OOB");
+    }
+    const int32_t block_id = block_table.at(block_table_id);
+
+    return (block_id * block_size) + offset;
+}
+```
+
+```
+llm_graph_input_attn_kv_paged * llm_graph_context::build_attn_inp_kv_paged() const {
+    const auto * mctx_paged = static_cast<const llama_kv_cache_paged_context*>(mctx);
+
+    auto inp = std::make_unique<llm_graph_input_attn_kv_paged>(hparams, cparams, mctx_paged);
+
+    const int32_t n_tokens   = mctx_paged->get_n_tokens();
+    const int32_t batch_size = mctx_paged->get_batch_size();
+    const int32_t max_blocks = mctx_paged->get_max_blocks();
+
+    // Create the GGML descriptors
+    inp->paged_write_slots   = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, n_tokens);
+    inp->paged_block_table   = ggml_new_tensor_2d(ctx0, GGML_TYPE_I32, max_blocks, batch_size);
+    inp->paged_context_lens  = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, batch_size);
+    inp->paged_batch_offsets = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, batch_size);
+    inp->paged_batch_lens    = ggml_new_tensor_1d(ctx0, GGML_TYPE_I32, batch_size);
+
+    ggml_set_input(inp->paged_write_slots);
+    ggml_set_input(inp->paged_block_table);
+    ggml_set_input(inp->paged_context_lens);
+    ggml_set_input(inp->paged_batch_offsets);
+    ggml_set_input(inp->paged_batch_lens);
+
+    return (llm_graph_input_attn_kv_paged *) res->add_input(std::move(inp));
+}
+```
+
+
+```
+void llm_graph_input_attn_kv_paged::set_input(const llama_ubatch* ubatch) {
+    GGML_ASSERT(ubatch != nullptr);
+
+    if (paged_write_slots) {
+        ggml_backend_tensor_set(paged_write_slots, mctx->get_write_slots(), 0, ggml_nbytes(paged_write_slots));
+        last_n_tokens = paged_write_slots->ne[0];
+    }
+    if (paged_block_table) {
+        ggml_backend_tensor_set(paged_block_table, mctx->get_block_table(), 0, ggml_nbytes(paged_block_table));
+    }
+    if (paged_context_lens) {
+        ggml_backend_tensor_set(paged_context_lens, mctx->get_context_lens(), 0, ggml_nbytes(paged_context_lens));
+    }
+    if (paged_batch_offsets) {
+        ggml_backend_tensor_set(paged_batch_offsets, mctx->get_batch_offsets(), 0, ggml_nbytes(paged_batch_offsets));
+    }
+    if (paged_batch_lens) {
+        ggml_backend_tensor_set(paged_batch_lens, mctx->get_batch_lens(), 0, ggml_nbytes(paged_batch_lens));
+    }
+}
+```
+
+在 llama.cpp 的底层实现中，set_input 并非一个孤立的公开全局函数，而是 llama_kv_cache 或内部调度逻辑（如 llama_context） 在处理 llama_ubatch（微批次）时的一个核心步骤。在 Paged 模式下，set_input 的执行逻辑实际上是将逻辑 token 映射到物理显存页的过程。以下是其执行调度的核心流程：     
+1. llama_ubatch 的角色llama_ubatch（Micro-batch）是 llama.cpp 为了优化调度引入的概念。它将一个大的 llama_batch 拆分成更小的片断，以便更灵活地在多个请求之间切换。    
+2. 执行调度的核心步骤当调用类似于 set_input(ubatch) 的逻辑时（通常在 llama_decode 内部触发），调度器会执行以下操作：
+A. 序列与槽位匹配 (Sequence Mapping)调度器遍历 ubatch 中的所有 token，根据 seq_id 确认每个 token 属于哪个逻辑序列。
++ Paged 操作： 检查该序列是否已经分配了物理 Block（页）。      
++ 映射： 如果是现有请求，找到 Block Table 中对应的物理地址。        
+B. 动态页分配 (Dynamic Paging)如果 ubatch 包含新的 token（例如在生成过程中），调度器会调用 KV-Cache 管理器：申请空间： 如果当前页满了，从空闲页池（Free Pool）中取出一个新页。更新映射： 在 llama_kv_cache 的 block_table 中记录这一对应关系。     
+
+
+
++  ggml_tensor 怎么存放物理索引table   
+
+在 llama.cpp 中，ggml_tensor 存放物理索引表（Block Table）的方式非常直接：它本质上是一个 1D 或 2D 的整数张量（类型通常为 GGML_TYPE_I32），存储了从逻辑块索引到物理内存块 ID 的映射。以下是具体的存放细节：
+1. 结构布局对于 PagedAttention，索引表通常被构造为一个形状为 [max_blocks_per_seq, n_seqs] 的张量：行（Rows/Dimension 0）： 对应不同的序列（Sequence）。列（Cols/Dimension 1）： 存放该序列按顺序占用的物理块 ID。    
+2. 核心代码实现在 build_attn_inp_kv 过程中，存放逻辑大致如下：    
+```
+// 1. 创建 tensor (在内存中分配 I32 类型的空间)
+struct ggml_tensor * block_table = ggml_new_tensor_2d(ctx, GGML_TYPE_I32, max_blocks_per_seq, n_seqs);
+
+// 2. 获取数据指针
+int32_t * data = (int32_t *) block_table->data;
+
+// 3. 填充物理索引
+for (int i = 0; i < n_seqs; ++i) {
+    auto & sequence_blocks = kv_self.get_blocks(seq_id[i]); // 从 KV Cache 调度器获取
+    for (int j = 0; j < sequence_blocks.size(); ++j) {
+        // data[i * max_blocks_per_seq + j] = 物理块 ID
+        data[i * block_table->ne[0] + j] = sequence_blocks[j].id; 
+    }
+}
+
+```
+3. 后端如何读取当这个 ggml_tensor 传递给 CUDA 或 Metal 算子时：     
++   GPU 端的 Kernel 会拿到这个 data 指针。在计算第 i 个序列的注意力时，线程会根据当前生成的 token + 位置计算出对应的 block_idx。     
++   然后从 block_table 张量中取出 physical_id = data[i][block_idx]。    
++   最后通过 physical_id * block_size 定位到真正的 KV 数据显存地址。     

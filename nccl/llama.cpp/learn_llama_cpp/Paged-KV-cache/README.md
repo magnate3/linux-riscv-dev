@@ -294,3 +294,33 @@ Numbers below come from two binaries on the branch that share the same continuou
 + examples/paged/paged.cpp: uses the new llama_paged_scheduler_* API.   
 + examples/continuous-batch/continuous-batch.cpp: uses the existing unified KV cache via llama_decode   + llama_memory_seq_rm, with prefill+decode interleaving and per-step token-budget enforcement. Written specifically for an apple-to-apple comparison, since the existing examples (llama-parallel, etc.) don't expose the same continuous-batching semantics.    
 Both drivers use the same prompt pool, the same greedy sampling configuration, and matching n_batch/n_ubatch. Source for continuous-batch.cpp is on the branch for anyone who wants to reproduce the numbers.   
+
+
+
+# paged-kv
+
+> ## llama_kv_cache_paged
+
+```
+bool llama_kv_cache_paged::allocate(int32_t num_tokens, llama_sequence_group & group) {
+    uint32_t curr_block_count     = group.block_table.size();
+    uint32_t total_num_tokens     = group.n_prompt + group.n_decoded + num_tokens;
+    uint32_t num_requested_blocks = std::ceil((float) total_num_tokens / block_size) - curr_block_count;
+    LLAMA_LOG_DEBUG("%s: curr_block_count=%d, total_num_tokens=%d, num_requested_blocks=%d\n", __func__,
+                    curr_block_count, total_num_tokens, num_requested_blocks);
+
+    if (num_requested_blocks == 0) {
+        return true;
+    }
+
+    if (!block_manager.has_free_gpu_blocks(num_requested_blocks)) {
+        LLAMA_LOG_DEBUG("%s: insufficient GPU blocks. Requested: %d.\n", __func__, num_requested_blocks);
+        return false;
+    }
+
+    llama_block_ids new_ids = block_manager.checkout_gpu_blocks(num_requested_blocks);
+    concat_block_ids(group.block_table, new_ids);
+    LLAMA_LOG_DEBUG("%s: successfully allocated %d.\n", __func__, num_requested_blocks);
+    return true;
+}
+```

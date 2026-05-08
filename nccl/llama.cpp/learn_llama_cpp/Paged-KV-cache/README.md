@@ -1,7 +1,9 @@
 
 [Paged KV cache and scheduler:](https://github.com/ggml-org/llama.cpp/discussions/21961)
 
+[kmbandy/llama.cpp -src/llama-kv-cache-paged.cpp](https://github.com/kmbandy/llama.cpp/blob/b0bfde5c9aeed18023476cb39a8f9a8b9dfd50cf/src/llama-kv-cache-paged.cpp#L524)   
 
+[GaloSerranoA/Super-llama.cpp -llama.cpp/src/llama-kv-cache-paged.cpp](https://github.com/GaloSerranoA/Super-llama.cpp/blob/e0e50181907ac39e938b9b556954296ebcf8ad25/src/llama-kv-cache-paged.cpp#L9)   
 
 ```
 # Clone and build branch
@@ -322,5 +324,54 @@ bool llama_kv_cache_paged::allocate(int32_t num_tokens, llama_sequence_group & g
     concat_block_ids(group.block_table, new_ids);
     LLAMA_LOG_DEBUG("%s: successfully allocated %d.\n", __func__, num_requested_blocks);
     return true;
+}
+```
+
+
+
+```
+
+// new_tokens contain 1 token per sequence in the batch
+void llama_paged_scheduler_impl::update(const llama_batch &              batch,
+                                        const std::vector<llama_token> & new_tokens,
+                                        const int8_t *                   stop_flags) {
+    GGML_ASSERT((int32_t) new_tokens.size() >= curr_info.n_seq && "new_tokens size does not match with batch size.");
+    GGML_ASSERT(stop_flags != nullptr && "stop_flags can't be null");
+
+    for (int i = 0; i < curr_info.n_seq; ++i) {
+        int32_t token_offset = curr_info.batch_offsets[i];
+        int32_t request_id   = batch.seq_id[token_offset][0];
+
+        auto it = id_to_group.find(request_id);
+        if (it == id_to_group.end()) {
+            LLAMA_LOG_WARN("%s: request_id %d not found in scheduler, skipping\n", __func__, request_id);
+            continue;
+        }
+
+        llama_sequence_group * group = it->second;
+        GGML_ASSERT(group && "group is nullptr.");
+
+        // TTFT
+        if (group->n_decoded == 0) {
+            group->t_first_token_us = ggml_time_us();
+        }
+
+        // Setting token ranges
+        llama_pos range_min = kv_cache_manager->seq_pos_min(group->request_id);
+        if (range_min == -1) {
+            kv_cache_manager->set_seq_min_pos(group->request_id, batch.pos[token_offset]);
+        }
+        int32_t last_token_in_batch_idx = token_offset + curr_info.batch_lens[i] - 1;
+        kv_cache_manager->set_seq_max_pos(group->request_id, batch.pos[last_token_in_batch_idx]);
+
+        group->n_past += curr_info.batch_lens[i];
+        group->n_decoded += curr_info.batch_lens[i];
+        group->logical_seq.push_back(new_tokens[i]);
+
+        // Default stop flags are n_seq_max and n_predict
+        if (stop_flags[i] || group->n_past >= n_seq_max_ctx || group->n_decoded >= group->n_predict) {
+            group->status = llama_sequence_group_status::FINISHED;
+        }
+    }
 }
 ```

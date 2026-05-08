@@ -539,6 +539,11 @@ def allocate(self, seq: Sequence):
             self.hash_to_block_id[h] = block_id
         seq.block_table.append(block_id)
 ```
+关键点：
+
+- **前缀命中粒度是 block**。比如 prompt 是 600 个 token、block_size=256，前两个 block（512 token）可能命中缓存（num_cached_tokens += 512），第三个 block 只有 88 个 token 不参与 hash，一定 miss。所以 prompt 前 512 个 token 的 QKV 计算完全可以省掉。
+- **miss 传染**：一旦某个 block miss，后面所有的 block 都 miss（即使后面有 block 是之前见过的——它不可能独立存在，因为哈希带链依赖）。
+- **`token_ids != token_ids` 二次比对**：防止哈希冲突。xxhash64 冲突概率极低但非零，生产系统加这个断言是对的。
 
 
 ## SequenceGroup

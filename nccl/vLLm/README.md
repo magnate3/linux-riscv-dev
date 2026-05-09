@@ -8,7 +8,12 @@
 
 [大模型推理Continuous Batching技术](https://zhuanlan.zhihu.com/p/1910225311997629198)    
 
-[Continuous Batching 与 Selective Batching 实现](https://zhuanlan.zhihu.com/p/1945666696598787814)     
+[Continuous Batching 与 Selective Batching 实现](https://zhuanlan.zhihu.com/p/1945666696598787814)    
+[vLLM Automatic Prefix Caching (前缀缓存) 详细分析](https://zhuanlan.zhihu.com/p/2010430935833793165)       
+
+
+
+
 # attention and ffn
 
 ![images](att.png)

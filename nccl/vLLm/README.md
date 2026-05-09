@@ -11,7 +11,7 @@
 [Continuous Batching 与 Selective Batching 实现](https://zhuanlan.zhihu.com/p/1945666696598787814)    
 [vLLM Automatic Prefix Caching (前缀缓存) 详细分析](https://zhuanlan.zhihu.com/p/2010430935833793165)       
 
-
+[高效推理的核心：vLLM V1 KV cache 管理机制剖析-slot_mapping](https://zhuanlan.zhihu.com/p/1954128446398633139)   
 
 
 # attention and ffn
@@ -564,3 +564,30 @@ def allocate(self, seq: Sequence):
 + 1个输入序列（你的prompt）    
 + 3个输出序列（3个不同的故事开头）   
  
+ 
+#  slot_mapping
+
+虽然模型有几十层（如 Llama-3-8B 有 32 层），但 PagedAttention 确保同一个逻辑 token 在不同层中映射到相同的物理块（Block Index），但具体的槽位（Slot）在不同层对应的 KV Cache 内存地址是不同的。
+  
++ PagedAttention 中，KV Cache 是按层存储的。每个 Layer 都有自己独立的物理 KV Cache 存储区域（KV Cache Block Manager）。       
+逻辑层面的统一性：无论第0层还是第32层，对于同一个请求（Request），其逻辑上的Token顺序是一样的，逻辑块表（Logical Block Table）也是共享的。对于请求中的某一个位置的 Token（第 
+i个 token），如果它被分配到物理块 Block ID: 100，那么这个 Token 的 Key/Value 数据将存储在所有层的 Block ID: 100 中。          
+物理层面的差异化：slot_mapping 决定了逻辑Token对应到物理显存的具体位置。由于不同层之间不共享显存，同一层中的同一个Token（例如第5个token），在第1层和第2层对应的物理地址（Slot）是不同的。   
+
+ ![images](cell.png)
+
+先看一个简单示例，从输入到slot_mapping的计算。    
+
+![images](slot.jpg)   
+
+具体计算方式：数据进行整除+取余运算，整数表示所在block id，余数表示在对应的block id里面的slot（槽位）。举个例子，假设block size=128，slot_mapping=[958, 714, 238, 427]，计算如下：
+
+
+![images](slot2.jpg)   
+
+
+![images](slot3.jpg)  
+***上图 slot_mapping中的token id 对应 slot_id，隐藏了层数的对应关系也就是一个token对应的是多层的slot_id，但是每一层Layer的KVCache组织形式是一样的（如图所示Layer 0的KV Cache和Layer n的KV Cache组织形式是一样的），所以等价于一个token id对应一个slot id。***
+
+
++ 映射一致性： 只要 Token 被分配了某个 Slot，它在所有 Layer 中都占用相同的 Slot 索引。这简化了内存管理，因为不需要为每一层维护一套不同的映射表。

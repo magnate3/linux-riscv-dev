@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1.9
+# vLLM CPU Docker Image - Minimal runtime using uv for Python management
+#
+# Build args:
+#   VLLM_VERSION - vLLM version (e.g., 0.11.2) - REQUIRED
+#   PYTHON_VERSION - Python version (e.g., 3.12) - auto-detected if "auto" or empty
+#   VARIANT - CPU variant (noavx512, avx512, avx512vnni, avx512bf16, amxbf16)
+#   USE_GITHUB_RELEASE - Set to "true" to use GitHub release wheels instead of PyPI
+#
+# Runtime args:
+#   PUID/PGID - User/Group ID to run as (unset = root)
+#   DATA_DIR - Data directory for models/cache (default: /data)
+#   VLLM_SERVER_HOST/PORT - Server bind address and port
+#
+# Recommended run options:
+#   docker run --cap-add SYS_NICE --security-opt seccomp=unconfined --shm-size 4g ...
+
+ARG BASE_IMAGE=vllm-openai-cpu:latest-arm64
+FROM ${BASE_IMAGE} AS runtime
+#FROM vllm-openai-cpu:latest-arm64
+
+ENV VIRTUAL_ENV=/vllm/venv
+ENV PATH="/vllm/venv/bin:$PATH"
+COPY flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_aarch64.whl /tmp/
+RUN pip install /tmp/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_aarch64.whl
+RUN rm -f /tmp/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_aarch64.whl
+COPY triton-3.7.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl /tmp/
+RUN pip install /tmp/triton-3.7.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+RUN rm -f /tmp/triton-3.7.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl
+#https://download.pytorch.org/whl/nightly/triton/
+#RUN pip install https://github.com/Dao-AILab/flash-attention/releases/download/v2.8.3/flash_attn-2.8.3+cu12torch2.9cxx11abiTRUE-cp312-cp312-linux_aarch64.whl
+#RUN MAX_JOBS=4 pip install flash-attn==2.8.3 --no-build-isolation -i https://pypi.tuna.tsinghua.edu.cn/simple/
+#COPY nano-vllm /tmp/
+#RUN pip install -r /tmp/nano-vllm/pyproject.toml
+#gpu
+RUN pip install git+https://github.com/GeeeekExplorer/nano-vllm.git
+#RUN pip install  git+https://github.com/linzm1007/nano-vllm-cpu.git
+#ENTRYPOINT ["/usr/bin/bash"]
+ENTRYPOINT []
+CMD ["/usr/bin/bash"]

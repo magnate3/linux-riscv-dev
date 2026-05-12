@@ -14,6 +14,11 @@
 [高效推理的核心：vLLM V1 KV cache 管理机制剖析-slot_mapping](https://zhuanlan.zhihu.com/p/1954128446398633139)   
 
 
+[vLLM不知如何开始？看这篇：vLLM框架快速入门引导-slot_mapping](https://zhuanlan.zhihu.com/p/1984742841528902530)   
+
+[三层架构：从 block_table 到物理 KV 写入](https://juejin.cn/post/7628789251623534602)   
+
+
 # attention and ffn
 
 ![images](att.png)
@@ -563,9 +568,237 @@ def allocate(self, seq: Sequence):
 
 + 1个输入序列（你的prompt）    
 + 3个输出序列（3个不同的故事开头）   
+
+#   RoPE 缩放技术
+Qwen3 模型在预训练中的上下文长度最长为 32,768 个 token。为了处理显著超过 32,768 个 token 的上下文长度，应应用 RoPE 缩放技术。    
+YARN是一种增强模型长度外推的技术，可确保在长文本上的最佳性能。    
+[为什么现在的llm大模型主要都是用RoPE位置编码而非其他？](https://www.zhihu.com/question/1821771428/answer/1968731068946441589)    
+
+![images](rope.png)   
+RoPE背后的思想是通过在高维空间中旋转词向量来编码位置信息，旋转量取决于字或token在序列中的位置。这种旋转具有一个整洁的数学性质：任何两个单词之间的相对位置可以通过一个单词的向量相对于另一个单词的旋转量来轻松计算。因此，每个单词根据其绝对位置获得旋转量，模型可以轻松计算出相对位置。    
+技术解读：给定输入token和该token的位置信息，传统方法是计算绝对位置嵌入，并将其添加到token嵌入中去：      
+Final Embedding = Token Embedding + Positional      Embedding而在新的方法中，在旋转位置嵌入中，给定一个token嵌入及其位置，会生成一个包含位置信息的新嵌入：     
+Final Embedding = ROPE(Token Embedding, position)      
+
+```
+作者：杭天
+链接：https://www.zhihu.com/question/1821771428/answer/1968731068946441589
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+import torch
+from typing import Tuple
+
+# 生成旋转矩阵
+def precompute_freqs_cis(dim: int, seq_len: int, theta: float = 10000.0):
+    """
+    预计算复数形式的旋转因子 freqs_cis
+    每个位置 m 的旋转角度为 m * theta_i
+    """
+    # 计算词向量元素两两分组之后，每组元素对应的旋转角度 \theta_i
+    freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)[: (dim // 2)].float() / dim))
+
+    # 生成 token 序列索引 t = [0, 1, ..., seq_len-1]
+    t = torch.arange(seq_len, device=freqs.device)
+
+    # freqs.shape = [seq_len, dim//2]
+    freqs = torch.outer(t, freqs).float()  # 计算 m * \theta_i
+
+    # 计算结果是个复数向量
+    # 假设 freqs = [x, y]，则 freqs_cis = [cos(x) + sin(x)i, cos(y) + sin(y)i]
+    freqs_cis = torch.polar(torch.ones_like(freqs), freqs)
+    return freqs_cis
+
+
+# 旋转位置编码计算
+def apply_rotary_emb(
+    xq: torch.Tensor,
+    xk: torch.Tensor,
+    freqs_cis: torch.Tensor,
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    将 query 和 key 向量应用旋转位置编码
+    """
+    # xq.shape = [batch_size, seq_len, dim]
+    # xq_.shape = [batch_size, seq_len, dim//2, 2]
+    xq_ = xq.float().reshape(*xq.shape[:-1], -1, 2)
+    xk_ = xk.float().reshape(*xk.shape[:-1], -1, 2)
+
+    # 转为复数域
+    xq_ = torch.view_as_complex(xq_)
+    xk_ = torch.view_as_complex(xk_)
+
+    # 应用旋转操作：复数乘法实现旋转
+    # 然后将结果转回实数域
+    # xq_out.shape = [batch_size, seq_len, dim]
+    xq_out = torch.view_as_real(xq_ * freqs_cis).flatten(2)
+    xk_out = torch.view_as_real(xk_ * freqs_cis).flatten(2)
+
+    # 恢复原始数据类型（如 float16）
+    return xq_out.type_as(xq), xk_out.type_as(xk)
+
+
+# ================================
+#           主函数示例
+# ================================
+
+def main():
+    print("开始演示 RoPE (Rotary Position Embedding)\n")
+
+    # 设置参数
+    batch_size = 2
+    seq_len = 4
+    dim = 8
+    theta = 10000.0
+
+    print(f"参数设置:")
+    print(f"batch_size = {batch_size}")
+    print(f"seq_len    = {seq_len}")
+    print(f"dim        = {dim}")
+    print(f"theta      = {theta}\n")
+
+    # 1. 创建模拟的 query 和 key 向量
+    print("创建随机 query 和 key 向量...")
+    xq = torch.randn(batch_size, seq_len, dim)
+    xk = torch.randn(batch_size, seq_len, dim)
+    print(f"xq.shape = {xq.shape}  dtype={xq.dtype}")
+    print(f"xk.shape = {xk.shape}  dtype={xk.dtype}\n")
+
+    # 2. 预计算旋转因子 freqs_cis
+    print("预计算 freqs_cis...")
+    freqs_cis = precompute_freqs_cis(dim=dim, seq_len=seq_len, theta=theta)
+    print(f"freqs_cis.shape = {freqs_cis.shape}  dtype={freqs_cis.dtype}")
+    print(f"freqs_cis.device = {freqs_cis.device}\n")
+
+    # 3. 应用旋转位置编码
+    print("应用 RoPE 到 query 和 key...")
+    xq_rotated, xk_rotated = apply_rotary_emb(xq, xk, freqs_cis)
+    print(f"xq_rotated.shape = {xq_rotated.shape}  dtype={xq_rotated.dtype}")
+    print(f"xk_rotated.shape = {xk_rotated.shape}  dtype={xk_rotated.dtype}\n")
+
+    # 4. 验证：形状和类型是否保持一致
+    assert xq_rotated.shape == xq.shape, "输出 shape 不匹配"
+    assert xk_rotated.shape == xk.shape, "输出 shape 不匹配"
+    assert xq_rotated.dtype == xq.dtype, "输出 dtype 不匹配"
+    assert xk_rotated.dtype == xk.dtype, "输出 dtype 不匹配"
+    print("形状和类型验证通过！\n")
+
+    # 5. 展示前几个数值（便于观察变化）
+    print("查看第一个样本的第一个 token 的向量变化（前4维）:")
+    print(f"原始 xq[0,0,:4]: {xq[0, 0, :4].tolist()}")
+    print(f"旋转后 xq[0,0,:4]: {xq_rotated[0, 0, :4].tolist()}")
+
+    print("\nRoPE 演示完成！")
+
+
+# 运行主函数
+if __name__ == "__main__":
+    main()
+```
+
+```
+运行结果：开始演示 RoPE (Rotary Position Embedding)
+参数设置:
+batch_size = 2
+seq_len    = 4
+dim        = 8
+theta      = 10000.0
+
+创建随机 query 和 key 向量...
+xq.shape = torch.Size([2, 4, 8])  dtype=torch.float32
+xk.shape = torch.Size([2, 4, 8])  dtype=torch.float32
+
+预计算 freqs_cis...
+freqs_cis.shape = torch.Size([4, 4])  dtype=torch.complex64
+freqs_cis.device = cpu
+
+应用 RoPE 到 query 和 key...
+xq_rotated.shape = torch.Size([2, 4, 8])  dtype=torch.float32
+xk_rotated.shape = torch.Size([2, 4, 8])  dtype=torch.float32
+
+形状和类型验证通过！
+
+查看第一个样本的第一个 token 的向量变化（前4维）:
+原始 xq[0,0,:4]: [0.08177565783262253, -0.9981204867362976, 0.5767455697059631, -2.0018727779388428]
+旋转后 xq[0,0,:4]: [0.08177565783262253, -0.9981204867362976, 0.5767455697059631, -2.0018727779388428]
+
+RoPE 演示完成！
+````
+
+
  
+
+#  Prefill 输入准备
+ Prefill 阶段要处理多个变长序列。Flash Attention 的 varlen 接口需要把所有序列的 token 拼成一个长向量，然后用累计长度数组来区分边界。     
  
+```
+def prepare_prefill(self, seqs):
+    input_ids = []
+    positions = []
+    cu_seqlens_q = [0]
+    cu_seqlens_k = [0]
+    max_seqlen_q = 0
+    max_seqlen_k = 0
+    slot_mapping = []
+    block_tables = None
+    
+    for seq in seqs:
+        seqlen = len(seq)
+        # 只处理未缓存的部分
+        input_ids.extend(seq[seq.num_cached_tokens:])
+        positions.extend(list(range(seq.num_cached_tokens, seqlen)))
+        
+        seqlen_q = seqlen - seq.num_cached_tokens  # Query 长度（未缓存部分）
+        seqlen_k = seqlen                          # Key 长度（完整序列）
+        cu_seqlens_q.append(cu_seqlens_q[-1] + seqlen_q)
+        cu_seqlens_k.append(cu_seqlens_k[-1] + seqlen_k)
+        max_seqlen_q = max(seqlen_q, max_seqlen_q)
+        max_seqlen_k = max(seqlen_k, max_seqlen_k)
+        
+        # 构造 slot_mapping：只包含要写入的槽位
+        if not seq.block_table:  # warmup 时没有 block_table
+            continue
+        for i in range(seq.num_cached_blocks, seq.num_blocks):
+            start = seq.block_table[i] * self.block_size
+            if i != seq.num_blocks - 1:
+                end = start + self.block_size
+            else:
+                end = start + seq.last_block_num_tokens
+            slot_mapping.extend(list(range(start, end)))
+    
+    # Prefix Cache 判断
+    if cu_seqlens_k[-1] > cu_seqlens_q[-1]:
+        block_tables = self.prepare_block_tables(seqs)
+    
+    # 转换为 GPU 张量
+    input_ids = torch.tensor(input_ids, dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
+    positions = torch.tensor(positions, dtype=torch.int64, pin_memory=True).cuda(non_blocking=True)
+    cu_seqlens_q = torch.tensor(cu_seqlens_q, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
+    cu_seqlens_k = torch.tensor(cu_seqlens_k, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
+    slot_mapping = torch.tensor(slot_mapping, dtype=torch.int32, pin_memory=True).cuda(non_blocking=True)
+    
+    set_context(True, cu_seqlens_q, cu_seqlens_k, max_seqlen_q, max_seqlen_k, 
+                slot_mapping, None, block_tables)
+    return input_ids, positions
+```
+
+cu_seqlens_q 和 cu_seqlens_k 的区别    
+
+当 Prefix Cache 命中时，序列的一部分 token 已经有 KV Cache 了，不需要重新计算。所以 Query 只包含未缓存的部分，而 Key 包含完整序列（缓存的部分从 Cache 读取）。    
+
+举个例子，三个序列的长度分别是 100、200、150，其中第一个序列命中了 50 个 token 的缓存：   
+
+```
+cu_seqlens_q = [0, 50, 250, 400]   # Query: 50 + 200 + 150 = 400   
+cu_seqlens_k = [0, 100, 300, 450]  # Key:  100 + 200 + 150 = 450   
+```
+
 #  slot_mapping
+
+（1）逻辑块 vs 物理块
+Logical Block：每个请求的 KV Cache 在逻辑上被划分为固定大小块（如 block_size=16 tokens）；    
+Physical Block：GPU 显存中预分配的物理页（大小 = block_size * num_heads * head_dim * 2，含 K 和 V）；    
+Block Table：每个请求维护一个索引数组，记录其逻辑块到物理块的映射。   
 
 虽然模型有几十层（如 Llama-3-8B 有 32 层），但 PagedAttention 确保同一个逻辑 token 在不同层中映射到相同的物理块（Block Index），但具体的槽位（Slot）在不同层对应的 KV Cache 内存地址是不同的。
   
@@ -591,3 +824,91 @@ i个 token），如果它被分配到物理块 Block ID: 100，那么这个 Toke
 
 
 + 映射一致性： 只要 Token 被分配了某个 Slot，它在所有 Layer 中都占用相同的 Slot 索引。这简化了内存管理，因为不需要为每一层维护一套不同的映射表。
+
+
+> ##  物理存储布局
+实际的 KV Cache 是一个大张量：
+
+```
+kv_cache = torch.empty(
+    2,                          # K 和 V
+    num_layers,                 # 层数
+    num_blocks,                 # 总块数
+    block_size,                 # 每块 token 数
+    num_kv_heads // tp_size,    # KV head 数（考虑张量并行）
+    head_dim                    # head 维度
+)
+```
+每层的 Attention 模块持有这个大张量对应层的切片：
+
+```
+module.k_cache = kv_cache[0, layer_id]  # shape: [num_blocks, block_size, num_kv_heads, head_dim]
+module.v_cache = kv_cache[1, layer_id]
+```
+block_table 存的是逻辑块到物理块的映射。比如 seq.block_table = [5, 12, 3] 表示：
+
+- 序列的第 0 个逻辑块存在物理块 5   
+- 序列的第 1 个逻辑块存在物理块 12   
+- 序列的第 2 个逻辑块存在物理块 3   
+
+> ##  从 block_table 到 slot_mapping
+ BlockManager——它的产出是 seq.block_table，一个逻辑块 ID 的列表。但 store_kvcache Triton kernel 不认识 block_table，它只接受物理的 slot_mapping：一个 tensor，告诉 kernel”这批 token 的 K/V 要分别写到 kv_cache 的第几行”。
+
+
+> ###  Slot映射计算   
+
+[nano-vllm](https://juejin.cn/post/7628789251623534602)    
+
+![images](slot.webp)   
+
+在prefill阶段，prepare_prefill()方法计算slot映射，并对每个序列的每个块，计算物理Block中的slot位置   
+
+
+```
+slot = block_id * block_size + offset_in_block
+
+for i in range(seq.num_cached_blocks, seq.num_blocks):
+      start = seq.block_table[i] * self.block_size
+      if i != seq.num_blocks - 1:
+           end = start + self.block_size
+      else:
+           end = start + seq.last_block_num_tokens 
+      slot_mapping.extend(list(range(start, end)))
+```
+
+这段代码不长，但有两个关键设计：    
+1. 只遍历未 cached 的逻辑块     
+range(seq.num_cached_blocks, seq.num_blocks) 是整段代码的灵魂。num_cached_blocks 是”前 N 个逻辑块已经在 cache 里了”，对这些 block 完全跳过——它们的 K/V 已经在 kv_cache 里，不需要重新写入。这就是 prefix cache 在 prepare 阶段的体现。
+2. 末块特殊处理     
+最后一个 block 可能没填满。比如 seq 有 430 个 token、block_size=256，那么：    
+
+Block 0: token 0-255（满，256 个 slot）    
+Block 1: token 256-429（未满，只有 174 个 slot）    
+
+所以代码里对末块用了 seq.last_block_num_tokens 而不是 block_size。   
+
+计算 公式  
+
+```
+slot = block_table[i] × block_size + offset
+```
+其中 offset 是 token 在 block 内的位置（0 到 block_size-1）。   
+
+
+
+
+
+在decode阶段，prepare_decode()方法计算当前token的slot位置
+```
+slot_mapping.append(seq.block_table[-1] * self.block_size + seq.last_block_num_tokens - 1)
+```
+
+slot_mapping 的核心作用：物理地址到逻辑位置的映射，是现代高效推理引擎（ vLLM, nano-vllm）的基石。
+
+具体来讲，由于显存是有限的，我们无法为每个序列都预留足够大的连续空间来存储其完整的KV Cache。因此，KV Cache 被切分成固定大小的“块”（Blocks），这些块可以被动态分配和回收。当一个序列的KV Cache增长时，它的数据块会被分散到物理内存的各个角落。然而，***GPU的注意力计算机制期望输入的KV Cache是按逻辑顺序（即序列中token的顺序）连续排列的***。   
+
+slot_mapping 就像一个地址翻译表，告诉GPU：在计算注意力时，本应去第 i 个逻辑位置寻找Key/Value，但实际上，它存储在物理内存的 slot_mapping[i] 这个地址上。    
+
+通过这种方式，我们既解决了物理内存不连续的问题，又满足了GPU计算对逻辑连续性的要求，即上面提到的PagedAttention 机制的代码与调用实现。    
+![images](slot.png)  
+

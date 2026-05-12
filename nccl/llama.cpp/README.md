@@ -544,3 +544,106 @@ root@centos7:/workspace/llama.cpp/examples/debug-kv#
     - sinfo.idxs: list of allocated cell indices
 ```
 
+# llama.cpp计算attention
+
+
+RoPE (旋转位置编码)：先对当前的 Query 和 Key 应用位置编码算子 ggml_rope。   
+构建 KV 视图：从巨大的 KV Cache 缓冲区中，根据当前 Token 的位置截取一段“视图”（View）。   
+MatMul (计算得分)：执行 ggml_mul_mat(K, Q)。   
+Softmax：对得分进行缩放和归一化 ggml_soft_max。   
+Weighted Sum：执行 ggml_mul_mat(V, Score)。    
+
+**`model. Build_graph`**（`src/llama-model. Cpp`）是 llama. Cpp 最庞大的函数之一，其核心逻辑：
+
+1. 创建 `llm_graph_context ctx_graph (params)`。
+
+2. 根据 `arch` 调用对应的 `build_*` 函数（如 `build_llama`、`build_qwen 2`、`build_gemma` 等）。
+
+3. 逐层遍历 `layers`：
+
+- `build_inp_embd` / `build_inp_pos`
+
+- `build_norm`
+
+- `build_attn`（根据 memory 类型选择 `build_attn_inp_kv`、`build_attn_inp_kv_iswa` 或 `build_attn_inp_no_cache`）
+
+- 内部调用 `ggml_rope_ext`（RoPE）、`ggml_flash_attn_ext`（如果启用 FA）或手动 `mat_mul + soft_max`。
+
+- `build_ffn` / `build_moe_ffn`
+
+- Residual add
+
+4. 最终 `build_dense_out` / `build_pooling`。
+
+5. 将输出 logits/embd 张量挂到 `llm_graph_result` 上。
+
+```cpp
+struct ggml_tensor * x = inpL;   // input from previous layer (or embedding)
+
+// 1. Pre-attention norm
+ggml_tensor * x_norm = ggml_rms_norm(ctx, x, hparams.f_norm_rms_eps);
+x_norm = ggml_mul(ctx, x_norm, model.layers[il].attn_norm);
+
+// 2. QKV projections (computed separately because shapes differ)
+ggml_tensor * Qcur = ggml_mul_mat(ctx, model.layers[il].wq, x_norm);
+ggml_tensor * Kcur = ggml_mul_mat(ctx, model.layers[il].wk, x_norm);
+ggml_tensor * Vcur = ggml_mul_mat(ctx, model.layers[il].wv, x_norm);
+
+// 3. Reshape to (head_dim, n_heads, n_tokens)
+Qcur = ggml_reshape_3d(ctx, Qcur, hparams.n_embd_head_v, hparams.n_head, n_tokens);
+Kcur = ggml_reshape_3d(ctx, Kcur, hparams.n_embd_head_k, hparams.n_head_kv, n_tokens);
+Vcur = ggml_reshape_3d(ctx, Vcur, hparams.n_embd_head_v, hparams.n_head_kv, n_tokens);
+
+// 4. Apply RoPE to Q and K
+Qcur = ggml_rope_ext(ctx, Qcur, inp_pos, /* freq base */ hparams.rope_freq_base, ...);
+Kcur = ggml_rope_ext(ctx, Kcur, inp_pos, /* freq base */ hparams.rope_freq_base, ...);
+
+// 5. Append K and V to KV cache (or read from it for prior tokens)
+build_kv_store(ctx, Kcur, Vcur, kv, il);
+ggml_tensor * K_full = build_kv_load_K(ctx, kv, il);
+ggml_tensor * V_full = build_kv_load_V(ctx, kv, il);
+
+// 6. FlashAttention (if enabled) or unfused attention
+ggml_tensor * cur = ggml_flash_attn_ext(ctx, Qcur, K_full, V_full, mask,
+                                         /* scale */ 1.0f / sqrtf(hparams.n_embd_head_v),
+                                         /* max_bias */ 0.0f,
+                                         /* logit_softcap */ 0.0f);
+
+// 7. Output projection
+cur = ggml_mul_mat(ctx, model.layers[il].wo, cur);
+
+// 8. Residual
+ggml_tensor * ffn_inp = ggml_add(ctx, cur, x);
+
+// 9. Pre-FFN norm
+ggml_tensor * ffn_norm = ggml_rms_norm(ctx, ffn_inp, hparams.f_norm_rms_eps);
+ffn_norm = ggml_mul(ctx, ffn_norm, model.layers[il].ffn_norm);
+
+// 10. FFN: gate * up, SiLU, down
+ggml_tensor * gate = ggml_mul_mat(ctx, model.layers[il].ffn_gate, ffn_norm);
+ggml_tensor * up   = ggml_mul_mat(ctx, model.layers[il].ffn_up,   ffn_norm);
+ggml_tensor * mid  = ggml_silu(ctx, gate);
+mid = ggml_mul(ctx, mid, up);
+cur = ggml_mul_mat(ctx, model.layers[il].ffn_down, mid);
+
+// 11. Residual
+inpL = ggml_add(ctx, cur, ffn_inp);
+```
+
+#  llama.cpp如何计算fnn   
+
+![images](fnn.png)   
+在 llama.cpp 的底层库 GGML 中，SiLU（SwiGLU 的核心部分）确实利用了查表法（Lookup Table, LUT）来规避昂贵的浮点指数运算（exp）。
+
++ SIMD 查表    
+在实际的 llama.cpp 内核中，如果 CPU 支持 AVX-512 或 ARM    NEON：向量化查表：它不会一个一个查，而是利用特殊的指令（如 _mm512_i32gather_ps）一次性从内存中“抓取” 16 个索引对应的 SiLU 值。线性插值：为了减小表格体积同时保持精度，它会取索引 i 和 i+1 的值进行微调，公式为 y = y_i + (y_{i+1} - y_i) * fract。     
+
+
+#  llama_decode 和采样的关系
+ 在llama.cpp中，llama_decode负责将模型最后一层的计算结果（Logits）算出来，而采样（Sampling）则是紧随其后的一步。采样并不是在 llama_decode 内部自动完成的，而是通过一组专门的采样器（llama_sampler）接口来处理。其逻辑流程如下：
+ 
+ 1. 采样的核心流程当你调用 llama_decode 后，采样遵循这个路径：   
+ Logits (原始分数) \(\rightarrow \) Softmax (概率分布) \(\rightarrow \) Sampler (截断/筛选) \(\rightarrow \) Final Token
+ 
+
+

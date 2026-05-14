@@ -645,5 +645,35 @@ inpL = ggml_add(ctx, cur, ffn_inp);
  1. 采样的核心流程当你调用 llama_decode 后，采样遵循这个路径：   
  Logits (原始分数) \(\rightarrow \) Softmax (概率分布) \(\rightarrow \) Sampler (截断/筛选) \(\rightarrow \) Final Token
  
+ 2. 代码实现逻辑在 llama.cpp 的最新 API 中，采样是通过构造一个“采样链”来完成的：    
+```
+// 1. 创建一个采样链（类似流水线）
+auto sparams = llama_sampler_chain_default_params();
+struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
+
+// 2. 向链条中添加具体的采样策略（按顺序执行）
+llama_sampler_chain_add(smpl, llama_sampler_init_top_k(40));      // 先取前 40 个
+llama_sampler_chain_add(smpl, llama_sampler_init_top_p(0.9, 1));  // 再取累计概率 90% 的
+llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.8));      // 最后按温度缩放
+
+// 3. 执行采样
+// 从 llama_decode 算出的 logits 中选出一个 token
+llama_token id = llama_sampler_sample(smpl, ctx, -1); 
+
+```
+
+3. 特有的采样黑科技：Mirostat      
+llama.cpp 相比 vLLM，最出名的是它实现了 Mirostat 采样。原理：它会自动监控生成文本的“困惑度（Perplexity）”。如果发现模型说话开始变得太乱，它会自动降低温度；如果说话太死板，它会提高随机性。效果：它试图维持一个恒定的“惊喜值”，防止长文本生成时的质量崩塌。         
+ 
+4. 采样时的计算优化    
+由于采样是在所有的 Logits（词表大小通常为 32k 到 128k）上进行的，llama.cpp 做了以下优化：按需排序：并非对所有 Logits 排序。比如 Top-K 采样，它会使用类似 quick_select 的算法只找出前 K 个最大的数，这比全量排序快得多。     
+SIMD 加速 Softmax：在将 Logits 转为概率时，利用 AVX/NEON 指令集批量处理指数运算。       
+     
+5. 为什么不把采样写死在 decode 里？    
+为了支持 投机采样（Speculative Decoding）：llama_decode 可能会一次算出 5 个候选词。
+采样器会根据大模型的 Logits 逐一校验这 5 个词的概率分布，决定接受几个。这种解耦设计让 llama.cpp 能灵活实现复杂的加速策略。     
+总结： llama.cpp      
+的采样是一个插件化的链式系统。它允许你通过简单的组合，实现从基础的“贪婪搜索”到复杂的“动态困惑度控制”等各种生成策略。
+ 
 
 

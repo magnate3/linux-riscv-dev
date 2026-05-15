@@ -79,7 +79,9 @@ F S UID         PID   PPID  C PRI  NI ADDR SZ WCHAN  STIME TTY          TIME CMD
 docker pull vllm/vllm-openai:latest
 sudo docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/vllm/vllm-openai:latest
 ``` 
-```sudo docker run -it --rm --net=host    --gpus=all     -e UID=root    --ipc host --shm-size="32g" --privileged   -u 0 -d  -p 8000:8000 -v /pytorch/models/:/models -v /pytorch:/workspace --shm-size=4g  --name vllm-sch   vllm-openai:latest   --model /models/Qwen2___5-0___5B-Instruct        --max_model_len  1024 
+
+```
+sudo docker run -it --rm --net=host    --gpus=all     -e UID=root    --ipc host --shm-size="32g" --privileged   -u 0 -d  -p 8000:8000 -v /pytorch/models/:/models -v /pytorch:/workspace --shm-size=4g  --name vllm-sch   vllm-openai:latest   --model /models/Qwen2___5-0___5B-Instruct        --max_model_len  1024 
 ```
 
 
@@ -792,10 +794,7 @@ Final Embedding = Token Embedding + Positional      Embedding而在新的方法�
 Final Embedding = ROPE(Token Embedding, position)      
 
 ```
-作者：杭天
-链接：https://www.zhihu.com/question/1821771428/answer/1968731068946441589
-来源：知乎
-著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+ 
 
 import torch
 from typing import Tuple

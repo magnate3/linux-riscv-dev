@@ -3,7 +3,6 @@
 
 ```
 [ubuntu i40e-symmetric-rss-rte-flow]$ sudo ./build/test_rss -c0x1 -- port0
-[sudo] password for liangjun: 
 TELEMETRY: No legacy callbacks, legacy socket not created
 name is 0000:1a:00.1 
 Error (err=-19) when getting port id of port0 Is device enabled?

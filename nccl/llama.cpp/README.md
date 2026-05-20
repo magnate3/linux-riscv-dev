@@ -117,6 +117,74 @@ system_info: n_threads = 128 (n_threads_batch = 128) / 128 | CPU : NEON = 1 | AR
 Running without SSL
 ```
 
+## cpu编译
+
+
+```
+cmake -B build2 -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=OFF  -DLLAMA_BUILD_TESTS=ON ${CMAKE_ARGS} -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined .
+
+```
+```
+root@centos7:/workspace/llama.cpp# cmake --build build2 --config Release --target test-backend-ops -j$(nproc)
+[  0%] Building CXX object vendor/cpp-httplib/CMakeFiles/cpp-httplib.dir/httplib.cpp.o
+```
+
+```
+root@centos7:/workspace/llama.cpp# cmake -B build3  -DCMAKE_BUILD_TYPE=Debug  -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=OFF  -DLLAMA_BUILD_TESTS=ON ${CMAKE_ARGS} -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined .
+CMAKE_BUILD_TYPE=Debug
+     
+cmake --build build3 --config Debug --target test-backend-ops -j$(nproc)
+```
+
+```
+root@centos7:/workspace/llama.cpp# ./build2/bin/test-backend-ops -o SWIGLU -b CPU
+Testing 1 devices
+
+Backend 1/1: CPU
+  Device description: CPU
+  Device memory: 522866 MB (522866 MB free)
+
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=0,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=0,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=0,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=0,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=0,split): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=0,split): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=1,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=1,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=1,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=1,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=1,split): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=1,split): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=0,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=0,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=0,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=0,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=0,split): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=0,split): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=1,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=1,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=1,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=1,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=1,split): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=1,split): OK
+  24/24 tests passed
+  Backend CPU: OK
+1/1 backends passed
+O
+```
+
+```
+(gdb) bt
+#0  ggml_compute_forward_glu (params=0xffff869de6b0, dst=0xaaaaab03f320) at /workspace/llama.cpp/ggml/src/ggml-cpu/ops.cpp:9647
+#1  0x0000ffffbe5c4c40 in ggml_compute_forward (params=0xffff869de6b0, tensor=0xaaaaab03f320) at /workspace/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c:1998
+#2  0x0000ffffbe5c67c0 in ggml_graph_compute_thread (data=0xaaaaab018b20) at /workspace/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c:2964
+#3  0x0000ffffbe5c742c in ggml_graph_compute._omp_fn.0 () at /workspace/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c:3245
+#4  0x0000ffffbdf4ba2c in ?? () from /lib/aarch64-linux-gnu/libgomp.so.1
+#5  0x0000ffffbe010398 in start_thread (arg=0x80e8a0) at ./nptl/pthread_create.c:442
+#6  0x0000ffffbe079e9c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone.S:79
+(gdb) 
+```
 
 > ## bash client
 ```

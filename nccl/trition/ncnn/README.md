@@ -63,12 +63,177 @@ make -j$(nproc)
 fopen yolov4-tiny-opt.param failed
 ```
 
+> ## NCNN_VULKAN=ON
+```
+cmake -DCMAKE_BUILD_TYPE=Release -DNCNN_VULKAN=ON  -DNCNN_BUILD_TOOLS=OFF  -DNCNN_SHARED_LIB=OFF -DNCNN_SYSTEM_GLSLANG=ON -DNCNN_BUILD_EXAMPLES=ON ..
+```
+
+```
+apt-get install libvulkan-dev vulkan-tools -y 
+apt --fix-broken install
+```
+
+```
+find /usr -name "libvulkan.so*" 2>/dev/null
+/usr/lib/x86_64-linux-gnu/libvulkan.so.1.3.204
+/usr/lib/x86_64-linux-gnu/libvulkan.so.1
+```
++ intel
+
+```
+```
+./benchmark/benchncnn 4 8 0 0 1 param=onnx2ncnn/model.ncnn.param   shape=[227,227,3]
+[0 Intel(R) Graphics (RPL-S)]  queueC=0[1]  queueT=0[1]
+[0 Intel(R) Graphics (RPL-S)]  fp16-p/s/u/a=1/1/1/1  int8-p/s/u/a=1/1/1/1  bf16-p/s=1/0
+[0 Intel(R) Graphics (RPL-S)]  subgroup=32(8~32)  ops=1/1/1/1/1/1/1/1/0/0
+[0 Intel(R) Graphics (RPL-S)]  fp16-cm=0  int8-cm=0  bf16-cm=0  fp8-cm=0
+[1 llvmpipe (LLVM 15.0.7, 256 bits)]  queueC=0[1]  queueT=0[1]
+[1 llvmpipe (LLVM 15.0.7, 256 bits)]  fp16-p/s/u/a=1/1/1/1  int8-p/s/u/a=1/1/1/1  bf16-p/s=1/0
+[1 llvmpipe (LLVM 15.0.7, 256 bits)]  subgroup=8(8~8)  ops=1/1/1/1/1/1/0/1/0/0
+[1 llvmpipe (LLVM 15.0.7, 256 bits)]  fp16-cm=0  int8-cm=0  bf16-cm=0  fp8-cm=0
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = 0
+cooling_down = 1
+onnx2ncnn/model.ncnn.param  min =   68.74  max =   69.04  avg =   68.87
+```
+ 
+
+```
+
+
++ 安装英伟达 Vulkan 组件   
+```
+nvidia-smi
+NVIDIA-SMI 570.211.01 
+```
+根据570安装apt-get install libnvidia-gl-570  
+ 
+
+> ## 英伟达 gpu
+
+```
+apt-get remove --purge -y "*nvidia*580*"
+apt-get install --reinstall -y libnvidia-gl-570 libnvidia-compute-570
+```
+
+```
+apt-get update && apt-get install -y --no-install-recommends \
+    libnvidia-gl-570 \
+    libnvidia-compute-570
+```
+
++ 宿主机上安装 570 核心和图形组件
+
+```
+# 1. 强行卸载宿主机上所有残存的 580 干扰组件
+sudo apt-get remove --purge -y "*nvidia*580*"
+
+# 2. 重新确保宿主机的 570 核心和图形组件完整无缺
+sudo apt-get install --reinstall -y nvidia-driver-570 libnvidia-gl-570 libnvidia-compute-570 nvidia-utils-570
+
+# 3. 核心关键：把 570 版本打上“死结”，彻底禁止宿主机以后在后台悄悄升级到 580
+sudo apt-mark hold nvidia-driver-570 libnvidia-gl-570 libnvidia-compute-570 nvidia-utils-570
+
+# 4. 重启宿主机（物理机）让内核模块与用户态彻底在 570 胜利会师
+sudo reboot
+
+```
+ 
+```
+root@ubuntu:/pytorch/ncnn/build# mkdir -p /usr/share/vulkan/icd.d/ && echo -e '{\n    "file_format_version" : "1.0.0",\n    "ICD": {\n        "library_path": "libGLX_nvidia.so.0",\n        "api_version" : "1.3.205"\n    }\n}' > /usr/share/vulkan/icd.d/nvidia_icd.json
+root@ubuntu:/pytorch/ncnn/build# cat /usr/share/vulkan/icd.d/nvidia_icd.json
+{
+    "file_format_version" : "1.0.0",
+    "ICD": {
+        "library_path": "libGLX_nvidia.so.0",
+        "api_version" : "1.3.205"
+    }
+}
+``` 
+
+
+
+```
+root@ubuntu:/pytorch/ncnn/build# ls /usr/share/vulkan/icd.d/nvidia_icd.json
+/usr/share/vulkan/icd.d/nvidia_icd.json
+root@ubuntu:/pytorch/ncnn/build# ls /usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0
+/usr/lib/x86_64-linux-gnu/libGLX_nvidia.so.0
+```
+
+```
+# 1. 强制将 64 位英伟达库路径加入系统搜索首位
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+
+# 2. 锁定你的 NVIDIA ICD 引导文件
+export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+
+# 3. 开启无头服务器模式（必须）
+export VK_HEADLESS_SERVER=1
+
+```
+
+```
+sudo  docker run -d --rm --name ncnn_gpu_service  --net=host    --gpus=all -it    -e UID=root  -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,video \
+-e VK_HEADLESS_SERVER=1   --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nccnpytorch:24.05-py3-v2  
+```
+
+```
+ubuntu@ubuntu:/pytorch/ncnn/build$ nvidia-smi 
+Mon Jun  1 10:59:31 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.159.03             Driver Version: 580.159.03     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3090        Off |   00000000:01:00.0 Off |                  N/A |
+| 31%   31C    P8             20W /  350W |      38MiB /  24576MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A            2108      G   /usr/lib/xorg/Xorg                        9MiB |
+|    0   N/A  N/A            2293      G   /usr/bin/gnome-shell                      8MiB |
++-----------------------------------------------------------------------------------------+
+ubuntu@ubuntu:/pytorch/ncnn/build$ 
+ubuntu@ubuntu:/pytorch/ncnn/build$ 
+ubuntu@ubuntu:/pytorch/ncnn/build$ cat /usr/share/vulkan/icd.d/nvidia_icd.json
+{
+    "file_format_version" : "1.0.1",
+    "ICD": {
+        "library_path": "libGLX_nvidia.so.0",
+        "api_version" : "1.4.312"
+    }
+}
+ubuntu@ubuntu:/pytorch/ncnn/build$ export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
+ubuntu@ubuntu:/pytorch/ncnn/build$ ./benchmark/benchncnn 4 8 0 0 1 param=onnx2ncnn/model.ncnn.param   shape=[227,227,3]
+[0 NVIDIA GeForce RTX 3090]  queueC=2[8]  queueT=1[2]
+[0 NVIDIA GeForce RTX 3090]  fp16-p/s/u/a=1/1/1/1  int8-p/s/u/a=1/1/1/1  bf16-p/s=1/1
+[0 NVIDIA GeForce RTX 3090]  subgroup=32(32~32)  ops=1/1/1/1/1/1/1/1/1/1
+[0 NVIDIA GeForce RTX 3090]  fp16-cm=16x16x16/16x8x16/16x8x8  int8-cm=16x16x32/16x8x32  bf16-cm=16x16x16  fp8-cm=0
+loop_count = 4
+num_threads = 8
+powersave = 0
+gpu_device = 0
+cooling_down = 1
+onnx2ncnn/model.ncnn.param  min =   15.17  max =   16.72  avg =   16.03
+ubuntu@ubuntu:/pytorch/ncnn/build$ 
+```
+
 
 > ## NCNN_BUILD_TOOLS=ON (不需要)
 但是tools/CMakeLists.txt注释add_subdirectory(caffe)    
 ```
  cmake -DCMAKE_BUILD_TYPE=Release -DNCNN_VULKAN=OFF  -DNCNN_BUILD_TOOLS=ON  -DNCNN_SHARED_LIB=OFF -DNCNN_SYSTEM_GLSLANG=ON -DNCNN_BUILD_EXAMPLES=ON ..
 ```
+
 
  
 #  onnx2ncnn

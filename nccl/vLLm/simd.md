@@ -35,3 +35,23 @@ DECODER THREAD: -73.0 ms saved (GELU: 23.4 → 96.3 ms)
 volatile sink = -0.463110
 [root@centos7 simd]# 
 ```
+
+##  march=armv8.2-a+sve
+[从标量到向量，释放ARM服务器全栈算力](https://developer.huawei.com/home/forum/kunpeng/thread-0225203930782208226-1-1.html)   
+
+```
+root@centos7:/workspace/simd# g++ --version
+g++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0
+Copyright (C) 2021 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+root@centos7:/workspace/simd#
+```
+
+```
+root@centos7:/workspace/simd# g++ -O3 -march=armv8.2-a+sve -o main  main.cpp
+root@centos7:/workspace/simd# ./main 
+2 4 6 8 2.5 3 3.5 4 
+root@centos7:/workspace/simd# 
+```

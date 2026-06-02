@@ -55,6 +55,7 @@ mkdir -p build
 cd build
  cmake -DCMAKE_BUILD_TYPE=Release -DNCNN_VULKAN=OFF  -DNCNN_BUILD_TOOLS=OFF  -DNCNN_SHARED_LIB=OFF -DNCNN_SYSTEM_GLSLANG=ON -DNCNN_BUILD_EXAMPLES=ON ..
 make -j$(nproc)
+make install -j$(nproc)
 ```
 
 
@@ -66,6 +67,8 @@ fopen yolov4-tiny-opt.param failed
 > ## NCNN_VULKAN=ON
 ```
 cmake -DCMAKE_BUILD_TYPE=Release -DNCNN_VULKAN=ON  -DNCNN_BUILD_TOOLS=OFF  -DNCNN_SHARED_LIB=OFF -DNCNN_SYSTEM_GLSLANG=ON -DNCNN_BUILD_EXAMPLES=ON ..
+make -j$(nproc)
+make install -j$(nproc)
 ```
 
 ```
@@ -80,7 +83,7 @@ find /usr -name "libvulkan.so*" 2>/dev/null
 ```
 + intel
 
-```
+
 ```
 ./benchmark/benchncnn 4 8 0 0 1 param=onnx2ncnn/model.ncnn.param   shape=[227,227,3]
 [0 Intel(R) Graphics (RPL-S)]  queueC=0[1]  queueT=0[1]
@@ -100,7 +103,7 @@ onnx2ncnn/model.ncnn.param  min =   68.74  max =   69.04  avg =   68.87
 ```
  
 
-```
+
 
 
 + 安装英伟达 Vulkan 组件   
@@ -226,7 +229,11 @@ cooling_down = 1
 onnx2ncnn/model.ncnn.param  min =   15.17  max =   16.72  avg =   16.03
 ubuntu@ubuntu:/pytorch/ncnn/build$ 
 ```
++ docker
 
+```
+apt-get update && apt-get install -y libvulkan-dev
+```
 
 > ## NCNN_BUILD_TOOLS=ON (不需要)
 但是tools/CMakeLists.txt注释add_subdirectory(caffe)    

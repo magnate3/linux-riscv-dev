@@ -4,6 +4,7 @@
   docker run -d --rm --net=host  --name rocket   --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch nvcr.io/nvidia/pytorch:24.05-py3
 ```
 #  flash-attn
+
 ```
 pip install -r requirements.txt
 pip install flash-attn==2.6.3
@@ -12,7 +13,7 @@ pip install addict -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 
-> ## 
+> ## pytorch nvcc 
 
 + pytorch 
 ```
@@ -62,6 +63,7 @@ Built on Thu_Mar_28_02:18:24_PDT_2024
 Cuda compilation tools, release 12.4, V12.4.131
 Build cuda_12.4.r12.4/compiler.34097967_0
 root@ubuntu:/pytorch#
+```
 
 # data处理
 

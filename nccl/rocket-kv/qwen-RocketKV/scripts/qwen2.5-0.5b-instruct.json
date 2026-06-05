@@ -1,0 +1,16 @@
+{
+    "pipeline_params": {
+        "model_name": "/pytorch/models/Qwen2___5-0___5B-Instruct",
+        "tokenizer_name": "/pytorch/models/Qwen2___5-0___5B-Instruct",
+	"chat_template": "qwen",
+        "model_max_len": 127500,
+        "fattn": false,
+        "use_flash_attn": false,
+        "truncation_mode": "middle",
+        "batch_size": 1,
+        "out_of_max_len_allowed": true,
+        "base": 500000,
+        "rope_theta_factor": 1.0
+    }
+}
+

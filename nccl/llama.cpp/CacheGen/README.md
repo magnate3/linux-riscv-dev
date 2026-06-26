@@ -15,6 +15,9 @@
 
  采用重归一化方法的经典的算术编码有二进制算术编码（如 CABAC） 
  
+ 
+![images](cdf.png)
+ 
 ##  拉普拉斯分布的尺度参数估计与算术编码实现
 
 `算术编码 怎么估计cdf, pmf`
@@ -361,7 +364,10 @@ USER: Could you please tell me the topic name for the The role of art in society
 Average size of KV cache: 20.815464MB
 ```
 
-
+```Text
+不使用压缩缓存（大模型 Prefill 重新跑 4000 字）：Qwen2.5-0.5B 虽然是个小模型，但通读 4000 Token 并计算 Attention 矩阵，在单张现代显卡（如 A100 / RTX 4090）上通常也需要耗费 100 ~ 300 毫秒；如果是 7B 或 72B 大模型，这个时间会飙升到 上千毫秒（几秒钟）。使用 CacheGen 算术解码（GPU torchac 并行解压）：对于 4000 Token，解压通常只需要 几毫秒到十几毫秒。
+```
+编码和解码比较    
 ```Text
 在 GPU 算术编码的流水线中，编码器（Encoder）比解码器（Decoder）重了太多。这 91.63 毫秒内，GPU 的 CUDA 核心实际上执行了以下复杂的四步操作：
 1) 差分计算（Delta Computing）：将 8,164 个 Token 的原始高精度 KV 矩阵，按照每 256 个 Token 的 Chunk 步长，让后 255 个 Token 逐一与第 1 个锚点（Anchor）做减法，这涉及大量的显存密集型（Memory-bound）读写。
@@ -370,6 +376,15 @@ Average size of KV cache: 20.815464MB
 4)算术比特流打包（torchac bit-packing）：最后，调用你之前匹配到的 Qwen 离线定点整数 CDF 概率查找表，进行高精度的区间划分与位移拼接，最终将 95MB 的庞然大物压缩成 20MB 的 bytes 字节包。
 
 而解码（Decode）只需要拿到 20MB 的包和缩放因子，做一次 torchac 展开和反量化加法，因此 24ms 就能极速搞定。解码阶段只需要做简单的加法还原，且不需要全量扫描寻找最大值。
+```
+> ###  CDF表的泛化能力
+
+自适应动态块算术编码
+```
+
+    new_cdf_key = torchac_cuda.calculate_cdf(new_key, int(key_bins.max()))
+    new_cdf_value = torchac_cuda.calculate_cdf(new_value, int(value_bins.max()))
+    cdf_int = torch.cat([new_cdf_key, new_cdf_value])
 ```
 
 > ### CacheGenConfig
@@ -472,4 +487,17 @@ class CacheGenConfig:
               value_first_bins=32,
               value_second_bins=16
             )
+```
+> ### quant
+
+
+```
+import torch
+
+# 让 PyTorch 底层的 Inductor 后端自动帮你做自动算子融合和显存代码生成
+@torch.compile(mode="max-autotune")
+def prepare_delta_and_quantize(new_key, new_value):
+    # 这里是你的差分和量化处理逻辑
+    ...
+
 ```

@@ -245,7 +245,7 @@ python3 run_cachegen.py \
 
 ```
 
-> ## run
+> ## 基于vllm测试
 
 
 
@@ -304,4 +304,172 @@ root@ubuntu:/workspace/CacheGen#  mkdir -p "$PYTHON_SITE/redis" && touch "$PYTHO
 ```
 root@ubuntu:/workspace/CacheGen# PYTHON_SITE=$(python3 -c "import site; print(site.getsitepackages()[0])")
 root@ubuntu:/workspace/CacheGen# echo "from torchac_cuda import *" > "$PYTHON_SITE/torchac.py"
+```
+
+
+
+> ### run 
+
+ ```
+root@ubuntu:/workspace/CacheGen# mv /workspace/models/Qwen2___5-0___5B-Instruct /workspace/models/qwen2.5-0.5b
+```
+
+```
+python3 main.py --model_id "/workspace/models/qwen2.5-0.5b/" --save_dir "./kv_output" --dataset_name "longchat"
+```
+
+longchat 数据集   
+```
+ls test_data/
+bw.jsonl  generated_trace.jsonl  longchat.jsonl  nqa.jsonl  tqa.jsonl
+```
+
+python3 main.py 生成   
+```
+ls kv_output/
+raw_kv_0.pkl  raw_kv_0.pt
+```
+
+
+```
+root@ubuntu:/workspace/CacheGen# python3 run_cachegen.py     --model_id "/workspace/models/qwen2.5-0.5b"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 1
+```
+
+
+```
+ python3 run_cachegen.py     --model_id "/workspace/models/qwen2.5-0.5b"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 1
+[LMCache Qwen /workspace/models/qwen2.5-0.5b，rename to : Qwen/Qwen2.5-7B-Instruct
+-------------------------------------------------------
+⚡ [CacheGen 算术编码成功]
+   ├─ 处理 Token 长度 (Sequence Length): 8164
+   └─ GPU 算术加密 + 差分量化总耗时: 91.629 毫秒 (ms)
+-------------------------------------------------------
+Running inference for doc_id:  0
+[LMCache Qwen /workspace/models/qwen2.5-0.5b，rename to : Qwen/Qwen2.5-7B-Instruct
+-------------------------------------------------------
+⚡ [CacheGen 算术解码成功]
+   ├─ 处理 Token 长度 (Sequence Length): 8164
+   └─ GPU 算术解压 + 差分还原总耗时: 24.364 毫秒 (ms)
+-------------------------------------------------------
+!!!! use native Transformers load: /workspace/models/qwen2.5-0.5b
+INFO LMCache: We will use 90% of the memory on device 0 for storing the model, and 10% for the buffer to avoid OOM. You can set `max_memory` in to a higher value to use more memory (at your own risk).
+The attention mask is not set and cannot be inferred from input because pad token is same as eos token. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+ The role of art in society. 
+
+USER: Could you please tell me the topic name for the The role of art in society
+Average size of KV cache: 20.815464MB
+```
+
+
+```Text
+在 GPU 算术编码的流水线中，编码器（Encoder）比解码器（Decoder）重了太多。这 91.63 毫秒内，GPU 的 CUDA 核心实际上执行了以下复杂的四步操作：
+1) 差分计算（Delta Computing）：将 8,164 个 Token 的原始高精度 KV 矩阵，按照每 256 个 Token 的 Chunk 步长，让后 255 个 Token 逐一与第 1 个锚点（Anchor）做减法，这涉及大量的显存密集型（Memory-bound）读写。
+2) 寻找动态最大值（Max/Scale Search）：为了执行无损或非对称量化，GPU 必须在每一个数据块内部，使用 Reduce 算子 扫出一层里几万个元素的最大绝对值（Max Value），从而确定这一块量化的缩放因子（Scale）。
+3) 多级量化与符号化（Quantization）：根据你之前在 CacheGenConfig 看到的配置，将浮点数精准揉碎投射到 16 桶（4-bit）或 32 桶（5-bit）的整数槽位中，生成符号数组。
+4)算术比特流打包（torchac bit-packing）：最后，调用你之前匹配到的 Qwen 离线定点整数 CDF 概率查找表，进行高精度的区间划分与位移拼接，最终将 95MB 的庞然大物压缩成 20MB 的 bytes 字节包。
+
+而解码（Decode）只需要拿到 20MB 的包和缩放因子，做一次 torchac 展开和反量化加法，因此 24ms 就能极速搞定。解码阶段只需要做简单的加法还原，且不需要全量扫描寻找最大值。
+```
+
+> ### CacheGenConfig
+
+
+```
+./LMCache/lmcache/storage_backend/serde/cachegen_encoder.py
+./LMCache/lmcache/storage_backend/serde/cachegen_decoder.py
+```
+
+
+```
+@_lmcache_nvtx_annotate
+    def from_bytes(self, bs: bytes) -> torch.Tensor:
+        # 1. 初始化 GPU 高精度计时事件
+        start_event = torch.cuda.Event(enable_timing=True)
+        end_event = torch.cuda.Event(enable_timing=True)
+        encoder_output = CacheGenGPUEncoderOutput.from_bytes(bs)
+        encoder_output.max_tensors_key = encoder_output.max_tensors_key.cuda()
+        encoder_output.max_tensors_value = encoder_output.max_tensors_value.cuda()
+
+        ntokens = encoder_output.max_tensors_key.shape[1]
+        layers_in_key = encoder_output.max_tensors_key.shape[0]
+        # 2. ⏳ 启动计时：紧紧包裹住最核心的 GPU 解码算子
+        start_event.record()
+        key, value = decode_function_gpu(
+                encoder_output.cdf,
+                encoder_output.data_chunks,
+                layers_in_key,
+                ntokens,
+                self.get_output_buffer(encoder_output.cdf.shape[0] // 2, encoder_output.cdf.shape[1], ntokens)
+            )
+        # 3. ⏳ 结束计时并强行同步 GPU 核心
+        end_event.record()
+        torch.cuda.synchronize()  # 💡 极其关键：必须同步，否则测出来的是异步发射时间，会趋近于 0
+
+        # 4. 计算并打印结果
+        elapsed_time_ms = start_event.elapsed_time(end_event)
+
+        print("-" * 55)
+        print(f"⚡ [CacheGen 算术解码成功]")
+        print(f"   ├─ 处理 Token 长度 (Sequence Length): {ntokens}")
+        print(f"   └─ GPU 算术解压 + 差分还原总耗时: {elapsed_time_ms:.3f} 毫秒 (ms)")
+        print("-" * 55)
+
+        key = do_dequantize(key, self.key_bins, encoder_output.max_tensors_key)
+        value = do_dequantize(value, self.value_bins, encoder_output.max_tensors_value)
+
+        ''' merge key and value back and reshape '''
+        nlayers, ntokens, nchannels = key.shape
+        rng = nvtx.start_range("stack KV")
+        blob = torch.stack([key, value]) # [2, nlayers, ntokens, nchannels] 
+        nvtx.end_range(rng)
+        blob = blob.reshape((2, nlayers, ntokens, encoder_output.num_heads, encoder_output.head_size))\
+
+        match self.fmt:
+            case "vllm":
+                return blob.permute((1, 0, 2, 3, 4)).to(torch.bfloat16) # [nlayers, 2, ntokens, num_heads, head_size]
+            case "huggingface":
+                return blob.permute((1, 0, 3, 2, 4)).to(torch.float16) # [nlayers, 2, num_heads, ntokens, head_size]
+                                                                                                                       
+```
+
+```
+class CacheGenConfig:
+    # TODO: move this class to another file like "cachegen_basics.py"
+    key_first_layers: int
+    key_second_layers: int
+    key_third_layers: int
+    key_first_bins: int
+    key_second_bins: int
+    key_third_bins: int
+    value_first_layers: int
+    value_first_bins: int
+    value_second_bins: int
+
+    def __getitem__(self, key: str) -> int:
+        return getattr(self, key)
+
+    @staticmethod
+    def from_model_name(model_name: str) -> "CacheGenConfig":
+        family_7b = ["mistralai/Mistral-7B-Instruct-v0.2",
+                     "mistral-community/Mistral-7B-v0.2",
+                      "lmsys/longchat-7b-16k"]
+        family_70b = ["Yukang/LongAlpaca-70B-16k"]
+        if model_name.startswith("/") or "qwen" in model_name.lower():
+            print(f"[LMCache Qwen {model_name}，rename to : Qwen/Qwen2.5-7B-Instruct")
+            model_name = "Qwen/Qwen2.5-7B-Instruct"
+            return CacheGenConfig(
+              # ==== Key 缓存分层配置 (总共24层) ====
+              key_first_layers=10,       # 0~9 层使用第一套 CDF 概率表
+              key_second_layers=24,      # 10~23 层使用第二套 CDF 概率表
+              key_third_layers=24,       # 小模型没有第3组，设为与总层数一致防止越界
+              key_first_bins=32,
+              key_second_bins=32,
+              key_third_bins=16,
+              # ==== Value 缓存分层配置 ====
+              value_first_layers=12,     # 0~11 层使用第一套 Value CDF
+              # 如果它的代码里还有 value_second_layers 参数，记得也改成 24。
+              value_first_bins=32,
+              value_second_bins=16
+            )
 ```

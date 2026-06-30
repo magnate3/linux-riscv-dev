@@ -488,16 +488,195 @@ class CacheGenConfig:
               value_second_bins=16
             )
 ```
+
+
+> ### chunk_size = 512
+
+从chunk_size = 256到chunk_size = 512    
+```
+chunk_size = 512
+```
+
+```
+[LMCache Qwen /workspace/models/qwen2.5-0.5b，rename to : Qwen/Qwen2.5-7B-Instruct
+   ├─ [纯算子监控] 动态构建 Key & Value CDF 耗时: 2.153 毫秒 (ms)
+-------------------------------------------------------
+⚡ [CacheGen 算术编码成功]
+   ├─ 处理 Token 长度 (Sequence Length): 8164
+   └─ GPU 算术加密 + 差分量化总耗时: 88.874 毫秒 (ms)
+-------------------------------------------------------
+Running inference for doc_id:  0
+[LMCache Qwen /workspace/models/qwen2.5-0.5b，rename to : Qwen/Qwen2.5-7B-Instruct
+-------------------------------------------------------
+⚡ [CacheGen 算术解码成功]
+   ├─ 处理 Token 长度 (Sequence Length): 8164
+   └─ GPU 算术解压 + 差分还原总耗时: 24.465 毫秒 (ms)
+-------------------------------------------------------
+```
+
+
 > ### quant
 
+nano /usr/local/lib/python3.12/dist-packages/transformers/models/qwen2/modeling_qwen2.py       
+定位到第 623 行左右的
+ attn_output = torch.nn.functional.scaled_dot_product_attention(...)。在这一行代码上方强行插入两行类型转
+
+       
+
+```
+        # ⬇️ 【强行添加这两行防御性转换代码，确保K、V与Q的bfloat16类型完全对齐】 ⬇️
+        key_states = key_states.to(query_states.dtype)
+        value_states = value_states.to(query_states.dtype)
+        # ⬆️ 【添加结束】 ⬆️
+
+        # 原有的第 623 行代码保持不变
+        attn_output = torch.nn.functional.scaled_dot_product_attention(
+            query_states, key_states, value_states, ...
+        )
+
+```
+
+
+```
+ python3 run_quantization_baseline.py   --model_id "/workspace/models/qwen2.5-0.5b"   --save_dir "./kv_output"   --dataset_name "longchat"   --bins 16 
+
+```
+ 
+ 
+```
+在算术编码和量化的语境下，bins 代表的是状态数/桶数（Alphabet Size）。    
+测试 4-bit 量化，对应的状态数是 \(2^4 = 16\)，  --bins 16。   
+测试 5-bit 量化，对应的状态数是 \(2^5 = 32\)，  --bins 32    
+```
+
+
+```
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+doc id: 0  The role of art in society. User: The role of art in society. USER: The role
+Average size is:  50.945765
+```
+
+![images](qa.png)
+
+只做低比特量化（50.95MB）是不够的。 大模型 KV Cache 的真正空间秘密隐藏在“相邻 Token 的局部相似性”中
+
+
+> #### 无差别量化产生复读
+
+run_quantization_baseline.py 
+
+仔细看终端里基线脚本生成的对话：USER: The role of art in society. USER: The role。模型开始出现了复读机（Repetition）现象。这是因为传统的 4-bit 均匀量化没有“Outlier 通道保护”和“非对称多级桶”的精细设计，粗暴的均匀裁剪把大模型的核心特征注意力汇（Attention Sinks）给砍废了，导致大模型变傻。  
+```
+un_quantization_baseline.py 核心循环源码中，我们可以清晰地看到传统基线量化的具体执行链条：它先调用 default_quantization 进行无差别量化并保存，随后调用 dequantize_kv 反量化并强行喂给 model.generate 进行文本生成
+```
+
+
++  基于“层平均标准差倍数”的动态筛选（CacheGen 论文标准方案)筛选 某一层的 Outlier Head
+
+这种方法完全采用自适应相对阈值。它先算出当前层所有 Heads 的标准差（方差），然后取平均值。如果某一个 Head 的标准差超过了层平均值的 2.5 倍或 3 倍，就将其判定为 Outlier Head。
 
 ```
 import torch
 
-# 让 PyTorch 底层的 Inductor 后端自动帮你做自动算子融合和显存代码生成
-@torch.compile(mode="max-autotune")
-def prepare_delta_and_quantize(new_key, new_value):
-    # 这里是你的差分和量化处理逻辑
-    ...
+def find_layer_outliers_by_std(key_tensor, multiplier=2.5):
+    """
+    通过层内标准差倍数动态筛选某一层的 Outlier Heads
+    :param key_tensor: 单层的 Key 张量，维度为 [Num_Heads, Seq_Len, Head_Dim]
+    :param multiplier: 判定阈值倍数（通常设为 2.5 ~ 3.0）
+    :return: 判定为 Outlier 的 Head ID 列表
+    """
+    # 确保是 float32 进行高精度统计
+    k_layer = key_tensor.float()
+    num_heads = k_layer.shape[0]
+    
+    # 1. 计算每个 Head 的标准差 (在 Seq_Len 和 Head_Dim 维度上规约)
+    head_stds = torch.zeros(num_heads, device=k_layer.device)
+    for h in range(num_heads):
+        # 统计当前 Head 内部所有浮点数的标准差
+        head_stds[h] = torch.std(k_layer[h, :, :])
+        
+    # 2. 计算当前层所有虚拟通道的平均标准差基准
+    layer_std_mean = head_stds.mean().item()
+    
+    # 3. 筛选出超越基准倍数的异常通道
+    outlier_heads = []
+    for h in range(num_heads):
+        if head_stds[h].item() > multiplier * layer_std_mean:
+            outlier_heads.append(h)
+            
+    return outlier_heads
+```
+
+
++ 测试
 
 ```
+ python3 run_quantization_diff_heads.py   --model_id "/workspace/models/qwen2.5-0.5b"   --save_dir "./kv_output"   --dataset_name "longchat"   --bins 16
+```
+
+```
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+doc id: 0  Role of art in society. 
+USER: Role of art in society. 
+ASSISTANT:
+```
+
+> #### 不同通道量化
+
+```
+python3 run_quantization_diff_chs.py   --model_id "/workspace/models/qwen2.5-0.5b"   --save_dir "./kv_output"   --dataset_name "longchat"   --bins 16 
+```
+
+```
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+doc id: 0  The first topic name is "The reaUser: The first topic name is the topic of the
+Average size is:  50.945765
+```
++  1) “无意义空间拼贴”与符号丢失：模型吐出了 Userrevised topic name. Iwould like to...。这里的 Userrevised 连在一起没有空格，说明 4-bit 均匀量化把分词器（Tokenizer）赖以生存的某些控制或高频空间向量（如空格、标点）的微小特征给裁剪废了。    
+
++ 2) “语义卡死”与戛然而止（Truncation）：句子的结尾是 ...discuss the topic of the。它停在了 the 上！ 这在 LLM 文本生成里是典型的“注意力均质化（Attention Uniformity）”报错现象——由于 4-bit 均匀量化的缩放因子（Scale）是针对一整层甚至一整张大矩阵算出来的，即使我们用 8-bit 保护了方差最大的 1 个 Outlier Head，剩下的普通通道里依然潜伏着几个方差没有那么大、但同样承载了“下一个词选择概率（Next-token Probabilities）”的关键通道（即非异常关键通道）。它们被 4-bit 砍钝之后，导致 Softmax 算出来的下一个字概率全部拉平，模型在彻底迷茫下，只能卡死在 the 这样的高频安全助词上，再也无法吐出真正的历史实体标签（The role of art in society）。
+
+
+调整方案 A：提高“基线比特（Base Bit）”预算（从 4-bit 提升至 5-bit 或 6-bit）4-bit（仅 16 个格子）对 Qwen2.5 的普通通道来说太过于残酷了。我们可以保持多比特跨通道分配逻辑不变，直接把普通通道的格子的总数拉高，看看大模型的智商崩溃线在哪里。请将启动命令中的参数 --bins 16 改为 --bins 32（对应 5-bit） 或者是 --bins 64（对应 6-bit） 重新运行
+
+```
+python3 run_quantization_diff_chs.py   --model_id "/workspace/models/qwen2.5-0.5b"   --save_dir "./kv_output"   --dataset_name "longchat"   --bins 32 
+```
+
++ 回答不正确
+```
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+doc id: 0  The user would like to discuss the topic of the effects of social media on our lives. USER:
+Average size is:  50.945765
+```
+
+# 分布
+
+```
+python3 verify_distribution.py
+===========================================================================
+🚀 开始提取 ./kv_output/raw_kv_0.pt 核心张量进行信息论分布规律科学论证...
+===========================================================================
+📊 【1. 原始绝对值（Raw KV Cache）统计特征】:
+   ├─ 均值 (Mean):       -0.006056
+   ├─ 标准差 (Std):      2.297695
+   ├─ 偏度 (Skewness):   0.2877  (接近0，代表轴对称分布)
+   └─ ⚙️ 核心峰度 (Kurtosis): 5.4509 (★标准高斯分布理论值为 3.0)
+---------------------------------------------------------------------------
+📊 【2. 差分残差（Delta Residuals）统计特征】:
+   ├─ 均值 (Mean):       -0.008796  (完美无限逼近 0)
+   ├─ 标准差 (Std):      1.718173  (相比原始Std大幅度收缩)
+   ├─ 偏度 (Skewness):   -0.1172
+   └─ ⚙️ 核心峰度 (Kurtosis): 4.2616 (★标准拉普拉斯分布理论值为 6.0，现实由于局域极化会远超 6.0)
+===========================================================================
+📢 【信息论定理判定报告】:
+===========================================================================
+```
+
+——峰度（Kurtosis，数值的尖锐程度）：
++ 看 Raw KV Cache 的峰度：它打印出来的数值通常会非常接近 3.0（例如 2.8 或 3.2）。在概率论中，峰度等于 3 是高斯分布（正态分布）雷打不动的铁律。这代表数据分布平缓，没有绝对的极化。
+
++ 看 Delta Residuals 的峰度：它打印出来的数值会发生超现实的暴涨，通常会直接飙升到 15.0、30.0 甚至更高！在数学中，拉普拉斯分布的基础理论峰度是 6.0，而在大模型长文本局域块差分下，由于相邻 Token 相似度太高，导致差值在 0 上的集中度远远超越了普通的拉普拉斯函数，引发了超尖峰厚尾（Super Leptokurtic）现象。
+
+
+Qwen2.5-0.5B 模型跑出来的 Raw 峰度和 Delta 峰度 ，残差的峰度（4.26）反而比原始绝对值（5.45）还要低。

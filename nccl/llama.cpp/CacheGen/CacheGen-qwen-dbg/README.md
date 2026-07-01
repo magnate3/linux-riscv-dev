@@ -181,3 +181,52 @@ Average size of KV cache: 178.13752MB
 ```
 
 ![images](cmp.png)
+
+#  离群通道（Outliers）检测
+
+
+```
+python3 extract_topk_outliers.py 
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.02s/it]
+✅ 成功读取本地数据集 'test_data/longchat.jsonl'
+成功加载 LongChat 任务文本，Token 总序列长度 (Seq_Len): 8903
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+KV 巨张量构建成功，最终 Key 形状: torch.Size([32, 8, 8903, 128])
+🚀 全局 Key Cache 离群通道索引 (Top 1%): [127]
+
+--- 逐层离群通道分析 (Top 2%): ---
+Layer 00 Outliers Indices: [0, 64]
+Layer 01 Outliers Indices: [0, 64]
+Layer 02 Outliers Indices: [62, 123]
+Layer 03 Outliers Indices: [57, 118]
+Layer 04 Outliers Indices: [54, 61]
+Layer 05 Outliers Indices: [118, 126]
+Layer 06 Outliers Indices: [58, 122]
+Layer 07 Outliers Indices: [126, 127]
+Layer 08 Outliers Indices: [60, 120]
+Layer 09 Outliers Indices: [60, 63]
+Layer 10 Outliers Indices: [123, 127]
+Layer 11 Outliers Indices: [62, 127]
+Layer 12 Outliers Indices: [62, 127]
+Layer 13 Outliers Indices: [55, 125]
+Layer 14 Outliers Indices: [61, 62]
+Layer 15 Outliers Indices: [120, 127]
+Layer 16 Outliers Indices: [59, 123]
+Layer 17 Outliers Indices: [56, 120]
+Layer 18 Outliers Indices: [60, 127]
+Layer 19 Outliers Indices: [55, 126]
+Layer 20 Outliers Indices: [56, 120]
+Layer 21 Outliers Indices: [56, 120]
+Layer 22 Outliers Indices: [121, 126]
+Layer 23 Outliers Indices: [57, 121]
+Layer 24 Outliers Indices: [56, 57]
+Layer 25 Outliers Indices: [57, 121]
+Layer 26 Outliers Indices: [57, 121]
+Layer 27 Outliers Indices: [57, 121]
+Layer 28 Outliers Indices: [58, 122]
+Layer 29 Outliers Indices: [123, 127]
+Layer 30 Outliers Indices: [56, 120]
+Layer 31 Outliers Indices: [56, 120]
+```
+
+![images](outliers.png)

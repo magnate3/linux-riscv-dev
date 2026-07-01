@@ -100,6 +100,39 @@ Starting from v4.46, the `logits` model output will have the same type as the mo
 🎉 [作图分析完成] 可视化全景对比图已成功保存至本地：'cachegen_delta_analysis.png'
 ```
 
+> ##   python3 ana_layers_entropy_v2.py 
+```
+ python3 ana_layers_entropy_v2.py  
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.04s/it]
+✅ 成功读取本地数据集 'test_data/longchat.jsonl'
+Starting from v4.46, the `logits` model output will have the same type as the model (except at train time, where it will always be FP32)
+
+🚀 开始全层动态熵扫描，正在分析分层异构特性...
+
+🚀 [全局修正版] 开始全通道拉通求和扫描，正在剔除单一通道偏斜...
+  [Layer 00] 宏观平均原始熵: 7.106 bits | 差分熵: 6.373 bits | 稳健收益: 0.733 bits
+  [Layer 04] 宏观平均原始熵: 6.869 bits | 差分熵: 6.576 bits | 稳健收益: 0.294 bits
+  [Layer 08] 宏观平均原始熵: 6.974 bits | 差分熵: 6.607 bits | 稳健收益: 0.367 bits
+  [Layer 12] 宏观平均原始熵: 6.777 bits | 差分熵: 6.527 bits | 稳健收益: 0.250 bits
+  [Layer 16] 宏观平均原始熵: 6.831 bits | 差分熵: 6.603 bits | 稳健收益: 0.228 bits
+  [Layer 20] 宏观平均原始熵: 6.806 bits | 差分熵: 6.635 bits | 稳健收益: 0.171 bits
+  [Layer 24] 宏观平均原始熵: 6.916 bits | 差分熵: 6.592 bits | 稳健收益: 0.323 bits
+  [Layer 28] 宏观平均原始熵: 6.888 bits | 差分熵: 6.703 bits | 稳健收益: 0.185 bits
+  [Layer 31] 宏观平均原始熵: 6.892 bits | 差分熵: 6.570 bits | 稳健收益: 0.322 bits
+
+======================================================================
+📊 CACHEGEN “分层异构敏感度” 铁律定性验证报告
+======================================================================
+【模型浅层（0-09层）】平均差分编码收益: 0.4334 bits
+【模型深层（22-31层）】平均差分编码收益: 0.2519 bits
+----------------------------------------------------------------------
+🔥 终极科研结论：
+【❓ 规律持平】请检查长文本语料语义是否过于单一。
+======================================================================
+
+🎉 [趋势分析完成] 全层敏感度曲线图已保存至本地：'cachegen_layer_sensitivity_trend.png'
+```
+
 # quant
 
 ```

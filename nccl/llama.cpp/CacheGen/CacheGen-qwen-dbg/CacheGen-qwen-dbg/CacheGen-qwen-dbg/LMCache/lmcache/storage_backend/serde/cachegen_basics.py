@@ -29,7 +29,8 @@ class CacheGenConfig:
                      "mistral-community/Mistral-7B-v0.2",
                       "lmsys/longchat-7b-16k"]
         family_70b = ["Yukang/LongAlpaca-70B-16k"]
-        if model_name.startswith("/") or "qwen" in model_name.lower():
+        #if model_name.startswith("/") or "qwen" in model_name.lower():
+        if  "qwen" in model_name.lower():
             print(f"[LMCache Qwen {model_name}，rename to : Qwen/Qwen2.5-7B-Instruct")
             model_name = "Qwen/Qwen2.5-7B-Instruct"
             return CacheGenConfig(

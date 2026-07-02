@@ -4,6 +4,36 @@
 modelscope download --model 'AI-ModelScope/Mistral-7B-v0.1' --cache_dir '/workspace/models/Mistral-7B-v0.1'
 ```
 
+# 告警屏蔽
+
+The attention mask and the pad token id were not set. As a consequence, you may observe unexpected behavior. Please pass your input's `attention_mask` to obtain reliable results.
+Setting `pad_token_id` to `eos_token_id`:None for open-end generation.
+
+
+
+```
+# ------------ 找到原本的这一行 ------------
+# adapt_output = model.generate(input_ids, past_key_values=concated_kv, max_new_tokens=20)
+
+# ------------ 修改为以下形式 ------------
+# 1. 动态生成 input_ids 对应的 attention_mask（1 表示有效 token）
+attention_mask = torch.ones_like(input_ids).cuda()
+
+# 2. 获取 tokenizer 的 pad_token_id。如果它没有设置，则自动安全地回退到 eos_token_id
+pad_token_id = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
+
+# 3. 将这两个参数显式传给 generate
+adapt_output = model.generate(
+    input_ids, 
+    past_key_values=concated_kv, 
+    max_new_tokens=20,
+    attention_mask=attention_mask,   # 解决警告的前半句
+    pad_token_id=pad_token_id        # 解决警告的后半句
+)
+```
+
+
+
 # calculate_shannon_entropy
 
 ```

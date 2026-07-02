@@ -171,7 +171,7 @@ Average size is:  584.543333
 + cacheGen
 
 ```
-root@ubuntu:/workspace/CacheGen# python3 run_cachegen.py     --model_id "/workspace/models/qwen2.5-0.5b"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 1
+root@ubuntu:/workspace/CacheGen# python3 run_cachegen.py     --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 1
 ```
 
 ```
@@ -181,6 +181,248 @@ Average size of KV cache: 178.13752MB
 ```
 
 ![images](cmp.png)
+
+
+# 多个doc
+
+ 
+ 
+```
+python3 main.py --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1/" --save_dir "./kv_output"  --dataset_name "longchat"  --start 0     --end 10
+```
+
+
+
+
+
+先测试前5个doc   
+```
+ 
+ python3 run_mistralai_mdoc_cachegen.py   --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"   --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output/"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 5
+```
+
+```
+Running inference for doc_id: 0
+The first topic we discussed was the future of renewable energy technology. What is the second topic we The role of art in society
+Running inference for doc_id: 1
+The first topic we discussed was the future of sustainable agriculture. USER: What is the second topic The benefits of regular exercise
+Running inference for doc_id: 2
+The first topic we discussed was the benefits of volunteering. What is the second topic we discussed? The impact of social media on mental health in adults
+Running inference for doc_id: 3
+The first topic we discussed was the benefits of reading for pleasure. USER: Great, this is The benefits of mindfulness meditation
+Running inference for doc_id: 4
+The first topic we discussed was the benefits of mindfulness meditation. What is the second topic we discussed The impact of technology on human connection
+Average size of KV cache: 178.96410600000002MB
+```
+> ## test2
+
+
+```
+python3 cachegen.py   --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./quants"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 5
+```
+
+或者
+```
+python3 run_cachegen.py   --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./quants"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 5
+```
+
+# chunk
+
+
+```
+export QUANT_LEVEL=3
+```
+ 
+```
+python3 main.py --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1/" --save_dir "./kv_output"  --dataset_name "longchat"  --start 0     --end 10
+```
+
+先测试前5个doc   
+```
+ 
+ python3 run_mistralai_real_chunk_cachegen.py   --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1" --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output/"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 5
+```
+
+
+```
+Running inference for doc_id: 0
+
+The first topic we discussed was the topic of the future of renewable energy technology. What is the The role of art in society
+Running inference for doc_id: 1
+The first topic we discussed was the future of space tourism. USER: Great, this is The benefits of regular exercise
+Running inference for doc_id: 2
+The first topic we discussed was the benefits of volunteering. USER: Great, this is the The impact of social media on mental health in adults
+Running inference for doc_id: 3
+The first topic we discussed was the benefits of reading for pleasure. USER: Great, this is The benefits of mindfulness meditation
+Running inference for doc_id: 4
+The first topic we discussed was the benefits of mindfulness meditation. What is the second topic we discussed The impact of technology on human connection
+Average size of KV cache: 10.642928711864407MB
+```
+
+# run_adaptation.py
+
+run_adaptation.py是为了解决“网络带宽（Bandwidth）动态波动”对大模型 Time-to-First-Token (TTFT) 的影响,通过 os.environ["QUANT_LEVEL"] = str(best_q_level)实现        
+1） 预分块 + 多量化级存储：在请求到来前，将 Context 预先切成 256 大小的 chunk，并且每一个 chunk 都同时生成好不同压缩率（例如 QUANT_LEVEL = 1, 2, 3）的二进制文件。    
+2） 模拟带宽动态适应（Adaptive Streaming）：在解码阶段，系统读取一个描述网络带宽变化的 trace 文件。对于每一个分块，根据当前的即时带宽，动态挑出一个能保证延迟最低的量化级别文件进行解码。若带宽差到极致，甚至会降级为传输 Text 并现场重算
+
+
+```
+cat /workspace/CacheGen/scripts/adapt.sh
+export MODEL=mistral-community/Mistral-7B-v0.2
+
+python run_adaptation.py \
+--model_id ${MODEL} \
+--num_gpus 1 \
+--dataset_name longchat \
+--save_dir ${SAVE_DIR}/${MODEL}_encoded \
+--start 0 \
+--end 50 \
+--slo 0.5 \
+--encode
+
+
+python run_adaptation.py \
+--model_id ${MODEL} \
+--num_gpus 1 \
+--dataset_name longchat \
+--save_dir ${SAVE_DIR}/${MODEL}_encoded \
+--start 0 \
+--end 50 \
+--slo 0.5 \
+--chunk_size 1500 \
+--total_traces 5 \
+--calculate_metric 1 
+```
+
+--calculate_metric 1
+```
+python run_adaptation.py \
+    --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1" \
+    --dataset_name "longchat" \
+    --save_dir "./kv_output" \
+    --start 0 \
+    --end 10 
+
+    
+
+```
+`查看测试结果 cat test_data/generated_trace.jsonl`
+
+> ## chunk文件
+
+```
+File "/workspace/CacheGen/src/utils.py", line 347, in config_selection
+    bytestream = pickle.load(open(f"{args.save_dir}/{doc_id}_{chunk_id}_{quant_level}.pkl", "rb"))
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: './kv_output/0_0_3.pkl
+```
+
+> ## 测试1
+
+```
+python3 main.py --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1/" --save_dir "./kv_output"  --dataset_name "longchat"  --start 0     --end 10
+```
+
+```
+export QUANT_LEVEL=3
+```
+```
+python3 run_mistralai_real_chunk_cachegen.py   --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"     --save_dir "./kv_output"     --num_gpus 1     --encoded_dir "./encoded_output/"     --results_dir "./res_output"     --dataset_name "longchat"         --start 0     --end 5
+```
+
+```
+ python3 run_adaptation.py     --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"     --dataset_name "longchat"     --save_dir "./kv_output"   --encoded_dir "./encoded_output"   --start 0     --end 5
+```
+
+
+
+```
+Doc 0 Prediction: The first topic we discussed was the topic of the future of renewable energy technology. What is the
+Doc 1 Prediction: The first topic we discussed was the future of space tourism. USER: Great, this is
+Doc 2 Prediction: The first topic we discussed was the benefits of volunteering. USER: Great, this is the
+Doc 3 Prediction: The first topic we discussed was the benefits of reading for pleasure. USER: Great, this is
+Doc 4 Prediction: The first topic we discussed was the benefits of mindfulness meditation. What is the second topic we discussed
+```
+
+> ## 测试2 (胡言乱语)
+
+```
+python3 main.py --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1/" --save_dir "./kv_output"  --dataset_name "longchat"  --start 0     --end 10
+```
+
+先测试前5个doc 
++ 生成adp_dir目录下的数据   
+```
+ python3 run_pre_encode.py --save_dir ./kv_output/ --encoded_dir ./adp_dir --start 0 --end 5
+```
+
+```
+ python3 run_adaptation.py     --model_id "/workspace/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1"     --dataset_name "longchat"     --save_dir "./kv_output"   --encoded_dir "./adp_dir"   --start 0     --end 5
+```
+
+```
+Doc 0 Prediction: 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Doc 1 Prediction: 
+
+              * * *  
+Doc 2 Prediction: 
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Doc 3 Prediction:                    
+Doc 4 Prediction: 
+
+
+    
+
+
+
+ ( ( (
+```
+
+```
+cat test_data/generated_trace.jsonl
+{"doc_id": 0, "chunk_id": 0, "bandwidth_mbps": 3.286519125892673, "selected_quant_level": 2, "size_bytes": 9074786, "estimated_delay_ms": 22091.22022345408}
+{"doc_id": 0, "chunk_id": 1, "bandwidth_mbps": 5.543967943158813, "selected_quant_level": 2, "size_bytes": 8911813, "estimated_delay_ms": 12861.333377640023}
+{"doc_id": 0, "chunk_id": 2, "bandwidth_mbps": 5.370697712297518, "selected_quant_level": 2, "size_bytes": 8945559, "estimated_delay_ms": 13326.486032286968}
+```
+
 
 #  离群通道（Outliers）检测
 

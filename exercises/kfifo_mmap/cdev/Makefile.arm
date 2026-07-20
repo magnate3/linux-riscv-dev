@@ -1,0 +1,20 @@
+export LOPHILO_TARGET_ARCH=arm
+include ../Makefile.common
+
+export PATH:=${TOOLCHAIN_PATH}:${PATH}
+obj-m += lophilo.o
+lophilo_arm.ko: lophilo.c
+	make V=1 ARCH=arm -C ${HOME}/lophilo/obj/linux M=$(PWD) modules
+
+install: lophilo_arm.ko lophilo_user
+	sudo cp lophilo.ko ../../lophilo-OS.nfs/
+	sudo cp lophilo_user ../../lophilo-OS.nfs/
+	@echo "on the target system:"
+	@echo "	insmod lophilo.ko"
+	@echo "	sudo mknod -m 0666 /dev/lophilo c 126 0"
+	@echo "	sudo cat /dev/lophilo"
+
+lophilo_user: lophilo_user.c
+	gcc -g lophilo_user.c -o lophilo_user
+
+

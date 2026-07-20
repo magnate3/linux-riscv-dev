@@ -1,0 +1,12 @@
+*~
+*.o
+.*.o.cmd
+*.ko
+.*.ko.cmd
+*.mod.c
+*.mod.o
+.tmp_versions/
+Makefile.local
+modules.order
+Module.symvers
+ptdump_cli

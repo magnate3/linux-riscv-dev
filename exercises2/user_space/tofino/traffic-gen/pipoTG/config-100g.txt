@@ -1,0 +1,18 @@
+ucli
+pm
+port-del 23/-  100G 
+port-del 25/-  100G  
+port-del 27/-  100G  
+port-del 29/-  100G 
+port-del 31/-  100G 
+port-add 23/-  100G  rs
+port-add 25/-  100G  rs
+port-add 27/-  100G  rs
+port-add 29/-  100G  rs
+port-add 31/-  100G  rs
+an-set -/- 2
+port-enb -/-
+show -a
+end
+exit
+exit

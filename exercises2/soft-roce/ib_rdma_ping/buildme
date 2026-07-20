@@ -1,0 +1,9 @@
+#
+# pkg needed -> rdma-core-devel
+#
+
+gcc -c rcommon.c -w -o rcommon.o -lpthread -lrdmacm -libverbs
+gcc -c rserver.c -w -o rserver.o -lpthread -lrdmacm -libverbs
+gcc -c rclient.c -w -o rclient.o -lpthread -lrdmacm -libverbs
+gcc -c rping.c -w -o rping.o -lpthread -lrdmacm -libverbs
+gcc rcommon.o rserver.o rclient.o rping.o -o rping_test -lpthread -lrdmacm -libverbs

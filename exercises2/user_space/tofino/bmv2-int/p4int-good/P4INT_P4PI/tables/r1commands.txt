@@ -1,0 +1,24 @@
+#L3 forwading
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.3.0/24 => d8:3a:dd:11:7a:de 1
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.4.0/24 => d8:3a:dd:11:7a:de 1
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.2.0/24 => d8:3a:dd:11:7a:de 1
+table_add l3_forward.ipv4_lpm ipv4_forward 10.0.1.9/32 => 38:a2:8c:90:60:6c 0
+#set up process_int_source_sink
+table_add process_int_source_sink.tb_set_source int_set_source 1 => 
+
+#set up switch ID
+table_set_default process_int_transit.tb_int_insert init_metadata 1
+
+#ARP
+table_add arpreply.arp_exact arp_reply 10.1.0.1 => b8:27:eb:83:45:95
+table_add arpreply.arp_exact arp_reply 10.0.1.1 => 3e:90:87:5f:dc:af
+table_add arpreply.arp_exact arp_reply 10.0.1.9 => 38:a2:8c:90:60:6c
+
+#port PostGreSQL 5432
+table_add process_int_source.tb_int_source int_source 10.0.1.9&&&0xFFFFFF00 10.0.4.2&&&0xFFFF0000 0x00&&&0x00 0x1538&&&0xFFFF => 11 10 0xF 0xF 10
+#port HTTPS 443
+table_add process_int_source.tb_int_source int_source 10.0.1.9&&&0xFFFFFF00 10.0.4.2&&&0xFFFF0000 0x00&&&0x00 0x01BB&&&0xFFFF => 11 10 0xF 0xF 10
+#port HTTP 80
+table_add process_int_source.tb_int_source int_source 10.0.1.9&&&0xFFFFFF00 10.0.4.2&&&0xFFFF0000 0x00&&&0x00 0x0050&&&0xFFFF => 11 10 0xF 0xF 10
+#any port
+table_add process_int_source.tb_int_source int_source 10.0.1.9&&&0xFFFFFF00 10.0.4.2&&&0xFFFF0000 0x00&&&0x00 0x00&&&0x00 => 11 10 0xF 0xF 10

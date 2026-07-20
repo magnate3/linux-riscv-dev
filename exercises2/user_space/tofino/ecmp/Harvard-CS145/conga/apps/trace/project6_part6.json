@@ -1,0 +1,99 @@
+{
+    "flow_groups": [
+        {
+            "start_time": 0,
+            "length": 300000000,
+            "src_host_list": ["h1"],
+            "dst_host_list": ["h5"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+        {
+            "start_time": 0,
+            "length": 300000000,
+            "src_host_list": ["h2"],
+            "dst_host_list": ["h6"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+        {
+            "start_time": 0,
+            "length": 300000000,
+            "src_host_list": ["h3"],
+            "dst_host_list": ["h7"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+        {
+            "start_time": 0,
+            "length": 300000000,
+            "src_host_list": ["h4"],
+            "dst_host_list": ["h8"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 300000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        }
+    ],
+    "mc_host_list": [],
+    "mc_gap_distribution": {
+        "type": "constant",
+        "value": 1000000
+    },
+    "length": 300000000,
+    "output": "./apps/trace/project6_part6.trace"
+}

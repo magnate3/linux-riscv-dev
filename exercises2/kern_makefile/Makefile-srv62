@@ -1,0 +1,22 @@
+MODULE_NAME1 := srv6_tunnel
+MODULE_NAME2 := srv6_hwmac
+CONFIG_IPV6_SEG6_HMAC=y
+CONFIG_IPV6_SEG6_LWTUNNEL=y
+obj-m := $(MODULE_NAME1).o
+obj-m += $(MODULE_NAME2).o
+OBJ_LIST1 := seg6.o  seg6_iptunnel.o seg6_local.o
+$(MODULE_NAME1)-objs := $(OBJ_LIST1)
+OBJ_LIST2 :=   seg6_hmac.o 
+$(MODULE_NAME2)-objs := $(OBJ_LIST2)
+
+
+ccflags-y := -O2
+#ccflags-y                               += -I$(src)
+KERNELDIR := /lib/modules/$(shell uname -r)/build
+
+all: srv6_ko
+
+srv6_ko:
+	make -C $(KERNELDIR) M=$(PWD) modules
+clean:
+	make -C $(KERNELDIR) M=$(PWD) clean

@@ -1,0 +1,2 @@
+pip install -U tf2onnx -i https://pypi.tuna.tsinghua.edu.cn/simple
+python -m tf2onnx.convert --input frozen_east_text_detection.pb --inputs "input_images:0" --outputs "feature_fusion/Conv_7/Sigmoid:0","feature_fusion/concat_3:0" --output detection.onnx

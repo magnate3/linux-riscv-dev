@@ -1,0 +1,40 @@
+
+port-add 1/- 10G NONE
+port-add 2/- 10G NONE
+port-add 3/- 10G NONE
+port-add 4/- 10G NONE
+port-add 9/- 10G NONE
+port-add 19/0 100G NONE
+port-add 20/0 100G NONE
+port-add 21/0 100G NONE
+port-add 22/0 100G NONE
+port-add 23/0 100G NONE
+port-add 24/0 100G NONE
+port-add 25/0 100G NONE
+port-add 26/0 100G NONE
+port-add 27/0 100G NONE
+port-add 28/0 100G NONE
+port-add 29/0 100G NONE
+port-add 30/0 100G NONE
+an-set 1/- 2
+an-set 2/- 2
+an-set 3/- 2
+an-set 4/- 2
+an-set 9/- 2
+port-enb 1/-
+port-enb 2/-
+port-enb 3/-
+port-enb 4/-
+port-enb 9/-
+port-enb 19/- 
+port-enb 20/- 
+port-enb 21/- 
+port-enb 22/- 
+port-enb 23/- 
+port-enb 24/- 
+port-enb 25/- 
+port-enb 26/- 
+port-enb 27/- 
+port-enb 28/- 
+port-enb 29/- 
+port-enb 30/-

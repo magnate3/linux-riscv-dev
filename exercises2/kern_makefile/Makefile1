@@ -1,0 +1,10 @@
+
+vfio-pci-y := vfio_pci.o vfio_pci_intrs.o vfio_pci_rdwr.o vfio_pci_config.o
+
+obj-$(CONFIG_VFIO_PCI) += vfio-pci.o
+KERNELDIR := /lib/modules/$(shell uname -r)/build
+
+all:
+	make -C $(KERNELDIR) M=$(PWD) modules
+clean:
+	make -C $(KERNELDIR) M=$(PWD) clean

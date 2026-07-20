@@ -1,0 +1,59 @@
+
+1. event的触发条件机涵义
+event的触发是在发送和接收队列的时候把对应的event给到固件的event queue，作为输入传到算法里面
+typedef enum
+{
+    EVNT_NULL       =  0,
+    EVNT_FW         =  1,
+    EVNT_ROCE_CNP   =  2,            // triggered every time a CNP is received
+    EVNT_ROCE_TX    =  3,            // triggered by every burst size(8kB) or everytime a rtt_req are sent (ev_attr_flas == TX_FLAG_RTT_REQ_SENT)? 
+                                     第一个不是每8kB的数据触发一次，而是每4k一次，4k是写死的，和burst_size没关系，发完探测包后立即触发event，4k burst的触发和RTT探测包的触发是独立的，不会互相等待
+                                    　如果同时触发了rtt，会在tx的event里面带对应的flag
+    EVNT_ROCE_ACK   =  4,            // triggered by every ack
+    EVNT_ROCE_NACK  =  5,            // triggered by every nack
+    EVNT_RTT        =  6             // triggered by every rtt ack
+} event_type_enum;
+
+探测包和burst独立
+
+2. events折叠
+多个event依次在一个很短的时间段内收到，不会生成独立event，而是折叠到（coalesced）一个event里
+Not every event will be coalesced, it happens only when events from same flow are next to each other and previous one is about to be handled.
+
+// 类似如下，对于TX/ACK/NACK/CNP events, 只上报第一个折叠了的event的timestamp
+FORCE_INLINE uint32 mlnx_cc_get_roce_first_timestamp() {
+    return mlnx_rd_lcr(FIRST_TIMESTAMP_ADDR);
+}
+
+//只有第一个coalesced event的serial number返回有意义
+FORCE_INLINE uint32 mlnx_cc_get_roce_ack_first_sn() {
+    return mlnx_rd_lcr(FIRST_SN_ADDR);
+}
+后续事件如果折叠，将累加到前面第一个折叠的统计里面
+
+3. DCQCN在关闭情况下，查看依然是打开的
+
+使用如下命令关闭DCQCN
+mlxreg -d /dev/mst/mt41686_pciconf0 -y --set "cmd_type=2" --reg_name PPCC --indexes "local_port=0,pnat=0,lp_msb=0,algo_slot=15,algo_param_index=0"
+但是使用命令检查发现DCQCN依然在in use状态：
+./bluefield2_check_pcc_load
+
+回答：ECE协商会检查如果对端网卡支持相同的PCC算法，否则就会回退到DCQCN。在跑DCQCN的时候，advanced algo bit不会是yes，但是跑自定义算法的时候，确实DCQCN会是yes，这个不是bug。
+如果想确认dc2qcn的算法，不想fall back到dcqcn，可以在algo_wrapper里面不调用default算法，不管algo_type传的是啥，都用dc2qcn
+
+注意：如果是用第二个端口，注意设置local_port=1
+
+4. 打印debug log
+当前PRINTF func是空的，只给simulator使用。如果希望看trace, 可以通过调用PCC_LOG打印
+使用如下命令读：
+fwtrace -d /dev/mst/mt4125_pciconf0 --tracer_mode MEM -i all -s --f cc_image_fw_strings.db -m 0 -l 4
+
+注意：在BF-2 上 --tracer_mode MEM 如果是CX-6 DX上，需要改用 --tracer_mode FIFO，否则追踪不到日志
+
+5. pcc_counter.sh查看收不到rtt的消息
+使用前确认，DOCA PCC是打开的
+sudo mlxreg -d /dev/mst/mt41692_pciconf0 -y --get --op "cmd_type=3" --reg_name PPCC --indexes "local_port=1,pnat=0,lp_msb=0,algo_slot=0,algo_param_index=0"
+“value                 | 0x00000001” means enabled
+
+打开方式： 
+sudo mlxreg -d /dev/mst/mt41692_pciconf0 -y --set  "cmd_type=1" --reg_name PPCC --indexes "local_port=1,pnat=0,lp_msb=0,algo_slot=0,algo_param_index=0"

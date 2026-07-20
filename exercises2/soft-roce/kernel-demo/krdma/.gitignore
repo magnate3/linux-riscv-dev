@@ -1,0 +1,15 @@
+*.o
+*.ko
+*.cmd
+*.mod
+.cache.mk
+Module.symvers
+lkm.mod.c
+lkm.o.ur-safe
+clique.mod.c
+
+.vscode
+ktcp.mod.c
+modules.order
+
+*.mod.c

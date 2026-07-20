@@ -1,0 +1,32 @@
+
+Please enable password-less ssh+sudo, otherwise
+these experiments wouldn't run.
+
+For more info check:
+https://docs.google.com/document/d/1za0qS6-z-14iYQNzf_AsmXm-SMyYxbIjhrOX1fY90d8/edit
+
+TODO:
+Update scripts to use ib_read_bw from
+http://git.openfabrics.org/git?p=~mmarciniszyn/new_ofed/perftest/.git;a=summary
+
+It has cool new features (e.g. run indefinitely, reporting stats every 5s).
+Beware: Make sure #qpairs is always 1.  Otherwise, the utility will report
+numbers that will make your NIC faster than it is.  I got 200Mpps with 64QPs
+at 64Bytes.  Perfect linear scalability, even beyond what your NIC can do! :)
+
+So, ALWAYS use the packet/byte counters from sysfs which the rocestats.py
+and pps.py utilities use.
+
+Example run (compile the utilities from the git repo above)
+Server: triton01
+Client: triton02
+
+Server: for i in {1..4}; do (sudo ./ib_read_bw -t 1024 -p $((18000+$i)) -q 1 -m 1024 &); done
+Client: for i in {1..4}; do (sudo ./ib_read_bw triton01 --run_infinitely -s 64 -p $((18000+$i)) -q 1 -m 1024 &); done
+
+Client: python rocestats.py --dir rx
+Client: python pps.py --dir rx
+
+--
+Vimal <j.vimal@gmail.com>
+

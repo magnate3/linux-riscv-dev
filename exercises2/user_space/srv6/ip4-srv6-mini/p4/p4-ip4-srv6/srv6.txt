@@ -1,0 +1,4 @@
+table_add IngressPipeImpl.fwd forward 0 => 1 0x2630f2feddc1
+table_add IngressPipeImpl.fwd forward 1 => 0 0xe2fc4311c020
+table_add IngressPipeImpl.srv6_encap_v4 IngressPipeImpl.usid_encap_1_v4 10.0.2.1/32 => fc00:1::1  fc00:4::bb
+table_add IngressPipeImpl.srv6_localsid_table srv6_end_dx4 fc00:1::bb/128 0

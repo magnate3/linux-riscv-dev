@@ -1,0 +1,2 @@
+#  Mozilla llamafile团队的优化
+llamafile是Mozilla公司支持的另一个针对模型推理的开源项目，团队中的开发者将部分CPU优化算子贡献到了llama.cpp并提交了PR。也是从SIMD加速和Cache优化两个方向。 

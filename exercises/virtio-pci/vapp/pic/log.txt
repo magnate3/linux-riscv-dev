@@ -1,0 +1,144 @@
+[root@centos7 vapp]# ./vhost -s ./vhost.sock
+Cmd: VHOST_USER_SET_OWNER (0x3)
+Flags: 0x1
+................................................................................
+Processing message: VHOST_USER_SET_OWNER
+_set_owner
+Cmd: VHOST_USER_GET_FEATURES (0x1)
+Flags: 0x1
+u64: 0xd4622eb000000000
+................................................................................
+Processing message: VHOST_USER_GET_FEATURES
+_get_features
+Cmd: VHOST_USER_SET_MEM_TABLE (0x5)
+Flags: 0x1
+nregions: 2
+region: 
+        gpa = 0xFFFF80DF0000
+        size = 51380224
+        ua = 0xffff80df0000
+region: 
+        gpa = 0xFFFF7DCF0000
+        size = 51380224
+        ua = 0xffff7dcf0000
+................................................................................
+Processing message: VHOST_USER_SET_MEM_TABLE
+_set_mem_table
+Got memory.nregions 2
+Cmd: VHOST_USER_SET_VRING_NUM (0x8)
+Flags: 0x1
+state: 0 32768
+................................................................................
+Processing message: VHOST_USER_SET_VRING_NUM
+_set_vring_num
+Cmd: VHOST_USER_SET_VRING_BASE (0xa)
+Flags: 0x1
+state: 0 0
+................................................................................
+Processing message: VHOST_USER_SET_VRING_BASE
+_set_vring_base
+Cmd: VHOST_USER_SET_VRING_KICK (0xc)
+Flags: 0x1
+u64: 0x0
+................................................................................
+Processing message: VHOST_USER_SET_VRING_KICK
+_set_vring_kick
+Got kickfd 0x7
+Cmd: VHOST_USER_SET_VRING_CALL (0xd)
+Flags: 0x1
+u64: 0x0
+................................................................................
+Processing message: VHOST_USER_SET_VRING_CALL
+_set_vring_call
+Got callfd 0x8
+Cmd: VHOST_USER_SET_VRING_ADDR (0x9)
+Flags: 0x1
+addr:
+        idx = 0
+        flags = 0x0
+        dua = 0xffff80df0008
+        uua = 0xffff80e81000
+        aua = 0xffff80e70008
+        lga = 0x0
+................................................................................
+Processing message: VHOST_USER_SET_VRING_ADDR
+_set_vring_addr
+Cmd: VHOST_USER_SET_VRING_NUM (0x8)
+Flags: 0x1
+state: 1 32768
+................................................................................
+Processing message: VHOST_USER_SET_VRING_NUM
+_set_vring_num
+Cmd: VHOST_USER_SET_VRING_BASE (0xa)
+Flags: 0x1
+state: 1 0
+................................................................................
+Processing message: VHOST_USER_SET_VRING_BASE
+_set_vring_base
+Cmd: VHOST_USER_SET_VRING_KICK (0xc)
+Flags: 0x1
+u64: 0x1
+................................................................................
+Processing message: VHOST_USER_SET_VRING_KICK
+_set_vring_kick
+Got kickfd 0x9
+Listening for kicks on 0x9
+Cmd: VHOST_USER_SET_VRING_CALL (0xd)
+Flags: 0x1
+u64: 0x1
+................................................................................
+Processing message: VHOST_USER_SET_VRING_CALL
+_set_vring_call
+Got callfd 0xa
+Cmd: VHOST_USER_SET_VRING_ADDR (0x9)
+Flags: 0x1
+addr:
+        idx = 1
+        flags = 0x0
+        dua = 0xffff7dcf0008
+        uua = 0xffff7dd81000
+        aua = 0xffff7dd70008
+        lga = 0x0
+................................................................................
+Processing message: VHOST_USER_SET_VRING_ADDR
+_set_vring_addr
+chunks: 70 
+................................................................................
+ff ff ff ff ff ff 01 02 03 04 05 06 08 06 00 01 
+08 00 06 04 00 01 01 02 03 04 05 06 c0 a8 00 02 
+00 00 00 00 00 00 c0 a8 00 01 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 
+chunks: 70 
+................................................................................
+ff ff ff ff ff ff 01 02 03 04 05 06 08 06 00 01 
+08 00 06 04 00 01 01 02 03 04 05 06 c0 a8 00 02 
+00 00 00 00 00 00 c0 a8 00 01 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 
+chunks: 70 
+................................................................................
+ff ff ff ff ff ff 01 02 03 04 05 06 08 06 00 01 
+08 00 06 04 00 01 01 02 03 04 05 06 c0 a8 00 02 
+00 00 00 00 00 00 c0 a8 00 01 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 
+chunks: 70 
+................................................................................
+ff ff ff ff ff ff 01 02 03 04 05 06 08 06 00 01 
+08 00 06 04 00 01 01 02 03 04 05 06 c0 a8 00 02 
+00 00 00 00 00 00 c0 a8 00 01 00 00 00 00 00 00 
+00 00 00 00 00 00 00 00 00 00 00 00 
+Cmd: VHOST_USER_RESET_OWNER (0x4)
+Flags: 0x1
+................................................................................
+Processing message: VHOST_USER_RESET_OWNER
+_reset_owner
+
+
++++++++++++++++++++++ client
+
+[root@centos7 vapp]#   ./vhost -q ./vhost.sock
+client callfd 0x7
+client kickfd 0x6
+client callfd 0x9
+client kickfd 0x8
+chunks: 70 
+chunks: 70 

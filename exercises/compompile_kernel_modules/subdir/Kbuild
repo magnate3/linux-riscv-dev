@@ -1,0 +1,14 @@
+obj-m := krdma.o
+#obj-m := rack_vm.o dvs_rdma.o dvs_dram.o rack_dvs.o krdma.o
+
+ccflags-y := -I$(src)/include
+
+rack_vm-y := rack_vm/rack_vm.o rack_vm/fault.o rack_vm/region.o rack_vm/debugfs.o
+
+dvs_rdma-y := rack_dvs/rdma_backend.o rack_dvs/test.o
+
+dvs_dram-y := rack_dvs/dram_backend.o rack_dvs/test.o
+
+rack_dvs-y := rack_dvs/rack_dvs.o
+
+krdma-y := krdma/krdma.o krdma/cm.o krdma/dbgfs.o krdma/rpc.o krdma/rdma.o krdma/benchmark.o

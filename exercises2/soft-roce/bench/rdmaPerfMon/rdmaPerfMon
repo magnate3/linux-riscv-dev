@@ -1,0 +1,235 @@
+#!/bin/bash
+
+# RDMA Real-time Network Monitor
+# Usage: ./rdma_monitor.sh [interface] [refresh_interval]
+# Example: ./rdma_monitor.sh mlx5_2 1
+#          ./rdma_monitor.sh all 2
+
+REFRESH_INTERVAL=${2:-1}
+SELECTED_INTERFACE=${1:-"all"}
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+NC='\033[0m' # No Color
+
+# Function to convert bytes to human readable format
+bytes_to_human() {
+    local bytes=$1
+    if [ $bytes -ge 1073741824 ]; then
+        echo "$bytes" | awk '{printf "%.2f GB", $1/1073741824}'
+    elif [ $bytes -ge 1048576 ]; then
+        echo "$bytes" | awk '{printf "%.2f MB", $1/1048576}'
+    elif [ $bytes -ge 1024 ]; then
+        echo "$bytes" | awk '{printf "%.2f KB", $1/1024}'
+    else
+        echo "${bytes} B"
+    fi
+}
+
+# Function to convert bytes/sec to Gbps
+bytes_to_gbps() {
+    local bytes_per_sec=$1
+    echo "$bytes_per_sec" | awk '{printf "%.3f", ($1*8)/1000000000}'
+}
+
+# Function to get counter value safely
+get_counter() {
+    local file=$1
+    if [ -f "$file" ]; then
+        cat "$file" 2>/dev/null || echo "0"
+    else
+        echo "0"
+    fi
+}
+
+# Function to get available interfaces
+get_interfaces() {
+    if [ "$SELECTED_INTERFACE" = "all" ]; then
+        find /sys/class/infiniband/*/ports/*/counters/ -name "port_xmit_data" 2>/dev/null | \
+        sed 's|/sys/class/infiniband/||; s|/ports/.*||' | sort -u
+    else
+        echo "$SELECTED_INTERFACE"
+    fi
+}
+
+# Function to get ports for an interface
+get_ports() {
+    local interface=$1
+    find /sys/class/infiniband/$interface/ports/*/counters/ -name "port_xmit_data" 2>/dev/null | \
+    sed 's|.*/ports/||; s|/counters/.*||' | sort -n
+}
+
+# Function to check if interface exists
+check_interface() {
+    local interface=$1
+    if [ ! -d "/sys/class/infiniband/$interface" ]; then
+        echo "Error: Interface $interface not found"
+        echo "Available interfaces:"
+        ls /sys/class/infiniband/ 2>/dev/null || echo "No RDMA interfaces found"
+        exit 1
+    fi
+}
+
+# Function to display header
+show_header() {
+    clear
+    local datetime=$(date "+%H:%M:%S %d/%m/%Y")
+    local hostname=$(hostname)
+    local title="RDMA Network Monitor - $hostname"
+    local refresh_info="Refresh: ${REFRESH_INTERVAL}s | $datetime"
+    
+    # Calculate padding for centering
+    local box_width=90
+    local title_padding=$(( (box_width - ${#title}) / 2 ))
+    local refresh_padding=$(( (box_width - ${#refresh_info}) / 2 ))
+    
+    echo -e "${WHITE}╔══════════════════════════════════════════════════════════════════════════════════════════╗${NC}"
+    printf "${WHITE}║%*s%s%*s║${NC}\n" $title_padding "" "$title" $((box_width - title_padding - ${#title})) ""
+    printf "${WHITE}║%*s%s%*s║${NC}\n" $refresh_padding "" "$refresh_info" $((box_width - refresh_padding - ${#refresh_info})) ""
+    echo -e "${WHITE}╚══════════════════════════════════════════════════════════════════════════════════════════╝${NC}"
+    echo
+}
+
+# Function to monitor single interface/port
+monitor_interface_port() {
+    local interface=$1
+    local port=$2
+    local counter_dir="/sys/class/infiniband/$interface/ports/$port/counters"
+    local hw_counter_dir="/sys/class/infiniband/$interface/ports/$port/hw_counters"
+    
+    # Get current counters
+    local xmit_data=$(get_counter "$counter_dir/port_xmit_data")
+    local rcv_data=$(get_counter "$counter_dir/port_rcv_data")
+    local xmit_pkts=$(get_counter "$counter_dir/port_xmit_packets")
+    local rcv_pkts=$(get_counter "$counter_dir/port_rcv_packets")
+    
+    # Store in associative array key
+    local key="${interface}_${port}"
+    
+    # Calculate bandwidth if we have previous values
+    if [[ -n "${prev_xmit_data[$key]}" ]]; then
+        local xmit_diff=$((xmit_data - prev_xmit_data[$key]))
+        local rcv_diff=$((rcv_data - prev_rcv_data[$key]))
+        local xmit_pkt_diff=$((xmit_pkts - prev_xmit_pkts[$key]))
+        local rcv_pkt_diff=$((rcv_pkts - prev_rcv_pkts[$key]))
+        
+        # Convert to bytes (counters are in 4-byte units)
+        xmit_diff=$((xmit_diff * 4))
+        rcv_diff=$((rcv_diff * 4))
+        
+        # Calculate bytes per second
+        local xmit_bps=$((xmit_diff / REFRESH_INTERVAL))
+        local rcv_bps=$((rcv_diff / REFRESH_INTERVAL))
+        local xmit_pps=$((xmit_pkt_diff / REFRESH_INTERVAL))
+        local rcv_pps=$((rcv_pkt_diff / REFRESH_INTERVAL))
+        
+        # Display interface info
+        echo -e "${CYAN}Interface: ${WHITE}$interface${NC} | ${CYAN}Port: ${WHITE}$port${NC}"
+        echo -e "${GREEN}TX: ${WHITE}$(bytes_to_human $xmit_bps)/s${NC} (${YELLOW}$(bytes_to_gbps $xmit_bps) Gbps${NC}) | ${GREEN}Packets: ${WHITE}$xmit_pps pps${NC}"
+        echo -e "${BLUE}RX: ${WHITE}$(bytes_to_human $rcv_bps)/s${NC} (${YELLOW}$(bytes_to_gbps $rcv_bps) Gbps${NC}) | ${BLUE}Packets: ${WHITE}$rcv_pps pps${NC}"
+        
+        # Show some error counters if available
+        local errors=""
+        if [ -f "$counter_dir/port_rcv_errors" ]; then
+            local rcv_errors=$(get_counter "$counter_dir/port_rcv_errors")
+            local xmit_discards=$(get_counter "$counter_dir/port_xmit_discards")
+            if [ $rcv_errors -gt 0 ] || [ $xmit_discards -gt 0 ]; then
+                errors="${RED}Errors: RX:$rcv_errors TX_Disc:$xmit_discards${NC}"
+            fi
+        fi
+        
+        # Show hardware counters of interest
+        local hw_info=""
+        if [ -d "$hw_counter_dir" ]; then
+            local out_of_seq=$(get_counter "$hw_counter_dir/out_of_sequence")
+            local timeouts=$(get_counter "$hw_counter_dir/local_ack_timeout_err")
+            if [ $out_of_seq -gt 0 ] || [ $timeouts -gt 0 ]; then
+                hw_info="${PURPLE}HW: OoS:$out_of_seq Timeouts:$timeouts${NC}"
+            fi
+        fi
+        
+        if [ -n "$errors" ] || [ -n "$hw_info" ]; then
+            echo -e "$errors $hw_info"
+        fi
+        
+        echo -e "${WHITE}────────────────────────────────────────────────────────────────${NC}"
+    else
+        echo -e "${YELLOW}$interface:$port - Collecting baseline data...${NC}"
+    fi
+    
+    # Store current values for next iteration
+    prev_xmit_data[$key]=$xmit_data
+    prev_rcv_data[$key]=$rcv_data
+    prev_xmit_pkts[$key]=$xmit_pkts
+    prev_rcv_pkts[$key]=$rcv_pkts
+}
+
+# Declare associative arrays for storing previous values
+declare -A prev_xmit_data prev_rcv_data prev_xmit_pkts prev_rcv_pkts
+
+# Main function
+main() {
+    # Validate arguments
+    if [ "$SELECTED_INTERFACE" != "all" ]; then
+        check_interface "$SELECTED_INTERFACE"
+    fi
+    
+    # Get list of interfaces to monitor
+    interfaces=($(get_interfaces))
+    
+    if [ ${#interfaces[@]} -eq 0 ]; then
+        echo "No RDMA interfaces found or accessible"
+        exit 1
+    fi
+    
+    echo "Starting RDMA monitor for: ${interfaces[*]}"
+    echo "Press Ctrl+C to exit"
+    sleep 2
+    
+    # Main monitoring loop
+    while true; do
+        show_header
+        
+        for interface in "${interfaces[@]}"; do
+            ports=($(get_ports "$interface"))
+            
+            if [ ${#ports[@]} -eq 0 ]; then
+                echo -e "${RED}No ports found for interface $interface${NC}"
+                continue
+            fi
+            
+            for port in "${ports[@]}"; do
+                monitor_interface_port "$interface" "$port"
+            done
+        done
+        
+        sleep "$REFRESH_INTERVAL"
+    done
+}
+
+# Handle Ctrl+C gracefully
+trap 'echo -e "\n${WHITE}RDMA Monitor stopped.${NC}"; exit 0' INT
+
+# Show usage if help requested
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    echo "RDMA Real-time Network Monitor"
+    echo "Usage: $0 [interface|all] [refresh_interval]"
+    echo
+    echo "Examples:"
+    echo "  $0                    # Monitor all interfaces, 1s refresh"
+    echo "  $0 all 2             # Monitor all interfaces, 2s refresh"
+    echo "  $0 mlx5_2 1          # Monitor only mlx5_2, 1s refresh"
+    echo
+    echo "Available interfaces:"
+    ls /sys/class/infiniband/ 2>/dev/null || echo "  No RDMA interfaces found"
+    exit 0
+fi
+
+# Run main function
+main

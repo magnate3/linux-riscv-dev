@@ -1,0 +1,15 @@
+torch==2.6.0
+transformers==4.57.1
+accelerate
+datasets
+zstandard
+sentencepiece
+protobuf
+sacrebleu
+scikit-learn
+sqlitedict
+omegaconf
+pycountry
+rouge-score
+lm-eval==0.3.0
+bitsandbytes

@@ -1,0 +1,2 @@
+FROM  fedml-x86:v1
+ENTRYPOINT ["/bin/bash"]

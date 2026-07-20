@@ -1,0 +1,23 @@
+FROM nccl:node2
+ENV DEBIAN_FRONTEND=noninteractive
+
+
+# setup pytorch build dependencies
+RUN apt install software-properties-common -y
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y
+RUN apt-get update -y
+RUN apt remove gcc-9 g++-9 -y
+RUN apt autoremove -y
+#RUN apt-get install gcc-13 g++-13 -y
+#RUN ln -sf /usr/bin/gcc-13 /usr/bin/gcc
+#RUN ln -sf /usr/bin/g++-13 /usr/bin/g++
+# Install gcc-13
+RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+     apt-get update && \
+         apt-get install -y --no-install-recommends gcc-13 g++-13 && \
+             update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 --slave /usr/bin/g++ g++ /usr/bin/g++-13
+RUN echo "deb http://mirrors.aliyun.com/ubuntu/ jammy main" >> /etc/apt/sources.list
+RUN apt-get update
+RUN apt install libc6 make -y
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/*

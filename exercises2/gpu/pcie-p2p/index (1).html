@@ -1,0 +1,977 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="linux kernel,pcie,p2p,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="综述PCIe协议定义了PCIe设备三种数据传输方式之一(PIO，P2P和DMA)，分别对应到CPU访问设备，设备访问设备和设备访问内存/CPU。  CPU访问设备-PCIe设备枚举建链PCI设备的地址空间PCI协议定义了三种地址空间：mmio地址空间(memory address space)，io地址空间(io address space)和配置空间(configure address spac">
+<meta name="keywords" content="linux kernel,pcie,p2p">
+<meta property="og:type" content="article">
+<meta property="og:title" content="pcie、p2p和ATS分析">
+<meta property="og:url" content="http://joyxu.github.io/2023/12/11/pcie-p2p/index.html">
+<meta property="og:site_name" content="记录成长的痕迹">
+<meta property="og:description" content="综述PCIe协议定义了PCIe设备三种数据传输方式之一(PIO，P2P和DMA)，分别对应到CPU访问设备，设备访问设备和设备访问内存/CPU。  CPU访问设备-PCIe设备枚举建链PCI设备的地址空间PCI协议定义了三种地址空间：mmio地址空间(memory address space)，io地址空间(io address space)和配置空间(configure address spac">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_data_transfer.png">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_ecam_mcfg.png">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_ecam_overview.png">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_ecam_scan.png">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_tlp.png">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_tlp_ats.png">
+<meta property="og:image" content="http://joyxu.github.io/images/pcie_ats.png">
+<meta property="og:updated_time" content="2024-05-10T02:24:53.275Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="pcie、p2p和ATS分析">
+<meta name="twitter:description" content="综述PCIe协议定义了PCIe设备三种数据传输方式之一(PIO，P2P和DMA)，分别对应到CPU访问设备，设备访问设备和设备访问内存/CPU。  CPU访问设备-PCIe设备枚举建链PCI设备的地址空间PCI协议定义了三种地址空间：mmio地址空间(memory address space)，io地址空间(io address space)和配置空间(configure address spac">
+<meta name="twitter:image" content="http://joyxu.github.io/images/pcie_data_transfer.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://joyxu.github.io/2023/12/11/pcie-p2p/">
+
+
+
+
+
+  <title> pcie、p2p和ATS分析 | 记录成长的痕迹 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">记录成长的痕迹</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Linux Kernel</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://joyxu.github.io/2023/12/11/pcie-p2p/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joy Xu">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/index_header.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="记录成长的痕迹">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                pcie、p2p和ATS分析
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2023-12-11T02:15:15+08:00">
+                2023-12-11
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2023/12/11/pcie-p2p/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2023/12/11/pcie-p2p/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="综述"><a href="#综述" class="headerlink" title="综述"></a>综述</h1><p>PCIe协议定义了PCIe设备三种数据传输方式之一(PIO，P2P和DMA)，分别对应到CPU访问设备，设备访问设备和设备访问内存/CPU。</p>
+<p><img src="/images/pcie_data_transfer.png" alt="pcie data_transfer"></p>
+<h1 id="CPU访问设备-PCIe设备枚举建链"><a href="#CPU访问设备-PCIe设备枚举建链" class="headerlink" title="CPU访问设备-PCIe设备枚举建链"></a>CPU访问设备-PCIe设备枚举建链</h1><h2 id="PCI设备的地址空间"><a href="#PCI设备的地址空间" class="headerlink" title="PCI设备的地址空间"></a>PCI设备的地址空间</h2><p>PCI协议定义了三种地址空间：mmio地址空间(memory address space)，io地址空间(io address space)和配置空间(configure address space)。<br>CPU要访问前面两种地址空间分别通过mmio和pio，而对于配置空间则使用io端口 CF8/CFC或者ECAM方式访问，在arm64平台上只支持ECAM机制。</p>
+<h2 id="ECAM机制"><a href="#ECAM机制" class="headerlink" title="ECAM机制"></a>ECAM机制</h2><p>ECAM其实也是基于mmio访问的，以ACPI启动举例，ACPI的MCFG(memory-maped configuration)表格中会配置ECAM的基地址。</p>
+<p><img src="/images/pcie_ecam_mcfg.png" alt="pcie ecam"></p>
+<p>完整流程如下：</p>
+<p><img src="/images/pcie_ecam_overview.png" alt="pcie ecam_overview"></p>
+<h2 id="设备枚举建链接"><a href="#设备枚举建链接" class="headerlink" title="设备枚举建链接"></a>设备枚举建链接</h2><p>建立好配置空间之后，后面就是读取配置空间信息，建立pcie设备树，具体流程如下:</p>
+<pre><code>acpi_init
+  acpi_scan_init
+    *acpi_pci_root_init
+      acpi_pci_root_add
+        pci_acpi_scan_root
+      acpi_pci_root_create
+        pci_create_root_bus
+        pci_scan_child_bus
+          pci_scan_single_device
+            pci_scan_device
+          pci_setup_device
+            pci_device_add
+
+    *acpi_pci_link_init
+</code></pre><p>其中<code>acpi_pci_root_init</code>完成pci设备的相关操作，包括设备枚举、配置空间设置等，最终完成物理设备到逻辑设备的映射：</p>
+<p><img src="/images/pcie_ecam_scan.png" alt="pcie ecam_scan"></p>
+<h1 id="设备访问内存、CPU"><a href="#设备访问内存、CPU" class="headerlink" title="设备访问内存、CPU"></a>设备访问内存、CPU</h1><p>这块涉及到的技术主要包括IOMMU，SVA，DDIO等，就不在本文描述了。</p>
+<h1 id="设备访问设备（P2P）"><a href="#设备访问设备（P2P）" class="headerlink" title="设备访问设备（P2P）"></a>设备访问设备（P2P）</h1><p>PCIe P2P是指两个PCIe设备直接通信，通信的数据不经过CPU处理从一个PCIe设备交换到另外一个PCIe设备。<br>因此有两个隐藏的前提条件：</p>
+<ul>
+<li>至少某一个PCIe设备拥有内存，而不是简单的一个PCIe设备去访问另外一个PCIe设备的BAR空间或者寄存器</li>
+<li>至少某一个PCIe设备拥有算力</li>
+</ul>
+<p>前面已经写过一篇<a href="https://joyxu.github.io/2022/07/19/p2p-dma%E6%8A%80%E6%9C%AF%E5%88%86%E6%9E%90%E6%80%BB%E7%BB%93/">P2P的文章</a>，<br>现在6.2内核已经把<code>p2pdma</code>接口合并到<code>dma</code>接口，并通过vfio接口export到了用户态。<br>简单来讲，主要实现以下2点：</p>
+<ul>
+<li><p>写一个pcie的设备驱动，实现p2pdma provider的<code>pci_p2pdma_add_resource</code>接口，将bar作为<code>zone_device</code>注册成为DMA内存资源，<br>并通过<code>pci_p2pm_publish</code>发布这个资源，允许p2pdma的orchestrator调用。注意如果该设备已有驱动匹配了，要先unbind原有驱动。</p>
+</li>
+<li><p>用户态通过<code>mmap</code>和<code>munmap</code>从这个设备以类似<code>O_Direct</code>方式来分配和释放内存，并在用户态通过SPDK类似的软件，在另外一个设备中操作该地址，或者直接在用户态读写该内存。</p>
+</li>
+</ul>
+<h2 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h2><ul>
+<li>mmap怎么从这个bar分配内存呢？</li>
+</ul>
+<p>由于bar是作为<code>zone_device</code>注册的,<code>zone_device</code>仍然是基于<code>sparsemem_vmemmap</code>的，它提供了基于<code>struct page</code>的服务，包括<code>pfn_to_page</code>,<code>page_to_pfn</code>和<code>get_user_pages</code>等。<br>但它的分配和释放并不是当做普通内存来管理的，而是通过generic purpose allocator来管理分配的，并会针对该设备创建一个内存池。<br>当map的时候，会调用<code>p2pmem_alloc_mmap</code>，并通过<code>vm_insert_page</code>把这个地址映射到用户态的va。</p>
+<ul>
+<li>对端设备怎么用这个地址呢？</li>
+</ul>
+<p>另外一个设备拿到这个地址之后，怎么找到这个地址对应的设备的bar offset呢？<br>这就有回到类似dma的作用，把dma地址映射到内存的物理地址，而在p2p场景中，则是把dma地址，转换成bar offset。<br>要理解这个细节，可以看<code>pci_p2pmem_virt_to_bus</code>，它会调用<code>gen_pool_virt_to_phys</code>，返回pcie bar的offset，于是对端设备实际上配置的是pcie的地址空间。<br>于是当对端设备针对这个地址发起访问的时候，就没有上pcie root port，而是直接到该设备了。</p>
+<p>注意：<br>当前内核一旦开启了P2P，默认会关掉ACS，也可能会影响到SVA。<br>原则上ATS/ACS和P2P是有些冲突的，因为当ATS打开之后，设备发出的PCIe TLP报文会声称该报文的地址是否是翻译过的。<br>如果没有翻译，则先路由到RC的TA处进行地址翻译;如果翻译过，则直接使用，绕过了IOMMU的隔离，直接访问这个物理地址了，导致安全风险。<br>比如说，开启了P2P和ATS以后，同一个PCIe Switch后的所有EP设备，必须都分给同一个虚拟机，不然分给不同虚拟机的话，可以从这个PCIe设备的另外一个Function攻击到其它的虚拟机。<br>于是呢，就引入了ACS（访问控制）来决定一个TLP是否能正常路由，还是被阻塞或者重定向。<br>可以参考这个patch的评论<a href="https://patchwork.kernel.org/project/linux-pci/patch/20180312193525.2855-5-logang@deltatee.com/" target="_blank" rel="noopener">PCI/P2PDMA: Clear ACS P2P flags for all devices behind switches</a>。<br>也可以参考SBSA的测试用例<a href="https://github.com/ARM-software/sbsa-acs/issues/111" target="_blank" rel="noopener">SBSA PCIe ATS test</a>。</p>
+<h1 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h1><p>PCIe TLP报文格式</p>
+<p><img src="/images/pcie_tlp.png" alt="pcie tlp"></p>
+<p>ATS域段</p>
+<p><img src="/images/pcie_tlp_ats.png" alt="pcie tlp_ats"></p>
+<p><img src="/images/pcie_ats.png" alt="pcie_ats"></p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><ul>
+<li><a href="http://blog.chinaaet.com/justlxy/p/5100053328" target="_blank" rel="noopener">PCIe扫盲系列博文连载目录篇</a></li>
+<li><a href="http://blog.chinaaet.com/justlxy/p/5100053095" target="_blank" rel="noopener">PCIe扫盲——PCI总线的三种传输模式</a></li>
+<li><a href="https://blog.csdn.net/u013253075/article/details/130755162" target="_blank" rel="noopener">PCIe ECAM机制</a></li>
+<li><a href="https://blog.csdn.net/u013253075/article/details/123301127" target="_blank" rel="noopener">Linux源码阅读——PCI总线驱动代码（三）PCI设备枚举过程</a></li>
+<li><a href="https://olegkutkov.me/2021/01/07/writing-a-pci-device-driver-for-linux/" target="_blank" rel="noopener">Writing a PCI device driver for Linux</a></li>
+<li><a href="https://www.kernel.org/doc/html/latest/PCI/pci.html" target="_blank" rel="noopener">How To Write Linux PCI Drivers</a></li>
+<li><a href="https://ctf.re/windows/kernel/pcie/tutorial/2023/02/14/pcie-part-1/" target="_blank" rel="noopener">A Practical Tutorial on PCIe for Total Beginners on Windows (Part 1)</a></li>
+<li><a href="https://blog.csdn.net/weixin_43921686/article/details/132136732" target="_blank" rel="noopener">UEFI——PCIe子系统(I)</a></li>
+<li><a href="https://liujunming.top/2019/11/24/Introduction-to-PCIe-Address-Translation-Services/" target="_blank" rel="noopener">Introduction to PCIe Address Translation Services</a></li>
+<li><a href="https://mangopapa.blog.csdn.net/article/details/128538065" target="_blank" rel="noopener">PCIe TLP Header 中的常见 Feild 及其释义</a></li>
+<li><a href="https://mangopapa.blog.csdn.net/article/details/120245027" target="_blank" rel="noopener">PCIe地址转换服务（ATS）详解</a></li>
+<li><a href="https://github.com/yakoye/PCIeDocs/blob/main/PCIe%E5%9C%B0%E5%9D%80%E8%BD%AC%E6%8D%A2%E6%9C%8D%E5%8A%A1%EF%BC%88ATS%EF%BC%89%E8%AF%A6%E8%A7%A3.md" target="_blank" rel="noopener">PCIe地址转换服务（ATS）详解</a></li>
+<li><a href="https://mangopapa.blog.csdn.net/article/details/120295827" target="_blank" rel="noopener">PCIe访问控制服务（ACS）</a></li>
+<li><a href="https://blog.csdn.net/21cnbao/article/details/105525581" target="_blank" rel="noopener">PCI设备驱动（二）</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/664873131" target="_blank" rel="noopener">P2P DMA</a></li>
+<li><a href="https://www.kernel.org/doc/html/next/driver-api/pci/p2pdma.html" target="_blank" rel="noopener">PCI Peer-to-Peer DMA Support</a></li>
+<li><a href="https://lwn.net/Articles/931668/" target="_blank" rel="noopener">Peer-to-peer DMA</a></li>
+<li><a href="http://blog.chinaaet.com/justlxy/p/5100053263" target="_blank" rel="noopener">PCIe扫盲——一个Memory Read操作的例子</a></li>
+<li><a href="https://xillybus.com/tutorials/pci-express-tlp-pcie-primer-tutorial-guide-1" target="_blank" rel="noopener">Down to the TLP: How PCI express devices talk</a></li>
+<li><a href="https://mangopapa.blog.csdn.net/article/details/120775889" target="_blank" rel="noopener">颠覆性技术！你NRZ相守20年又怎样？看我PAM4如何上位PCIe 6.0</a></li>
+<li><a href="https://github.com/sbates130272/p2pmem-test" target="_blank" rel="noopener">p2pmem-test</a></li>
+<li><a href="https://blog.csdn.net/scarecrow_byr/article/details/100983619?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170263012016800180699660%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=170263012016800180699660&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-1-100983619-null-null.nonecase&amp;utm_term=sva&amp;spm=1018.2226.3001.4450" target="_blank" rel="noopener">Linux SVA特性分析</a></li>
+<li><a href="https://stackoverflow.com/questions/66893486/how-can-my-pci-device-driver-remap-pci-memory-to-userspace" target="_blank" rel="noopener">How can my PCI device driver remap PCI memory to userspace</a></li>
+</ul>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>知道是不会有人点的，但万一有人呢:)</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/87314894.png" alt="Joy Xu WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/554361081.jpg" alt="Joy Xu Alipay">
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/linux-kernel/" rel="tag"># linux kernel</a>
+          
+            <a href="/tags/pcie/" rel="tag"># pcie</a>
+          
+            <a href="/tags/p2p/" rel="tag"># p2p</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2023/11/28/设备虚拟化/" rel="next" title="设备虚拟化">
+                <i class="fa fa-chevron-left"></i> 设备虚拟化
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2024/01/30/linux-kernel-debug/" rel="prev" title="linux kernel调试">
+                linux kernel调试 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript">
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+          
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2023/12/11/pcie-p2p/" data-title="pcie、p2p和ATS分析" data-url="http://joyxu.github.io/2023/12/11/pcie-p2p/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/index_header.jpg" alt="Joy Xu">
+          <p class="site-author-name" itemprop="name">Joy Xu</p>
+           
+              <p class="site-description motion-element" itemprop="description">技术积累</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">67</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">54</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/joyxu" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons">
+            </a>
+          </div>
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://makelinux.net/resources/" title="1#" target="_blank">1#</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://www.cse.iitb.ac.in/~mythili/" title="2#" target="_blank">2#</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://adam.younglogic.com" title="software dev leadership" target="_blank">software dev leadership</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://remword.com/kps_result/" title="kernel contribution" target="_blank">kernel contribution</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://jvns.ca/blog/2017/07/05/linux-tracing-systems/" title="linux tracing" target="_blank">linux tracing</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.brendangregg.com/blog/2015-07-08/choosing-a-linux-tracer.html" title="linux tracing advance" target="_blank">linux tracing advance</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.wangchaochao.top" title="wangchao" target="_blank">wangchao</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://tonydeng.github.io/" title="architecure" target="_blank">architecure</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://www.zhihu.com/people/in-nek" title="Kenneth" target="_blank">Kenneth</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://lujun.org.cn" title="arm verification jun's blog" target="_blank">arm verification jun's blog</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://siguza.github.io" title="hacker" target="_blank">hacker</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://blog.foool.net/" title="useful link" target="_blank">useful link</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://jianshu.com/p/2089af1cdea0" title="good" target="_blank">good</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://gngshn.github.io/" title="arm linux boot" target="_blank">arm linux boot</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://minnie.tuhs.org/CompArch/Tutes/week03.html" title="simple emu soc" target="_blank">simple emu soc</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://kernel.taobao.org/" title="ali" target="_blank">ali</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://tinylab.org/" title="泰晓" target="_blank">泰晓</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.wowotech.net/" title="蜗窝" target="_blank">蜗窝</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://www.ffutop.com/" title="ffutop" target="_blank">ffutop</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://happypeter.github.io/" title="peter" target="_blank">peter</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://oenhan.com/" title="virt" target="_blank">virt</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://beej.us/guide/bggdb/" title="gdb" target="_blank">gdb</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://plantegg.github.io/" title="性能调优" target="_blank">性能调优</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.qdpma.com/ServerSystems/MemoryLatencyII.html" title="memory latency" target="_blank">memory latency</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://norvig.com/" title="peter-at-google" target="_blank">peter-at-google</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://vonoff.com/comics/nano/a-trip-down-memory-lane-1/" title="内存漫画" target="_blank">内存漫画</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://kernelgo.org/" title="kernelgo" target="_blank">kernelgo</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://makelinux.net/" title="makelinux" target="_blank">makelinux</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://people.kernel.org/read" title="peoplekernel" target="_blank">peoplekernel</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#综述"><span class="nav-number">1.</span> <span class="nav-text">综述</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#CPU访问设备-PCIe设备枚举建链"><span class="nav-number">2.</span> <span class="nav-text">CPU访问设备-PCIe设备枚举建链</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#PCI设备的地址空间"><span class="nav-number">2.1.</span> <span class="nav-text">PCI设备的地址空间</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ECAM机制"><span class="nav-number">2.2.</span> <span class="nav-text">ECAM机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#设备枚举建链接"><span class="nav-number">2.3.</span> <span class="nav-text">设备枚举建链接</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#设备访问内存、CPU"><span class="nav-number">3.</span> <span class="nav-text">设备访问内存、CPU</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#设备访问设备（P2P）"><span class="nav-number">4.</span> <span class="nav-text">设备访问设备（P2P）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#原理"><span class="nav-number">4.1.</span> <span class="nav-text">原理</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#其它"><span class="nav-number">5.</span> <span class="nav-text">其它</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考"><span class="nav-number">6.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2017 - 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joy Xu</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+<div class="busuanzi-count">
+
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv"><i class="fa fa-user"></i><span class="busuanzi-value" id="busuanzi_value_site_uv"></span></span>
+  
+
+  
+    <span class="site-pv"><i class="fa fa-eye"></i><span class="busuanzi-value" id="busuanzi_value_site_pv"></span></span>
+  
+  
+</div>
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+    
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"joyxu"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    
+    <script src="/lib/ua-parser-js/dist/ua-parser.min.js?v=0.7.9"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+</body>
+</html>

@@ -1,0 +1,747 @@
+
+
+[Georgi Gerganov ggml 简介](https://huggingface.co/blog/zh/introduction-to-ggml)
+
+[GGML 入门：搞懂张量、内存池与计算图](https://www.laumy.tech/3147.html/ggml-%E5%85%A5%E9%97%A8%EF%BC%9A%E6%90%9E%E6%87%82%E5%BC%A0%E9%87%8F%E3%80%81%E5%86%85%E5%AD%98%E6%B1%A0%E4%B8%8E%E8%AE%A1%E7%AE%97%E5%9B%BE/)    
+
+[rwkv.cpp](https://github.com/RWKV/rwkv.cpp) 
+
+[GGML的CPU算子解读：矩阵乘法](https://www.laumy.tech/category/ai%e5%a4%a7%e6%a8%a1%e5%9e%8b/%e6%8e%a8%e7%90%86%e6%a1%86%e6%9e%b6/)   
+
+[深入理解GGML（二）基于计算图的并行计算](https://zhuanlan.zhihu.com/p/874527851)      
+
+
+# ggml
+
+```
+git clone https://github.com/ggml-org/ggml
+root@ubuntu:/pytorch/ggml# whereis nvcc
+nvcc: /usr/local/cuda-12.4/bin/nvcc
+root@ubuntu:/pytorch/ggml# cmake -DGGML_CUDA=ON -DCMAKE_CUDA_COMPILER=/usr/local/cuda-12.4/bin/nvcc -S . -B build
+cmake --build build  --config Release -j 8
+```
+
+## gpt-2
+[ggml-model-gpt-2-117M.bin](https://huggingface.co/ggerganov/ggml/tree/main)   
+
+
+```
+/pytorch/ggml# ./build/bin/gpt-2-backend -m models/gpt-2-117M/ggml-model-gpt-2-117M.bin -p "This is an example"
+main: seed = 1770867474
+gpt2_model_load: loading model from 'models/gpt-2-117M/ggml-model-gpt-2-117M.bin'
+gpt2_model_load: n_vocab = 50257
+gpt2_model_load: n_ctx   = 1024
+gpt2_model_load: n_embd  = 768
+gpt2_model_load: n_head  = 12
+gpt2_model_load: n_layer = 12
+gpt2_model_load: ftype   = 1
+gpt2_model_load: qntvr   = 0
+gpt2_model_load: using CPU backend
+gpt2_model_load: ggml tensor size    = 336 bytes
+gpt2_model_load: backend buffer size = 312.70 MB
+gpt2_model_load: memory size =   144.00 MB, n_mem = 24576
+gpt2_model_load: model size  =   239.08 MB
+extract_tests_from_file : No test file found.
+test_gpt_tokenizer : 0 tests failed out of 0 tests.
+main: compute buffer size: 9.47 MB
+main: prompt: 'This is an example'
+main: number of tokens in prompt = 4, first 8 tokens: 1212 318 281 1672 
+
+This is an example of how the state can be set for each state, but at the same time it's different for each individual state.
+
+This article has been translated into a new language.
+
+References
+
+Fahm, M. (2017). The state of the world. Oxford University Press.
+
+Jensen, L. (2015). "The State of the World". In W.J. Smith (ed.), The state of the world: global policy and the state of the world, 2nd edition. Oxford University Press.
+
+Lang, J. (2013). "The State of the World: The World Order is Back". American Journal of Political Science, 69, 521–535.<|endoftext|>
+
+main:     load time =   122.54 ms
+main:   sample time =    47.37 ms
+main:  predict time =   849.03 ms / 5.70 ms per token
+main:    total time =  1020.81 ms
+```
+
+
+# qwen
+
+```
+ huggingface-cli download bartowski/Qwen_Qwen3-0.6B-GGUF --include "Qwen_Qwen3-0.6B-Q4_K_M.gguf" --local-dir ./models
+```
+
+#  llama.cpp
+
+```
+docker pull ghcr.io/ggml-org/llama.cpp:server
+```
+
+ 
+
+```
+docker run -v /pytorch/qwen/models:/models -p 8080:8080 llama-cpp-connector:latest -m /models/Qwen_Qwen3-0.6B-Q4_K_M.gguf --port 8080 --host 0.0.0.0 -n 512
+```
+
+> ## arm64
+
+
+```
+# remove armv9 builds
+sed -i '/armv9/d' "ggml/src/CMakeLists.txt"
+
+# start docker build
+            docker buildx build \
+              --push \
+              --platform linux/arm64 \
+              --build-arg TARGETARCH=arm64 \
+              --target server \
+              --file .devops/cpu.Dockerfile \
+              --attest type=provenance,disabled=true \
+              --tag  llama-server:latest \
+              .
+```
+
+
+```
+[root@centos7 llama.cpp]# docker run -v /pytorch/qwen/models:/models -p 8080:8080 9d2f72ddb130 -m /models/Qwen_Qwen3-0.6B-Q4_K_M.gguf --port 8080 --host 0.0.0.0 -n 512
+load_backend: loaded CPU backend from /app/libggml-cpu-armv8.0_1.so
+warn: LLAMA_ARG_HOST environment variable is set, but will be overwritten by command line argument --host
+main: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
+build: 7941 (11fb327bf) with GNU 11.4.0 for Linux aarch64
+system info: n_threads = 128, n_threads_batch = 128, total_threads = 128
+
+system_info: n_threads = 128 (n_threads_batch = 128) / 128 | CPU : NEON = 1 | ARM_FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+
+Running without SSL
+```
+
+## cpu编译
+
+
+```
+cmake -B build2 -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=OFF  -DLLAMA_BUILD_TESTS=ON ${CMAKE_ARGS} -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined .
+
+```
+```
+root@centos7:/workspace/llama.cpp# cmake --build build2 --config Release --target test-backend-ops -j$(nproc)
+[  0%] Building CXX object vendor/cpp-httplib/CMakeFiles/cpp-httplib.dir/httplib.cpp.o
+```
+
+```
+root@centos7:/workspace/llama.cpp# cmake -B build3  -DCMAKE_BUILD_TYPE=Debug  -DGGML_NATIVE=OFF -DGGML_CPU_ALL_VARIANTS=OFF  -DLLAMA_BUILD_TESTS=ON ${CMAKE_ARGS} -DCMAKE_EXE_LINKER_FLAGS=-Wl,--allow-shlib-undefined .
+CMAKE_BUILD_TYPE=Debug
+     
+cmake --build build3 --config Debug --target test-backend-ops -j$(nproc)
+```
+
+```
+root@centos7:/workspace/llama.cpp# ./build2/bin/test-backend-ops -o SWIGLU -b CPU
+Testing 1 devices
+
+Backend 1/1: CPU
+  Device description: CPU
+  Device memory: 522866 MB (522866 MB free)
+
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=0,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=0,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=0,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=0,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=0,split): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=0,split): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=1,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=1,swapped=0): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=1,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=1,swapped=1): OK
+  SWIGLU(type=f16,ne_a=[128,2,2,2],v=1,split): OK
+  SWIGLU(type=f16,ne_a=[5,7,11,13],v=1,split): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=0,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=0,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=0,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=0,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=0,split): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=0,split): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=1,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=1,swapped=0): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=1,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=1,swapped=1): OK
+  SWIGLU(type=f32,ne_a=[128,2,2,2],v=1,split): OK
+  SWIGLU(type=f32,ne_a=[5,7,11,13],v=1,split): OK
+  24/24 tests passed
+  Backend CPU: OK
+1/1 backends passed
+O
+```
+
+```
+(gdb) bt
+#0  ggml_compute_forward_glu (params=0xffff869de6b0, dst=0xaaaaab03f320) at /workspace/llama.cpp/ggml/src/ggml-cpu/ops.cpp:9647
+#1  0x0000ffffbe5c4c40 in ggml_compute_forward (params=0xffff869de6b0, tensor=0xaaaaab03f320) at /workspace/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c:1998
+#2  0x0000ffffbe5c67c0 in ggml_graph_compute_thread (data=0xaaaaab018b20) at /workspace/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c:2964
+#3  0x0000ffffbe5c742c in ggml_graph_compute._omp_fn.0 () at /workspace/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.c:3245
+#4  0x0000ffffbdf4ba2c in ?? () from /lib/aarch64-linux-gnu/libgomp.so.1
+#5  0x0000ffffbe010398 in start_thread (arg=0x80e8a0) at ./nptl/pthread_create.c:442
+#6  0x0000ffffbe079e9c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone.S:79
+(gdb) 
+```
+
+> ## bash client
+```
+[root@centos7 llama.cpp]# bash ./tools/server/chat.sh
+> hello qwen , how to play basketball
+ Hello, Qwen. How can I help you with playing basketball?yes
+ Let
+```
+
+
+
+> ## client
+
+```
+curl -X POST "http://localhost:8080/v1/chat/completions" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "model": "your-model-name",
+           "messages": [
+             {"role": "system", "content": "You are a helpful assistant."},
+             {"role": "user", "content": "Hello, who are you?"}
+           ]
+         }'
+```
+
+
++ llama-cpp-api-client   
+```
+docker run --name llama-cli -itd   --net=host --cap-add=NET_ADMIN --privileged=true -v /root/pytorch/:/workspace python:3.11.14-slim-bookworm
+```
+
+```
+# install from github
+pip install git+https://github.com/ubergarm/llama-cpp-api-client
+```
+#  单精度评测
+
+llama.cpp提供了perplexity可执行文件来验证模型的PPL精度，这里以wikitext语料来简单测试一下千问14B的性能（通义千问可能更偏向于中文，wikitext-2多数都是英文语料）。需要先下载解压wikitext-2到本地，这里解压到了llama.cpp/wikitext-2-raw/目录下，运行一下命令：   
+
+```
+./perplexity -m models/Qwen/14B/ggml-model-Q4_0.gguf -f wikitext-2-raw/wiki.test.raw
+```
+
+# dev
+
+
+```
+[root@centos7 docker]# docker run --rm  --name llama.cppdev --net=host    -itd    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0 -v /pytorch:/workspace -p 8088:8080  llamp.cpp:cpudev2 
+WARNING: Published ports are discarded when using host network mode
+6699a510e446d4f640b9e1e09d674dd0c60741bb4ed9ef522fe9bf617a45e44d
+[root@centos7 docker]# docker exec -it llama.cppdev  bash
+root@centos7:/#  
+```
+
+```
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DLLAMA_BUILD_TESTS=OFF -DGGML_CPU_ARM_ARCH=armv8-a
+cmake --build build -j $(nproc)
+```
+
+```
+root@centos7:/workspace/llama.cpp# ./build/bin/llama-server -m /workspace/qwen/models/  --host 0.0.0.0 --port 8080 -n 512
+```
+
+
+```
+root@centos7:/workspace/llama.cpp# ./build/bin/llama-server -m /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf  --host 0.0.0.0 --port 8080 -n 512
+main: n_parallel is set to auto, using n_parallel = 4 and kv_unified = true
+build: 7941 (11fb327bf) with GNU 11.4.0 for Linux aarch64
+system info: n_threads = 128, n_threads_batch = 128, total_threads = 128
+
+system_info: n_threads = 128 (n_threads_batch = 128) / 128 | CPU : NEON = 1 | ARM_FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+
+Running without SSL
+init: using 127 threads for HTTP server
+start: binding port with default address family
+main: loading model
+srv    load_model: loading model '/workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf'
+common_init_result: fitting params to device memory, for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on
+llama_params_fit_impl: no devices with dedicated memory found
+llama_params_fit: successfully fit params to free device memory
+llama_params_fit: fitting params to free memory took 0.54 seconds
+llama_model_loader: loaded meta data with 31 key-value pairs and 311 tensors from /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf (version GGUF V3 (latest))
+llama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+```
+
+> ##  ggml-demo
+```
+root@centos7:/workspace/llama.cpp/ggml-demo/demo-sgemm# g++ simple-sgemm.cpp  -I /workspace/llama.cpp/ggml/include  -L /workspace/llama.cpp/build/bin/ -lggml -lggml-cpu -lggml-base -o  test
+root@centos7:/workspace/llama.cpp/ggml-demo/demo-sgemm# export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/workspace/llama.cpp/build/bin"
+root@centos7:/workspace/llama.cpp/ggml-demo/demo-sgemm# ./test 
+Using the CPU as backend to computing...
+main: compute buffer size: 0.0625 KB
+Enable the cpu parallel mode, and using 66 threads  
+compute: compute model in 3.88 ms
+mul mat (4 x 3) (transposed result):
+[ 61.00 56.00 51.00 111.00
+ 91.00 55.00 55.00 127.00
+ 43.00 30.00 29.00 65.00 ]
+```
+
+> ## spilt sched
+
+
+
+```
+sudo  docker run --rm --net=host    --gpus=all -it    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0   -v /pytorch:/pytorch  nvcr.io/nvidia/pytorch:24.05-py3 bash
+```
+arm64   
+```
+docker run --rm  --name llama.cppdev --net=host    -itd    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0 -v /pytorch:/workspace -p 8088:8080  llamp.cpp:cpudev2 
+```
+
+> ### cpu编译(运行coredump)   
+```
+#构建编译build文件
+cmake -B build #（如果使用vscode中cmake插件，则此步骤可能自动被执行）
+cmake --build build  -j 4
+```
+
+```
+/pytorch/GGML-Tutorial#  build/bin/split_graph -h
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (Intel(R) Core(TM) i9-14900)
+/pytorch/GGML-Tutorial/src/custom-model.cpp:246: GGML_ASSERT(!devices.empty() && "no gpu devices can be used!") failed
+/pytorch/GGML-Tutorial/build/ggml/src/libggml-base.so(+0x5ef21)[0x7e3eac5a1f21]
+```
+
+> ###  gpu编译  
+
+```
+cmake -B build -DGGML_CUDA=ON
+cmake --build build -j 12 #cuda编译较慢，尽可能选择更多core进行编译
+```
+
+```
+/pytorch/GGML-Tutorial# ./build/bin/split_graph 
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 3090, compute capability 8.6, VMM: yes
+register_backend: registered backend CUDA (1 devices)
+register_device: registered device CUDA0 (NVIDIA GeForce RTX 3090)
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (Intel(R) Core(TM) i9-14900)
+custom_model:        CUDA0 model buffer size =     1.22 MiB
+custom_model:          CPU model buffer size =     0.00 MiB
+custom_model: enumerating backends
+custom_model: backend_ptrs.size() = 2
+custom_model: max_nodes = 65536
+ggml_graph_dump_dot: dot -Tpng llama.dot -o llama.dot.png && open llama.dot.png
+ggml_backend_sched_alloc_splits: failed to allocate graph, reserving (backend_ids_changed = 1)
+ggml_gallocr_reserve_n: reallocating CUDA0 buffer from size 0.00 MiB to 0.00 MiB
+ggml_gallocr_reserve_n: reallocating CUDA_Host buffer from size 0.00 MiB to 0.00 MiB
+```
+
+新增debug   
+```
+
+// lists of buffer types used for each layer
+using buft_list_t = std::vector<std::pair<ggml_backend_dev_t, ggml_backend_buffer_type_t>>;
+static  void debug_backend(std::vector<ggml_backend_ptr> & backends, std::map<ggml_backend_buffer_type_t, ggml_context *> & ctx_map) {
+        //const char * dev_name = "CPU";
+            auto get_ctx_for_buft = [&](ggml_backend_buffer_type_t buft) -> ggml_context * {
+        auto it = ctx_map.find(buft);
+        if (it == ctx_map.end()) {
+#if 0
+            // add a new context
+            struct ggml_init_params params = {
+                /*.mem_size   =*/ n_tensors*ggml_tensor_overhead(),
+                /*.mem_buffer =*/ NULL,
+                /*.no_alloc   =*/ true,
+            };
+            ggml_context * buft_ctx = ggml_init(params);
+            ctx_map[buft] = buft_ctx;
+            return buft_ctx;
+#else
+            return NULL;
+#endif
+
+        };
+        return it->second;
+    };
+        for (auto & backend : backends) {
+            auto * buft = ggml_backend_get_default_buffer_type(backend.get());
+            //auto backend_type = ggml_backend_dev_type(ggml_backend_get_device(backend.get()));
+            ggml_context * ctx = get_ctx_for_buft(buft);
+            ggml_backend_dev_t dev = ggml_backend_buft_get_device(buft);
+            //struct ggml_context * ctx = get_ctx_for_buft(ggml_backend_buffer_get_type(backend.get()));
+            if(ctx){
+                // skip contexts without tensors
+                if (ggml_get_first_tensor(ctx) == nullptr) {
+                    continue;
+                }
+                //ggml_backend_buffer_type_t buf_type = ggml_backend_get_default_buffer_type(backend);
+                printf("!!!!!!!!!!!!!! buffer type name: %s\n", ggml_backend_buft_name(buft));
+                if(NULL != dev)
+                      printf("backend device %s \n",ggml_backend_dev_name(dev));
+            }
+        }
+}
+```
+
+
++ 可视化
+
+```
+ apt-get install graphviz
+ sudo dot -Tpng llama.dot -o llama.dot.png
+```
+
+![images](dev/llama.dot.png )
+
+
+> ## device
+
+
+ 
+
+```
+ cmake -S . -B build -DGGML_CUDA=ON
+  cmake --build build -j 12
+```
+
+```
+./build/test-device 
+GGML device examples
+ggml_cuda_init: GGML_CUDA_FORCE_MMQ:    no
+ggml_cuda_init: GGML_CUDA_FORCE_CUBLAS: no
+ggml_cuda_init: found 1 CUDA devices:
+  Device 0: NVIDIA GeForce RTX 3090, compute capability 8.6, VMM: yes
+register_backend: registered backend CUDA (1 devices)
+register_device: registered device CUDA0 (NVIDIA GeForce RTX 3090)
+register_backend: registered backend CPU (1 devices)
+register_device: registered device CPU (Intel(R) Core(TM) i9-14900)
+device count: 2
+device name: CUDA0
+device description: NVIDIA GeForce RTX 3090
+backend name: CUDA0
+buffer type name: CUDA0
+buffer name: CUDA0
+device name: CPU
+device description: Intel(R) Core(TM) i9-14900
+backend name: CPU
+backend type: GGML_BACKEND_DEVICE_TYPE_CPU
+buffer type name: CPU
+buffer name: CPU
+```
+
+> ## 多设备调度
+
+
+```
+ggml_context * ctx = ctx_for_buft(buft);
+```
+
+```
+ ggml_backend_sched_new(model.backends.data(), model.backends.size())
+```
+
+
+#  Mixture-of-Experts（MoE）
+
+```text
+Mixture-of-Experts（MoE）：对于MoE架构，源码提供了llm_build_moe_ffn函数。MoE层有多个专家FFN和一个门控网络选择权重。llm_build_moe_ffn先对输入cur通过门控网络权重gate_inp计算每个expert的logits（形状[n_expert, n_tokens]）​。然后根据gating_op选择Softmax或Sigmoid将其转换为各expert概率分布。可选地，加上exp_probs_b实现bias（DeepSeek V3中提出的偏置）。接着通过ggml_top_k选出概率最高的n_expert_used个专家索引。随后用ggml_get_rows提取对应专家的权重系数，再根据需要对这些权重归一化（按每token概率和为1）。这样得到每token实际参与计算的专家及其系数。之后会针对选中的每个专家分别计算其FFN输出（通过up_exps、down_exps等权重），并按概率加权求和为最终输出（代码未展示部分应包括这些步骤）。总之，该函数构建了MoE所需的复杂控制流，用GGML实现了Softmax、TopK选择和按行组装等操作。MoE部分较为复杂，但通过静态计算图同样可以执行，只是在执行时会动态地选择部分专家计算。
+```
+`ggml_top_k ggml_get_rows`
+
+
+```
+ // Select top-k experts
+    ggml_tensor * selected_experts = ggml_top_k(ctx0, probs, n_expert_used);
+    
+    // Compute expert weights
+    ggml_tensor * weights = ggml_get_rows(ctx0,
+        ggml_reshape_3d(ctx0, probs, 1, n_expert, n_tokens), 
+        selected_experts);
+    
+```
+
+# debug-kv
+
+[examples/debug-kv](https://github.com/The-Lyc/runkv/tree/450705d2548d5498eb863b7e5e357652ba4ed61e/examples/debug-kv)   
+
+```
+docker run --rm  --name llama.cppdev --net=host    -itd    -e UID=root    --ipc host --shm-size="32g"  --privileged   -u 0 -v /pytorch:/workspace -p 8088:8080  llamp.cpp:cpudev2 
+```
+
+```
+root@centos7:/workspace/llama.cpp/examples/debug-kv# g++ common.cpp  sampling.cpp log.cpp debug_kv_single_thread.cpp   -I /workspace/llama.cpp/ggml/include  -I /workspace/llama.cpp/include  -L /workspace/llama.cpp/build/bin/ -lggml -lggml-cpu -lggml-base -lllama -lmtmd -o  test
+/usr/bin/ld: /tmp/ccvg6MZp.o: in function `common_init()':
+common.cpp:(.text+0xde0): undefined reference to `LLAMA_BUILD_NUMBER'
+/usr/bin/ld: common.cpp:(.text+0xde4): undefined reference to `LLAMA_BUILD_NUMBER'
+/usr/bin/ld: common.cpp:(.text+0xdec): undefined reference to `LLAMA_COMMIT'
+/usr/bin/ld: common.cpp:(.text+0xdf0): undefined reference to `LLAMA_COMMIT'
+/usr/bin/ld: common.cpp:(.text+0xdf8): undefined reference to `LLAMA_COMPILER'
+/usr/bin/ld: common.cpp:(.text+0xdfc): undefined reference to `LLAMA_COMPILER'
+/usr/bin/ld: common.cpp:(.text+0xe04): undefined reference to `LLAMA_BUILD_TARGET'
+/usr/bin/ld: common.cpp:(.text+0xe08): undefined reference to `LLAMA_BUILD_TARGET'
+collect2: error: ld returned 1 exit status
+```
+common库    
+```
+[root@centos7 llama.cpp]# ls build/common/
+build-info.cpp  CMakeFiles  cmake_install.cmake  libcommon.a  Makefile
+[root@centos7 llama.cpp]# 
+```
+
+改成   
+```
+root@centos7:/workspace/llama.cpp/examples/debug-kv# g++  debug_kv_single_thread.cpp   -I /workspace/llama.cpp/ggml/include  -I /workspace/llama.cpp/include  -I /workspace/llama.cpp/common  -L /workspace/llama.cpp/build/bin/ -lggml -lggml-cpu -lggml-base  -lllama -lmtmd  -L /workspace/llama.cpp/build/common -lcommon -o  test
+root@centos7:/workspace/llama.cpp/examples/debug-kv# 
+```
+
+
+
+
+
+```
+ export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/workspace/llama.cpp/build/bin:/workspace/llama.cpp/build/common"
+ ./test  /workspace/qwen/models/Qwen_Qwen3-0.6B-Q4_K_M.gguf 
+ 
+ 
+```
+
+
+
+```
+……
+============================================================
+  4. Tokenize Test Prompts
+============================================================
+  Prompt 1: "Hello, my name is Alice and I am a"
+    -> 10 tokens
+  Prompt 2: "The capital of France is Paris, which"
+    -> 8 tokens
+
+============================================================
+  5. Scenario A: Single Sequence Prefill
+============================================================
+  Processing Prompt 1 (seq_id = 0)
+
+  >>> Set breakpoint here: llama_kv_cache::find_slot <<<
+  >>> Inspect: ubatch.n_tokens, ubatch.seq_id <<<
+
+  Batch 1: n_tokens=10, seq_id=0
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+  Calling llama_decode() ...
+  Decode successful!
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  6. Scenario B: Continue Generation (Decode Phase)
+============================================================
+  Continue generation for seq_id=0 with next token
+  Observe: How KV cache appends new cell
+
+  Batch 2: n_tokens=1, seq_id=0, pos=10
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+  >>> Observe how find_slot() finds next free cell <<<
+
+
+  Calling llama_decode() ...
+  Decode successful!
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  7. Scenario C: Generate More Tokens
+============================================================
+  Generate 3 tokens sequentially, observe continuous cell allocation
+
+  Generate token 1: pos=11
+  Generate token 2: pos=12
+  Generate token 3: pos=13
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  8. Scenario D: Clear KV (Simulate Request Completion)
+============================================================
+  Clear KV cache for seq_id=0
+
+  >>> Observe: how llama_memory_seq_rm() frees cells <<<
+
+  llama_memory_seq_rm(seq_id=0): success
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  9. Scenario E: New Request Reuses Freed Space
+============================================================
+  Send new request (seq_id=0), should reuse previously freed space
+
+  Batch 4: n_tokens=6, seq_id=0
+
+  >>> Observe: how find_slot() finds previously freed space <<<
+
+
+  Calling llama_decode() ...
+  Decode successful!
+  KV Cache: n_ctx=256, memory=0xaaaadca15dd0
+
+============================================================
+  10. Cleanup
+============================================================
+~llama_context:        CPU compute buffer size is  18.7970 MiB, matches expectation of  18.7970 MiB
+  Cleanup completed!
+
+
+============================================================
+  Debugging Tips
+============================================================
+  Key breakpoints:
+    1. llama_kv_cache::llama_kv_cache - constructor, observe initialization
+    2. llama_kv_cache::find_slot     - find free cells
+    3. llama_kv_cache::apply_ubatch  - update cell metadata
+    4. llama_kv_cache::cpy_k/cpy_v   - write K/V data
+    5. llama_kv_cache::seq_rm        - remove sequence
+
+  Key variables:
+    - kv_size: total number of cells
+    - n_stream: number of streams (unified=1)
+    - v_cells[s]: cell state for each stream
+    - v_heads[s]: search head for each stream
+    - ubatch.seq_id: sequence ID of tokens in batch
+    - sinfo.idxs: list of allocated cell indices
+```
+
+# llama.cpp计算attention
+
+
+RoPE (旋转位置编码)：先对当前的 Query 和 Key 应用位置编码算子 ggml_rope。   
+构建 KV 视图：从巨大的 KV Cache 缓冲区中，根据当前 Token 的位置截取一段“视图”（View）。   
+MatMul (计算得分)：执行 ggml_mul_mat(K, Q)。   
+Softmax：对得分进行缩放和归一化 ggml_soft_max。   
+Weighted Sum：执行 ggml_mul_mat(V, Score)。    
+
+**`model. Build_graph`**（`src/llama-model. Cpp`）是 llama. Cpp 最庞大的函数之一，其核心逻辑：
+
+1. 创建 `llm_graph_context ctx_graph (params)`。
+
+2. 根据 `arch` 调用对应的 `build_*` 函数（如 `build_llama`、`build_qwen 2`、`build_gemma` 等）。
+
+3. 逐层遍历 `layers`：
+
+- `build_inp_embd` / `build_inp_pos`
+
+- `build_norm`
+
+- `build_attn`（根据 memory 类型选择 `build_attn_inp_kv`、`build_attn_inp_kv_iswa` 或 `build_attn_inp_no_cache`）
+
+- 内部调用 `ggml_rope_ext`（RoPE）、`ggml_flash_attn_ext`（如果启用 FA）或手动 `mat_mul + soft_max`。
+
+- `build_ffn` / `build_moe_ffn`
+
+- Residual add
+
+4. 最终 `build_dense_out` / `build_pooling`。
+
+5. 将输出 logits/embd 张量挂到 `llm_graph_result` 上。
+
+```cpp
+struct ggml_tensor * x = inpL;   // input from previous layer (or embedding)
+
+// 1. Pre-attention norm
+ggml_tensor * x_norm = ggml_rms_norm(ctx, x, hparams.f_norm_rms_eps);
+x_norm = ggml_mul(ctx, x_norm, model.layers[il].attn_norm);
+
+// 2. QKV projections (computed separately because shapes differ)
+ggml_tensor * Qcur = ggml_mul_mat(ctx, model.layers[il].wq, x_norm);
+ggml_tensor * Kcur = ggml_mul_mat(ctx, model.layers[il].wk, x_norm);
+ggml_tensor * Vcur = ggml_mul_mat(ctx, model.layers[il].wv, x_norm);
+
+// 3. Reshape to (head_dim, n_heads, n_tokens)
+Qcur = ggml_reshape_3d(ctx, Qcur, hparams.n_embd_head_v, hparams.n_head, n_tokens);
+Kcur = ggml_reshape_3d(ctx, Kcur, hparams.n_embd_head_k, hparams.n_head_kv, n_tokens);
+Vcur = ggml_reshape_3d(ctx, Vcur, hparams.n_embd_head_v, hparams.n_head_kv, n_tokens);
+
+// 4. Apply RoPE to Q and K
+Qcur = ggml_rope_ext(ctx, Qcur, inp_pos, /* freq base */ hparams.rope_freq_base, ...);
+Kcur = ggml_rope_ext(ctx, Kcur, inp_pos, /* freq base */ hparams.rope_freq_base, ...);
+
+// 5. Append K and V to KV cache (or read from it for prior tokens)
+build_kv_store(ctx, Kcur, Vcur, kv, il);
+ggml_tensor * K_full = build_kv_load_K(ctx, kv, il);
+ggml_tensor * V_full = build_kv_load_V(ctx, kv, il);
+
+// 6. FlashAttention (if enabled) or unfused attention
+ggml_tensor * cur = ggml_flash_attn_ext(ctx, Qcur, K_full, V_full, mask,
+                                         /* scale */ 1.0f / sqrtf(hparams.n_embd_head_v),
+                                         /* max_bias */ 0.0f,
+                                         /* logit_softcap */ 0.0f);
+
+// 7. Output projection
+cur = ggml_mul_mat(ctx, model.layers[il].wo, cur);
+
+// 8. Residual
+ggml_tensor * ffn_inp = ggml_add(ctx, cur, x);
+
+// 9. Pre-FFN norm
+ggml_tensor * ffn_norm = ggml_rms_norm(ctx, ffn_inp, hparams.f_norm_rms_eps);
+ffn_norm = ggml_mul(ctx, ffn_norm, model.layers[il].ffn_norm);
+
+// 10. FFN: gate * up, SiLU, down
+ggml_tensor * gate = ggml_mul_mat(ctx, model.layers[il].ffn_gate, ffn_norm);
+ggml_tensor * up   = ggml_mul_mat(ctx, model.layers[il].ffn_up,   ffn_norm);
+ggml_tensor * mid  = ggml_silu(ctx, gate);
+mid = ggml_mul(ctx, mid, up);
+cur = ggml_mul_mat(ctx, model.layers[il].ffn_down, mid);
+
+// 11. Residual
+inpL = ggml_add(ctx, cur, ffn_inp);
+```
+
+#  llama.cpp如何计算fnn   
+
+![images](fnn.png)   
+在 llama.cpp 的底层库 GGML 中，SiLU（SwiGLU 的核心部分）确实利用了查表法（Lookup Table, LUT）来规避昂贵的浮点指数运算（exp）。
+
++ SIMD 查表    
+在实际的 llama.cpp 内核中，如果 CPU 支持 AVX-512 或 ARM    NEON：向量化查表：它不会一个一个查，而是利用特殊的指令（如 _mm512_i32gather_ps）一次性从内存中“抓取” 16 个索引对应的 SiLU 值。线性插值：为了减小表格体积同时保持精度，它会取索引 i 和 i+1 的值进行微调，公式为 y = y_i + (y_{i+1} - y_i) * fract。     
+
+
+#  llama_decode 和采样的关系
+ 在llama.cpp中，llama_decode负责将模型最后一层的计算结果（Logits）算出来，而采样（Sampling）则是紧随其后的一步。采样并不是在 llama_decode 内部自动完成的，而是通过一组专门的采样器（llama_sampler）接口来处理。其逻辑流程如下：
+ 
+ 1. 采样的核心流程当你调用 llama_decode 后，采样遵循这个路径：   
+ Logits (原始分数) \(\rightarrow \) Softmax (概率分布) \(\rightarrow \) Sampler (截断/筛选) \(\rightarrow \) Final Token
+ 
+ 2. 代码实现逻辑在 llama.cpp 的最新 API 中，采样是通过构造一个“采样链”来完成的：    
+```
+// 1. 创建一个采样链（类似流水线）
+auto sparams = llama_sampler_chain_default_params();
+struct llama_sampler * smpl = llama_sampler_chain_init(sparams);
+
+// 2. 向链条中添加具体的采样策略（按顺序执行）
+llama_sampler_chain_add(smpl, llama_sampler_init_top_k(40));      // 先取前 40 个
+llama_sampler_chain_add(smpl, llama_sampler_init_top_p(0.9, 1));  // 再取累计概率 90% 的
+llama_sampler_chain_add(smpl, llama_sampler_init_temp(0.8));      // 最后按温度缩放
+
+// 3. 执行采样
+// 从 llama_decode 算出的 logits 中选出一个 token
+llama_token id = llama_sampler_sample(smpl, ctx, -1); 
+
+```
+
+3. 特有的采样黑科技：Mirostat      
+llama.cpp 相比 vLLM，最出名的是它实现了 Mirostat 采样。原理：它会自动监控生成文本的“困惑度（Perplexity）”。如果发现模型说话开始变得太乱，它会自动降低温度；如果说话太死板，它会提高随机性。效果：它试图维持一个恒定的“惊喜值”，防止长文本生成时的质量崩塌。         
+ 
+4. 采样时的计算优化    
+由于采样是在所有的 Logits（词表大小通常为 32k 到 128k）上进行的，llama.cpp 做了以下优化：按需排序：并非对所有 Logits 排序。比如 Top-K 采样，它会使用类似 quick_select 的算法只找出前 K 个最大的数，这比全量排序快得多。     
+SIMD 加速 Softmax：在将 Logits 转为概率时，利用 AVX/NEON 指令集批量处理指数运算。       
+     
+5. 为什么不把采样写死在 decode 里？    
+为了支持 投机采样（Speculative Decoding）：llama_decode 可能会一次算出 5 个候选词。
+采样器会根据大模型的 Logits 逐一校验这 5 个词的概率分布，决定接受几个。这种解耦设计让 llama.cpp 能灵活实现复杂的加速策略。     
+总结： llama.cpp      
+的采样是一个插件化的链式系统。它允许你通过简单的组合，实现从基础的“贪婪搜索”到复杂的“动态困惑度控制”等各种生成策略。
+ 
+
+

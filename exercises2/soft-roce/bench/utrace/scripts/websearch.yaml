@@ -1,0 +1,13 @@
+duration: 2
+scheduler_p: 2
+
+flows:
+  type: tcp
+  num: 32
+  distribution: WebSearch
+  distribution_params: []
+  client_nic: mlx5_1
+  client_ip: 172.16.200.3
+  server_nic: mlx5_1
+  server_ip: 172.16.200.10
+  server_port_base: 50001

@@ -1,0 +1,108 @@
+
+#主要原理是将vlan映射到TC优先级，从而设置TC优先级的速率，达到硬件限速的效果
+#以下是验证步骤
+
+yum install vconfig 
+
+vconfig add enp175s0f0np0 5
+vconfig add enp175s0f0np0 9
+
+ifconfig enp175s0f0np0.5 5.5.5.5/24 up
+ifconfig enp175s0f0np0.9 9.9.9.9/24 up
+
+#将vlan子接口enp175s0f0np0.5的默认优先级流量映射到up 1
+#可以将所有的优先级都映射，对于测试来讲，只映射0就够了，因为iperf报文的优先级字段默认都是0
+vconfig set_egress_map enp175s0f0np0.5 0 1
+#将vlan子接口enp175s0f0np0.9的默认优先级流量映射到up 2
+vconfig set_egress_map enp175s0f0np0.9 0 2
+
+#查看priority mapping
+# cat /proc/net/vlan/enp175s0f0np0.5
+enp175s0f0np0.5  VID: 5  REORDER_HDR: 1  dev->priv_flags: 1001
+         total frames received       666947
+          total bytes received     34688170
+      Broadcast/Multicast Rcvd            0
+
+      total frames transmitted       702087
+       total bytes transmitted  44554421463
+Device: enp175s0f0np0
+INGRESS priority mappings: 0:0  1:0  2:0  3:0  4:0  5:0  6:0 7:0
+ EGRESS priority mappings: 0:2
+
+
+#设置
+# mlnx_qos -i enp175s0f0np0 -p 0,1,2,3,4,5,6,7 -r 25,5,10,25,25,25,25,25 -s vendor,vendor,vendor,vendor,vendor,vendor,vendor,vendor
+DCBX mode: OS controlled
+Priority trust state: pcp
+default priority:
+Receive buffer size (bytes): 0,156096,0,0,0,0,0,0,
+Cable len: 7
+PFC configuration:
+        priority    0   1   2   3   4   5   6   7
+        enabled     0   0   0   0   0   0   0   0
+        buffer      1   1   1   1   1   1   1   1
+tc: 0 ratelimit: 25.0 Gbps, tsa: vendor
+         priority:  0
+tc: 1 ratelimit: 5.0 Gbps, tsa: vendor
+         priority:  1
+tc: 2 ratelimit: 10.0 Gbps, tsa: vendor
+         priority:  2
+tc: 3 ratelimit: 25.0 Gbps, tsa: vendor
+         priority:  3
+tc: 4 ratelimit: 25.0 Gbps, tsa: vendor
+         priority:  4
+tc: 5 ratelimit: 25.0 Gbps, tsa: vendor
+         priority:  5
+tc: 6 ratelimit: 25.0 Gbps, tsa: vendor
+         priority:  6
+tc: 7 ratelimit: 25.0 Gbps, tsa: vendor
+         priority:  7
+
+
+iperf在5%以内
+
+[root@l-csi-12191s ~]# iperf -c 5.5.5.6 -t 60
+------------------------------------------------------------
+Client connecting to 5.5.5.6, TCP port 5001
+TCP window size: 85.0 KByte (default)
+------------------------------------------------------------
+[  1] local 5.5.5.5 port 35410 connected with 5.5.5.6 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  1] 0.00-60.01 sec  33.2 GBytes  4.76 Gbits/sec
+[root@l-csi-12191s ~]# iperf -c 9.9.9.10 -t 60
+------------------------------------------------------------
+Client connecting to 9.9.9.10, TCP port 5001
+TCP window size: 85.0 KByte (default)
+------------------------------------------------------------
+[  1] local 9.9.9.9 port 58342 connected with 9.9.9.10 port 5001
+[ ID] Interval       Transfer     Bandwidth
+[  1] 0.00-60.00 sec  66.5 GBytes  9.51 Gbits/sec
+
+
+iperf3打的时间长点，也没问题
+
+]# iperf3 -c 9.9.9.10 -t 60
+Connecting to host 9.9.9.10, port 5201
+[  5] local 9.9.9.9 port 47770 connected to 9.9.9.10 port 5201
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-1.00   sec  1.11 GBytes  9.54 Gbits/sec    0    730 KBytes
+[  5]   1.00-2.00   sec  1.11 GBytes  9.52 Gbits/sec    0    730 KBytes
+[  5]   2.00-3.00   sec  1.11 GBytes  9.51 Gbits/sec    0    730 KBytes
+[  5]   3.00-4.00   sec  1.11 GBytes  9.51 Gbits/sec    0    730 KBytes
+[  5]   4.00-5.00   sec  1.11 GBytes  9.52 Gbits/sec    0    730 KBytes
+[  5]   5.00-6.00   sec  1.11 GBytes  9.51 Gbits/sec    0    730 KBytes
+[  5]   6.00-7.00   sec  1.11 GBytes  9.51 Gbits/sec    0    730 KBytes
+[  5]   7.00-8.00   sec  1.11 GBytes  9.51 Gbits/sec    0    730 KBytes
+[  5]   8.00-9.00   sec  1.11 GBytes  9.52 Gbits/sec   34    510 KBytes
+[  5]   9.00-10.00  sec  1.11 GBytes  9.51 Gbits/sec    0    510 KBytes
+[  5]  10.00-11.00  sec  1.11 GBytes  9.51 Gbits/sec    0    520 KBytes
+[  5]  11.00-12.00  sec  1.11 GBytes  9.51 Gbits/sec    0    520 KBytes
+[  5]  12.00-13.00  sec  1.11 GBytes  9.52 Gbits/sec    0    520 KBytes
+[  5]  13.00-14.00  sec  1.11 GBytes  9.51 Gbits/sec    0    520 KBytes
+[  5]  14.00-15.00  sec  1.11 GBytes  9.51 Gbits/sec    0    799 KBytes
+[  5]  15.00-16.00  sec  1.11 GBytes  9.51 Gbits/sec    0    799 KBytes
+[  5]  16.00-17.00  sec  1.11 GBytes  9.52 Gbits/sec    0    799 KBytes
+[  5]  17.00-18.00  sec  1.11 GBytes  9.51 Gbits/sec    0    799 KBytes
+[  5]  18.00-19.00  sec  1.11 GBytes  9.51 Gbits/sec    0    799 KBytes
+[  5]  19.00-20.00  sec  1.11 GBytes  9.52 Gbits/sec    0    799 KBytes
+[  5]  20.00-21.00  sec  1.11 GBytes  9.51 Gbits/sec    0    799 KBytes

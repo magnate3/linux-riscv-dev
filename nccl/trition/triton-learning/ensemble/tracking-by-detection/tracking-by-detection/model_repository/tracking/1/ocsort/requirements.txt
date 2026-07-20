@@ -1,0 +1,6 @@
+filterpy>=1.4
+lap>=0.4
+loguru>=0.7
+numpy>=1.23
+opencv-python-headless>=4.9
+scipy>=1.12

@@ -1,0 +1,29 @@
+
+#RoCE有很多拥塞算法，可以通过固件配置来调整和修改
+#有些配置需要新的mft工具，并且与驱动和固件版本有耦合关系，一般建议用最新驱动、驱动中带的mft工具和固件
+
+共有以下模式的cc算法：
+1. HW DCQCN：拥塞情况下，CNP的发送和处理counter都会增加，但是RTT counter不会增加
+2. PCC DCQCN：拥塞情况下，只有CNP发送counter增加，CNP处理counter不增加，RTT counter不增加
+3. HPCC：RTT counter增加，设置scratchpad.nv_config.nv_config_main.fw_config.global.hpcc_int.hpcc_int_en参数
+4. ZTR_RTTCC：RTT counter增加，不设置scratchpad.nv_config.nv_config_main.fw_config.global.hpcc_int.hpcc_int_en参数
+
+Per-IP模式是默认的算法。 
+
+需要提前注意：算法需要与对应的QoS和Lossy feature对应，因此不能漏掉对应的lossy配置
+
+##PCC DCQCN IP模式:
+mlxconfig -d a1:00.0 -y s ROCE_CC_LEGACY_DCQCN=0
+mlxfwreset -d a1:00.0 reset -y -l3
+
+#使用INT作为输入的算法配置，类似HPCC，需要交换机配合，支持对应的INT格式，PCC的模拟器也可以模拟INT
+mlxconfig -d a1:00.0 -y s USER_PROGRAMMABLE_CC=1 PCC_INT_EN=1 PCC_INT_NP_RTT_DATA_MODE=0 PCC_INT_NP_RTT_DSCP_EN=0 PCC_INT_NP_RTT_DSCP=26 PCC_INT_SYSTEM_RTT=0
+
+##ZTR_RTTCC (IP模式）
+mlxconfig -d a1:00.0 -y s ROCE_CC_LEGACY_DCQCN=0
+mlxconfig -d a1:00.0 -y s USER_PROGRAMMABLE_CC=1
+mlxfwreset -d a1:00.0 reset -y -l3
+
+##打开pcc后，可以选择关闭默认算法，确保使用pcc算法
+mlxreg -d /dev/mst/mt4129_pciconf0   -y --set "cmd_type=2" --reg_name PPCC --indexes "local_port=1,pnat=0,lp_msb=0,algo_slot=15,algo_param_index=0"
+mlxreg -d /dev/mst/mt4129_pciconf0.1   -y --set "cmd_type=2" --reg_name PPCC --indexes "local_port=1,pnat=0,lp_msb=0,algo_slot=15,algo_param_index=0"

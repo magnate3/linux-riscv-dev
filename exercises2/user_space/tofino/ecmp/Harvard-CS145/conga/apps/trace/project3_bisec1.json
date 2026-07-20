@@ -1,0 +1,195 @@
+{
+    "flow_groups": [
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h1"],
+            "dst_host_list": ["h9"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h2"],
+            "dst_host_list": ["h10"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h3"],
+            "dst_host_list": ["h11"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h4"],
+            "dst_host_list": ["h12"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h5"],
+            "dst_host_list": ["h13"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+
+
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h6"],
+            "dst_host_list": ["h14"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h7"],
+            "dst_host_list": ["h15"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        },
+
+
+        {
+            "start_time": 0,
+            "length": 60000000,
+            "src_host_list": ["h8"],
+            "dst_host_list": ["h16"],
+            "flow_size_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flow_gap_distribution": {
+                "type": "constant",
+                "value": 60000000
+            },
+            "flowlet_size_distribution": {
+                "type": "constant",
+                "value": 0
+            },
+            "flowlet_gap_distribution": {
+                "type": "constant",
+                "value": 0
+            }
+        }
+    ],
+
+
+    "mc_host_list": [],
+    "mc_gap_distribution": {
+        "type": "constant",
+        "value": 1000000
+    },
+    "length": 60000000,
+    "output": "bisec1.trace"
+}

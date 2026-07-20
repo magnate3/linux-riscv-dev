@@ -1,0 +1,1 @@
+cmd_/root/programming/kernel/hinic/hinic.ko := ld -EL -r -maarch64linux -T ./scripts/module-common.lds --build-id  -o /root/programming/kernel/hinic/hinic.ko /root/programming/kernel/hinic/hinic.o /root/programming/kernel/hinic/hinic.mod.o ;  true

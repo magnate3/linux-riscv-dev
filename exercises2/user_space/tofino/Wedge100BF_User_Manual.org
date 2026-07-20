@@ -1,0 +1,3639 @@
+* 管理交换机  
+  
+  在 Switch 初始启动时，通过以下方式连接到 BMC CPU
+  前面板上的 CONSOLE 端口。一旦登录到 BMC CPU，
+  您可以通过 sol.sh 脚本连接到主 CPU。后
+  您已经进行了网络设置以将两个 CPU 连接到您的
+  管理网络，您可以通过 “MGMT” SSH进入每个CPU
+  前面板上的以太网端口。
+
+** 通过串口控制台访问 BMC CPU 和主 CPU 端口
+
+  您可以通过 RJ45 控制台端口（标有、
+  “CONSOLE”，在 Switch 前面板的左侧），或通过
+  前面板以太网端口（标有“MGMT”）。开机时，控制台
+  端口连接到 BMC CPU。当系统启动时，允许
+  进行此连接大约需要 2.5 分钟。
+
+  使用串口线缆和以下设置连接到 BMC
+  中央处理器：
+
+  • 控制台设置：将您的串行控制台设置为 9600/8-N-1（9600 波特，
+  8 个数据位，无奇偶校验和 1 个停止位）
+
+  • 凭据：默认的 BMC CPU 管理员帐户是 root
+  默认密码 0penBmc（密码的第一个字符是零）。
+
+*** 配置带外管理 IP
+    可以通过修改  /etc/network/interfaces 来调整带外管理IP
+    默认配置如下，eth0 采用 dhcp 获得IP地址。
+    #+begin_example
+    auto lo
+    iface lo inet loopback
+     
+    auto eth0
+    iface eth0 inet dhcp
+     
+    auto usb0
+    iface usb0 inet6 static
+      address fe80::1
+      netmask 64
+      pre-up sysctl -w net.ipv6.conf.usb0.autoconf=0
+      pre-up sysctl -w net.ipv6.conf.usb0.router_solicitations=0
+    #+end_example
+
+    可以执行
+    #+begin_example
+    root@bmc:~# ifconfig 
+    eth0      Link encap:Ethernet  HWaddr 00:90:fb:5c:cb:54
+              inet addr:192.168.10.82  Bcast:192.168.10.255  Mask:255.255.250
+              inet6 addr: fe80::fa8e:a1ff:fe3b:d880/64 Scope:Link
+              UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+              RX packets:1196990 errors:0 dropped:0 overruns:0 frame:0
+              TX packets:1012487 errors:0 dropped:0 overruns:0 carrier:0
+              collisions:0 txqueuelen:1000 
+              RX bytes:0 (0.0 B)  TX bytes:0 (0.0 B)
+              Interrupt:3 
+	      .......
+     
+    #+end_example
+     
+    确认目前的地址。
+
+    如果需要设置为静态地址，可以参考如下配置修改
+
+    #+begin_example
+    auto lo
+    iface lo inet loopback
+     
+    auto eth0
+    iface eth0 inet static
+      address  192.168.20.100
+      netmask  255.255.255.0
+      gateway  192.168.20.1
+     
+    auto usb0
+    iface usb0 inet6 static
+      address fe80::1
+      netmask 64
+      pre-up sysctl -w net.ipv6.conf.usb0.autoconf=0
+      pre-up sysctl -w net.ipv6.conf.usb0.router_solicitations=0
+    #+end_example
+    保存后执行
+    #+begin_example
+    root@bmc:~# ifdown eth0
+    root@bmc:~# ifup eth0
+    #+end_example
+    使配置生效。
+     
+    默认可以通过ssh 访问带外IP地址。 
+    #+begin_example
+    ssh root@192.168.20.100
+    #+end_example
+    默认密码 0penBmc（密码的第一个字符是零）。
+
+     
+*** 通过 BMC CPU 连接到主 CPU：sol.sh
+
+  从 BMC CPU shell（OpenBMC shell），你可以启动一个终端
+  通过运行 /sol.sh/ 脚本连接到一个主 CPU 上的会话：
+
+  #+begin_example
+  bmc login: root
+  Password:
+  root@bmc:~# sol.sh
+  Starting client to connect to microserver...
+  #+end_example
+
+  #+BEGIN_COMMENT
+  故障排除提示：如果主 CPU 没有响应，请按照
+  “SYS-1: Main CPU is not   OpenBMC 启动时启动”，第 65 页。
+  #+END_COMMENT
+
+**** 退出 sol.sh
+
+  从主 CPU 的 shell 中，您可以退出 /sol.sh/ 并返回到
+  OpenBMC shell 如下：
+
+  * 在 Barefoot 的 OpenBMC 映像版本 1.0.0.3 及更早版本上，键入：
+  Ctrl-x
+
+  * 在 Barefoot 的 OpenBMC 映像版本 1.0.0.4 及更高版本上，键入：  Ctrl-L + DEL
+
+  注意：DEL 是 Mac 键盘上的 /Delete/ 或 /DEL/ 键，它是
+  微软风格键盘上的 /Backspace/ 键。
+
+**** sol.sh 命令和日志记录
+
+  在 Barefoot 的 OpenBMC 映像版本 1.0.0.4 及更高版本上，/sol.sh/
+  脚本提供以下命令：
+  * 显示帮助：Ctrl-L + ?
+
+  * 退出主 CPU 会话并返回 BMC CPU：Ctrl-L + DEL
+
+  * 发送中断以中断当前操作：Ctrl-L + b
+
+  /sol.sh/ 脚本将其活动记录到 /var/log/mTerm_wedge.log
+  BMC CPU 映像。
+
+
+
+** 设备默认登录凭据
+
+  * BMC CPU：默认管理员帐户是 root，默认密码0penBmc（第一个字符是零）。
+
+  * 主 CPU：默认帐户取决于操作系统：
+    * 对于基于 ONIE/ONL 的系统，默认管理员帐户是 root 使用默认密码
+      onl。
+
+      因为ssh 服务安全考虑，root 无法ssh 远程登录，可以尝试使用
+      user 用户 默认密码 linux123 。或者自行新建一个账户。
+
+** 管理以太网端口
+
+  前面板上的 10/100/1000 管理端口提供BMC CPU 和主 CPU的管理访问。
+
+*** 配置主CPU的IP地址
+
+  使用以下命令将 Switch 主 CPU 连接到您的管理网络
+  前面板上的 MGMT 端口。
+
+  [fn:1] 注意！
+
+
+  默认情况下，主 CPU 的  OS 通过以下方式获取网络连接
+  执行 DHCP。或者，您可以配置主 CPU 以使用
+  静态 IP 地址，如下所示：
+
+  1. 通过串口控制台连接到 BMC CPU。
+
+  2. 通过运行 /sol.sh/ 脚本连接到主 CPU：
+
+     root@bmc:~#sol.sh
+
+  3. 按<Enter> 连接到主CPU 控制台。
+
+  4. 运行 /ifconfig/ 以显示当前 IP 地址：[fn:3]
+
+  #+begin_example
+  root@Switch:~$ ifconfig ma1
+  Link encap:Ethernet HWaddr 00:90:fb:5c:cb:54
+  inet addr:10.201.200.158 Bcast:10.201.201.255 Mask:255.255.254.0
+  inet6 addr: fe80::638e:f7c9:d099:fd94/64 Scope:Link
+  UP BROADCAST RUNNING MULTICAST MTU:1500 Metric:1
+  #+end_example
+   
+   
+  5. 分配静态 IP 地址。编辑接口文件：
+
+  root@Switch:~$ sudo vi /etc/network/interfaces
+
+  6.在/etc/network/interfaces文件中，添加或更新以下内容
+  符合您所需的网络设置：
+
+
+  #+begin_example
+  auto ma1
+  iface enp2s0 inet static address 
+  <ip address> netmask <netmask>
+  gateway <gateway ip address>
+  #+end_example
+
+
+  7. 重新启动接口以应用您的更改。
+
+
+
+  ifdown ma1; ifup ma1
+
+  重要！[fn:2]
+   
+
+*** 通过 SSH 登录主 CPU
+
+  主 CPU 的 Ubuntu OS 支持 SSH、SCP 和 SFTP 操作后
+  建立管理网络连接。查找主 CPU
+  管理 IP 地址，请使用“配置   主 CPU 的 IP 地址”（第 14 页）。使用 SSH 连接到主 CPU
+  使用管理员帐户。 （这通常是 user 或 root。
+  请参阅本文档前面的“设备默认登录凭据”。）：
+
+  $ ssh user@203.0.113.158
+
+** USB端口
+
+  Switch 前面板上的 USB A 型主机端口允许您
+  连接外部 USB 闪存驱动器。该端口可访问
+  主 CPU。
+
+
+
+** 在 Switch 上使用  SDE 编译环境
+
+   Barefoot 推出业界首个完全可编程的数据面
+   。 Barefoot Networks Capilano™ 软件开发
+   环境 (SDE) 允许您使用 P4 对数据平面进行编程
+   语言并编译您的 P4 程序以在 Barefoot Tofino 上运行
+   芯片或模拟芯片行为的行为模型。
+
+   SDE 是用于开发 P4 的软件包集
+   程式。 SDE 软件包大致分为：
+
+   • 设备模型（ASIC 和行为）
+
+   • P4 编译器
+
+   • Barefoot Networks 设备的驱动程序
+
+   • 交换和路由包（P4 和相关语义库）
+
+   • P4 测试框架
+
+   • 示例 P4 程序和相关测试
+
+   在本节中，我们将解释如何使用 SDE。
+
+由于SDE默认已经安装，如无特殊要求可以直接参考[[*加载 Tofino 内核模式驱动程序 (bf_kdrv.ko)][加载 Tofino 内核模式驱动程序 (bf_kdrv.ko)]]
+*** COMMENT 获取 SDE
+
+
+   1. 下载 SDE 包 bf-sde-<version>.tar
+
+   2.复制文件到Switch主CPU
+
+   me@my-desktop:~$ scp bf-sde-<version>.tar user@<my Switch
+   主机>:/home/user
+
+   对于本示例的其余部分，我们将使用示例版本“3.2.2-40”
+   和一个示例 Switch 地址，203.0.113.101，所以示例 scp
+   命令是：
+
+   root@Switch:~$ scp bf-sde-3.2.2-40.tar
+   user@203.0.113.101:/home/user
+
+   3.解压存档：
+
+   root@Switch:~$ tar -xvf bf-sde-3.2.2-40.tar
+
+   4. 进入SDE目录。这是您的 SDE 主目录。你可以
+   获取 set_sde.bash 帮助脚本以设置所需的环境
+   设置：
+
+   root@Switch:~$ . ./set_sde.bash
+
+   请注意，当前不支持在线 SDE 升级。
+
+*** COMMENT 确保存在 SDE 依赖项
+
+   构建和运行 Capilano 需要依赖包
+   SDE 及其工具，如 PTF。一些 Switch 系统要求您
+   安装这些：
+
+   * 在运行 /Ubuntu 操作系统 / 的 Switch 系统上，
+   依赖项已经安装。请继续到该部分，
+   “构建 SDE”，如下。
+
+   * 在运行 /ONL 操作系统 / 的 Switch 系统上，您必须
+   安装这些依赖项。请参阅以下部分，“安装 SDE
+   依赖。”
+
+**** 安装 SDE 依赖项
+
+   在运行 ONL 操作系统的 Switch 系统上，您必须
+   在构建和运行 Capilano 之前安装其他软件包
+   系统上的 SDE（以及所有 Barefoot 工具，例如 PTF）。安装：
+
+
+
+   1. 从“Switch ONL Operating
+   系统下载”页面
+   [[https://support.barefootnetworks.com/hc/en-us][Barefoot Networks
+   支持门户。]]
+
+   2.将dependencies.tar.gz文件移动到Switch主CPU，
+   解压 tar.gz 存档：root@localhost:~# tar zxvf
+   依赖.tar.gz
+
+   3. 切换到依赖目录并运行 install.sh 脚本：
+
+   root@localhost:~# cd 依赖项
+
+   root@localhost:~/dependencies# ./install.sh
+
+*** COMMENT 构建 SDE 
+
+   Barefoot Networks 客户支持提供脚本以简化设置
+   启动并使用 SDE（ set_sde.bash 和 sde_build.sh ）。为了
+   有关使用脚本的说明，请参阅文章
+   [[https://support.barefootnetworks.com/hc/en-us/articles/115002796007-Building-SDE-in-two-easy-stepshttps://support.barefootnetworks.com/hc/en-us/articles/ 115002796007-Building-SDE-in-two-easy-steps][“Building
+   只需两个简单的步骤即可barefoot SDE”]] 在客户支持门户网站上，以及
+   确保您下载这些脚本的最新版本。
+
+   无需在 Switch 上构建 Capilano™ SDE
+   系统本身。您可以在其他地方构建它
+
+   构建系统和 scp 上传已安装的工件和所需的
+   练习前将 ptf 脚本写入 Switch
+
+   他们。为方便起见，Switch上的Ubuntu镜像
+   包括构建 SDE 所需的包。下面，我们提供一个
+   构建和使用 SDE 的步骤的简要说明。
+
+   构建 SDE 时请记住：
+
+   • bf-drivers 包需要在不指定的情况下构建
+   --with-model 选项
+
+   • 当 bf-drivers 离线构建时，它会生成 Tofino UIO 内核
+   驱动程序模块 ( bf_kdrv.ko )。它是
+
+   构建系统的 Linux 内核版本和
+   Switch 系统匹配。您可以通过运行 uname 来确认这一点
+   -一种 。
+
+   • 需要 bf-platforms 工件来练习 Tofino
+   端口。
+
+   • 在 Switch 上构建时，无需构建模块
+   与纯软件行为模型（例如 bmv2）相关联
+   或 tofinobm 。
+
+   参考 $SDE/README 文件和 SDE 的其他 README 文件了解
+   更详细的说明。一旦 SDE 安装工件被
+   在系统上可用，请阅读以下部分以了解如何
+   使用 SDE。
+
+   在没有 Internet 连接的情况下构建 SDE：如果您正在构建
+   系统上的 SDE
+
+   未连接到互联网，例如 Switch 系统
+   隔离的实验室网络，以下命令行标志很有帮助：
+
+   ./sde_build.sh -r --no-deps --no-bmv2
+
+   使用这些标志运行时，脚本会跳过安装依赖项
+   （必须通过互联网下载）。运行在这个
+   方式，构建依赖于预安装的组件并跳过构建
+   BMv2 相关软件。
+
+   后续步骤：在您可以运行 SDE 之前，在大多数系统上您必须加载
+   Tofino 驱动程序，如下一节所述。
+
+
+*** SDE 9.7.0 的编译
+    If you see the following messages
+    #+begin_src 
+    Connecting to www.kernel.org (www.kernel.org)|145.40.73.55|:443... connected.
+    WARNING: The certificate of ‘www.kernel.org’ is not trusted.
+    WARNING: The certificate of ‘www.kernel.org’ has expired.
+    #+end_src
+    disable checking certificates by wget:
+
+    #+end_src
+    #+begin_src bash
+    echo "check-certificate = no" > ~/.wgetrc
+    #+end_src
+
+    默认的完整编译配置 =bf-sde-9.7.0/p4studio/profiles/all-tofino.yaml= 并没有激活硬件支持所以需要更改为如下配置，
+    #+begin_src yaml
+      global-options:
+	asic: true  #生成驱动
+      features:
+	bf-diags:
+	  thrift-diags: true
+	bf-platforms:
+	  bsp-path: /root/bf-reference-bsp-9.7.0 #指定bsp path
+	drivers:
+	  bfrt: true
+	  bfrt-generic-flags: true
+	  grpc: true
+	  p4rt: true
+	  thrift-driver: true
+	p4-examples:
+	  - p4-16-programs
+	switch:
+	  profile: x1_tofino
+	  sai: true
+	  thrift-switch: true
+      architectures:
+	- tofino
+    #+end_src
+
+    执行如下命令完成编译：
+    
+    #+begin_src bash
+
+      ./p4studio profile apply ./profiles/all-tofino.yaml
+
+    #+end_src
+
+
+
+
+*** 加载 Tofino 内核模式驱动程序 (bf_kdrv.ko)
+
+   bf_kdrv.ko 驱动程序是标准内核模式驱动程序，用于
+   托菲诺设备。它提供用户空间的 mmap 服务，支持
+   全系列的 MSI 和 MSIx 向量，以及用户空间等待
+   中断和启用中断服务。
+
+   执行 SDE 的第一步是加载 bf_kdrv.ko，默认SDE环境放在 /root/bf-sde-x.x.x,
+   x.x.x 为SDE的版本号。
+   
+   
+   #+begin_example
+   root@Switch:~$ cd /root/bf-sde-*
+   root@Switch:~$ . ./set_sde.bash
+   root@Switch:~$ ./install/bin/bf_kdrv_mod_load $SDE_INSTALL
+   #+end_example
+   使用以下步骤确认驱动程序的加载
+   #+begin_example
+   root@Switch:~$ ls /dev/bf0
+   #+end_example
+   
+
+
+
+   每次重新启动 CPU 时都需要加载内核驱动程序。可以考虑将加载驱动的命令
+   添加到/etc/rc.local 来实现重启时自动加载。
+   此外，当有升级的 SDE 时，
+   内核驱动程序需要在重新加载较新版本之前，使用以下步骤卸载。
+
+   root@Switch:~$ cd $SDE
+
+   root@Switch:~$ sudo ./install/bin/bf_kdrv_mod_unload
+
+   注意：较早版本的内核模式驱动程序 bf_uio.ko 是
+   已弃用，但仍保留在发行版中以确保向后
+   兼容性。不推荐使用 bf_uio.ko 驱动程序。
+
+   下一步：
+
+   * 如果您刚刚升级了 SDE，请继续执行“启动您的 P4 定义的
+   打开 Tofino 硬件”，如下所示。
+
+   * 如果这是一个新的系统，或者如果您升级了
+   操作系统，在您可以运行 SDE 之前您必须正确设置 HugePages 设置
+   。请参阅“设置 HugePages 内存设置”
+
+
+**** 最小化 bf_kdrv.ko 的重建
+
+   如果内核更新应用于主 CPU 的操作系统，则
+   必须重新构建 Tofino 内核模式驱动程序 (bf_kdrv.ko)。避免
+   必须重建驱动程序，您必须避免更新主
+   CPU 的内核并禁用 Ubuntu 的自动操作系统更新功能。跟随
+   以下步骤禁用自动更新：
+
+   1. 在 Switch 主 CPU 上的终端 shell 中工作，使用文本
+   编辑器打开文件，
+
+   /etc/apt/apt.conf.d/10periodic
+
+   2. 在文件中，通过编辑禁用自动包下载
+   以下行，将参数设置为零，如下所示：
+   APT::Periodic::Update-Package-Lists "0";
+
+   3. 确保 Download-Upgradeable-Packages 和 AutocleanInterval
+   设置为零。
+
+   4. 保存文件。
+
+   5. 通过键入以下内容禁用内核更新：
+
+
+
+   root@Switch:~$ sudo apt-mark 持有 linux-image-generic
+   linux-headers-generic \ linux-generic
+
+*** 设置 HugePages 内存设置
+
+   在 Switch 系统上运行 SDE 之前，您必须执行
+   一次性设置以分配 DMA 缓冲区所需的大页面
+   分配。 SDE 为此提供了一个脚本。运行如下：
+
+   root@Switch:~$ $SDE_INSTALL/bin/dma_setup.sh
+
+   您可以通过键入 cat /proc/meminfo 来检查 HugePages 设置。这
+   正确的设置如下：
+
+   HugePages_Total: 128
+
+   HugePages_Free: 128
+
+   HugePages_Rsvd: 0
+
+   HugePages_Surp: 0
+
+   如果 HugePages 选项设置不正确，并且您尝试运行
+   run_switchd中的一个P4程序，你会看到诸如
+   alloc_huge_pages() mmap failed ， dma_pool_create failed(-1) ，或作为
+   如下图：
+
+   在端口 Tcl 服务器上启动 BF-PLATFORM RPC 服务器：在端口上绑定完成
+   8008，听
+
+   bf_switchd：驱动程序初始化
+
+   错误：dev_id 0 的 bf_sys_dma_buffer_alloc 失败（-1）
+
+   后续步骤：继续“在 Tofino 上启动 P4 定义的开关”
+   硬件”，如下。
+
+*** 在 Tofino 硬件上启动 P4 定义的交换机
+
+   要启动 Switch 上的交换机并从 您的 P4程序加载其逻辑，您必须运行一
+   个 带有 Tofino 硬件驱动程序的交换机运行环境。Barefoot 提供了一个示
+   例交换机运行环境，名为 bf_switchd。
+
+   先决条件：
+
+   * SDE 已构建、安装和构建。请参阅“构建 SDE”
+   * SDE 和 SDE_INSTALL 环境变量已设置，并且您的 PATH 包含 $SDE_INSTALL/bin
+
+      #+begin_example
+      root@Switch:~$ cd /root/bf-sde-*
+      root@Switch:~$ . ./set_sde.bash
+      root@Switch:~$ ./install/bin/bf_kdrv_mod_load $SDE_INSTALL
+      #+end_example
+   * Tofino 内核模式驱动程序已加载。请参阅 “加载 Tofino   内核模式驱动程序”，。
+
+   * P4 程序已编译，其所有工件均可用
+     在 SDE 主目录中。
+
+   运行 bf_switchd 示例应用程序，将定义您的交换机逻辑的P4 程序的名称传
+   递给它。 bf_switchd 应用程序加载用户空间驱动程序，将 P4 程序应用到
+   Tofino设备，并允许您访问 Switch 平台的 bf-sde CLI 来管理。
+   
+   [fn:4]
+
+   SDE 提供了一个脚本 run_switchd.sh，用于启动 bf_switchd。如下所示使
+   用。 -p 参数提供用于描述您的交换机行为的已编译的 P4 程序名称。通过
+   P4 程序名，注意不包括它的.p4后缀。
+
+
+   #+begin_example
+   root@Switch:~$ cd $SDE
+   root@Switch:~$ ./run_switchd.sh -p <p4_name>
+   #+end_example
+   
+
+
+   例如，要运行示例 P4 程序 switch.p4，您将键入：
+   #+begin_example
+   root@Switch:~$ ./run_switchd.sh -p switch
+   #+end_example
+   
+
+   等待 switch 程序启动，然后按 <Enter> 继续
+   bf-sde CLI 提示符。此 CLI 允许您添加端口并管理
+   Switch 平台。
+
+   要确认 Tofino 设备已初始化，请使用以下命令
+   命令行命令：
+
+   #+begin_example
+   
+   bf-sde> dev -d 0
+   -------------------------------------
+   Device|Type |#pipe|#stg|#prsr|#macblk
+   ------|-----|-----|----|-----|-------
+   0     |T64Q |4    |12  |18   |65   
+   #+end_example
+
+   您可以选择使用最少的初始化选项来启动 bf_switchd
+   需要使用 --skip-* 选项，如下所示：
+   #+begin_example
+   root@Switch:~$ ./run_switchd.sh -p <p4_name> --skip-p4  --skip-hld pmkrt --skip-port-add
+   #+end_example
+   
+
+   可以使用基本寄存器PIO 访问诊断设备的初始化
+   
+   #+begin_example
+   bf-sde> devdiag
+   bf-sde.devdiag> regtest -d 0 -i 0 -t 0 -l 0 
+   bf-sde.devdiag> regtest -d 0 -i 1 -t 0 -l 0 
+   bf-sde.devdiag> regtest -d 0 -i 2 -t 0 -l 0
+   #+end_example
+
+
+**** 对 SDE 和 run_switchd 进行故障排除
+
+***** 故障排除资源
+
+   有关 SDE 故障排除帮助，请参阅知识库文章，   [[https://support.barefootnetworks.com/hc/en-us/articles/115003644687-Common-issues-during-SDE-build-and-bring-up][常见SDE 构建和启动期间的问题。]]
+
+***** 重启 bf_switchd
+
+   如果您无法在 run_switchd.sh 中运行 P4 程序，请确保
+   没有人在使用您的 Switch，请按照以下步骤操作：
+
+   1. 在主 CPU 命令行，使用 lsmod 检查 Tofino   内核驱动程序正在运行：
+
+      $ lsmod | grep bf
+
+      bf_kdrv 20480 2
+
+   2. 查找正在运行的 bf_switchd 实例的进程号。
+      #+begin_example
+      $ ps -ax | grep switch
+   
+      26897？ Sl 2868:51 bf_switchd --install-dir   /root/bf-sde-9.3.1/install --conf-file /root/bf-sde-9.3.1/install/share/p4/targets/diag.conf
+   
+      #+end_example
+   
+   3. 杀死 bf_switchd 进程。
+
+      $ sudo kill <来自上一个命令的进程ID>
+
+   4. 像往常一样使用 run_switchd.sh 运行 P4 程序。例如：
+
+      $ ./run_switchd.sh -p switch
+
+**** 如何在 Switch 上加载交换机配置
+
+   使用 run_switchd.sh 启动交换机数据平面程序时
+   脚本，Switch 装载交换机配置文件中的端口映射等配置。这
+   run_switchd.sh 脚本接受参数标志 -c TARGET_CONFIG_FILE
+   指定配置文件。如果未指定，则加载的 P4 程序将使用默认配置文件
+   。
+
+   配置文件的加载由
+   bf_switchd_load_switch_conf_file() 函数处理。在 .conf 文件中，如果
+   "switchapi" 被指定，那么指定的 libswitchapi.so 将被
+   加载，对 libswitchapi.so 中 dlsym() 调用将返回成功，SwitchAPI可以初始化。
+
+   如果 使用add_ports 参数，则调用 switch_api_init()，这样 会将所有端
+   口添加为 10G 端口指定（add_ports 来自
+   p4_cfg->add_ports_to_switchapi;默认值是true）。在
+   bf_switchd_switchapi_lib_init()，我们调用dlsym并检查
+   switchapi_lib_handle 状态) 并继续，如果值存在。实际的端口添加操作是
+   switch_device_init() 并在 SWITCH_CONFIG_PORT_ADD() 为真时运行。
+
+   前端端口映射在相关板卡头文件中指定
+   ./pkgsrc/bf-paltforms/drivers/src/bf_pltfm_bd_cfg/。系统头文件
+   （例如 SwitchF-32X 或 SwitchF-65X）将在源代码编译过程中被使用。
+   为方便头文件生成，可以在 .csv 文件中指定映射，并且有工具可以用于从
+   .csv 文件生成头文件。请参阅 Barefoot Support 知识库文章，/Porting
+   Barefoot Platform Port Manager to a New Board/ 有关端口映射的更多详
+   细信息。
+
+
+
+** 管理 Tofino 端口
+
+   以下部分展示了如何使用 bf-sde CLI 管理 Tofino
+   端口。您还可以选择使用 <pltfm_pm_rpc> Python 包编写端口管理脚本
+   ，如[[*从 PTF 脚本管理端口]]。
+
+
+*** Tofino 内部端口
+
+   默认情况下，初始化时 bf_switchd 仅实例化 Tofino 的
+   内部端口（例如，PCIe 端口、PktGen 端口和再循环端口）。也就是说，默认情况下，bf_switchd
+   仅实例化不与 QSFP/MAC 关联的端口。这些包括所有管道 0、1、2 和 3 上的端口 64-71口（不含
+   对于pipe 0 上的64-67端口) ，这几个端口与面板上的 QSFP-65 相关联
+   。此类内部端口以 100G 模式进行实例化。
+
+   注意！ P4 程序可能会在初始化时覆盖（包括默认情况下 bf_switchd 实例化的内部端口）并实例化 QSFP 端口。
+
+   例如switch.p4示例程序以 10G 速度初始化所有端口。
+   #+begin_example
+   bf-sde> cfg
+   DVM:: Board configuration:
+   +----+------+-----+---+--------------------------------
+   |dev | port
+   +----+------+-----+---+--------------------------------
+   | 0  | 68
+   | 0  | 192
+   | 0  | 196
+   | 0  | 320
+   | 0  | 324
+   | 0  | 448
+   | 0  | 452
+   +----+------+-----+---+--------------------------------
+   #+end_example
+   
+
+
+
+
+
+*** Tofino 交换机端口
+
+   与 QSFP 设备关联的 Tofino 端口是默认是不创建的。 QSFP 关联的端口可
+   以通过两种方式创建和管理：
+
+   * 使用 bf-sde CLI 命令，主要是端口管理器 (pm)
+   * 在使用python-thrift API 的PTF 脚本中。
+
+   注意！在使用 CLI 之前，请查看[[*bf-sde CLI 概述]]。
+
+   输入 pm 上下文以使用端口管理器 CLI 命令：
+   #+begin_example
+   bf-sde> pm
+   #+end_example
+   
+
+   在接下来的部分中，我们将描述端口管理器
+   详细命令。概括起来，它们是：
+
+   * 添加端口：port-add <conn_id/chnl> <speed (1G, 10G, 25G, 40G, 40G_NB, 50G, 100G, 40G_NON_BREAKABLE)> <fec (NONE, FC, RS)>
+
+   * 删除端口：port-del <conn_id/chnl>
+
+   * 启用端口：port-enb <conn_id/chnl>
+
+   * 禁用端口：port-dis <conn_id/chnl>
+
+   * 显示端口信息：show -a -p <conn_id/chnl> [-d]
+
+     
+
+*** Switch 端口命名
+
+   端口管理器的 show -a 命令的列标题让您了解您各种端口名之间的映射关系：
+   #+BEGIN_EXPORT latex
+   {\small
+   #+END_EXPORT
+
+   #+begin_example
+   bf-sde> pm
+   bf-sde.bf_pltfm.pm> show -a
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   PORT|MAC |D_P|P/PT|SPEED |FEC |QSFP|ADM|OPR|FRAMES RX       |FRAMES TX       |E
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   1/0 |31/0|188|1/60|------|----| NO |---|---|----------------|----------------|-
+   1/1 |31/1|189|1/61|------|----| NO |---|---|----------------|----------------|-
+   #+end_example
+   #+BEGIN_EXPORT latex
+   }
+   #+END_EXPORT
+
+
+   pm ‘show -a’ 命令输出显示所有端口的状态，以及
+   从中您可以看到不同端口名称之间的映射。
+
+   Barefoot SDE 使用以下端口名称：
+
+   * PORT：此连接的 QSFP 连接器编号/QSFP 通道编号，
+     其中 QSFP 连接器编号是 Switch 上显示的编号
+     前面板，通道编号显示通道化通道
+     连接，或 0 表示非通道化连接，例如端口
+     配置为 100G。使用此 PORT 名称来指代端口
+     调用 bf-sde CLI 命令时。例如，运行命令
+     port-add 1/0 ... 为最左侧的前面板 QSFP 添加一个端口
+     连接器。有关前面板编号的指南，请参阅
+     平台概述部分中的插图，在本文前面
+     文档。
+
+   * MAC：Tofino 的此连接的 QUAD-MAC/块 ID。在这
+     斜线分隔的名称，第一个数字是 Tofino MAC 设备
+     number（MAC块ID），第二个数字是MAC通道号
+     在那个 MAC 设备上。 /提示/：您可以使用
+     bf-sde.bf_pltfm.bd_cfg.mac_get 命令用于查找给定的 ID
+     端口和通道。
+
+   * D_P：Tofino 的设备端口 ID（“device_port_id”，一个 9 位值）的
+     这种联系。这是 P4 编程
+     在 Python 测试框架 (PTF) 脚本中，以及在运行 Diags 时使用的端口名称。
+
+   * P/PT：Tofino 的 pipe_id（2 位值）/ pipe_local_port_id（7 位值）
+     值）
+
+   在下面的插图中，我们概述了 Switch 上的 MAC 到 QSFP 映射。
+
+   #+CAPTION:Switch 上的流水线、MAC 和 QSFP 映射
+   [[./media/image7.jpeg]]
+
+
+
+
+*** bf-sde CLI 端口管理命令汇总
+
+   最常用的用于端口管理的 bf-sde CLI 命令是
+   下面列出。要运行其中一些命令，您必须处于
+   如上所述，特定的 CLI 上下文。其他可以从任何 CLI 运行
+   语境。
+
+   * pm：进入平台端口管理器 (bf_pltfm.pm) CLI 上下文
+
+   * port-add：添加端口。例如，要添加 100G 的所有端口：
+     =port-add -/- 100G NONE=
+
+   * port-enb：启用端口。例如，启用所有端口： =port-enb -/-=
+
+   * show：显示所有端口的摘要状态。仅在   bf_pltfm.pm CLI 上下文。
+
+   * op：显示所有SerDes 的状态。仅适用于根 CLI 上下文。
+
+   * ports：显示所有端口的状态。仅适用于根 CLI 上下文。
+
+   * oper：显示操作端口的状态。仅适用于根 CLI 语境。
+
+
+
+*** 添加和启用端口
+
+   使用 port-add 和 port-enb 命令添加和启用端口，如
+   如下所示。
+
+**** QSFP 通道对端口创建的限制
+
+   端口的速度决定了它可以使用哪个 QSFP 通道（通道）
+   占据。创建端口时，请遵守以下 QSFP 通道
+   限制。
+
+   #+CAPTION:QSFP 通道对端口创建的限制
+   | Speed | QSFP lane 0 | QSFP lane 1 | QSFP lane 2 | QSFP lane 3 |
+   | 10G   | Y           | Y           | Y           | Y           |
+   | 25G   | Y           | Y           | Y           | Y           |
+   | 40G   | Y           |             |             |             |
+   | 50G   | Y           |             | Y           |             |
+   | 100G  | Y           |             |             |             |
+
+   比如一个10G的端口可以在任何lane中实例化，但是一个100G的端口
+   端口仅可以在 QSFP 通道 0 中进行实例化。在初始化时，
+   默认情况下，bf_switchd 不会实例化与
+   QSFP/MAC。用户或应用程序可以使用以下两种方法中的任何一种初始化合适的端口及速度：
+
+   * 在 bf-sde CLI 的 pm 上下文中使用 CLI 命令
+
+   * 使用 PTF 脚本通过 Thrift 调用适当的 pm API
+
+**** 添加端口
+
+   使用 port-add CLI 命令添加端口：port-add <conn_id/chnl>
+   <speed> <fec>
+
+   其中
+
+   * conn_id/chnl：要连接的端口的 QSFP 连接器笼/QSFP 通道   添加
+
+   * speed：端口标称速度，必须是1G、10G、25G、40G，50G 或 100G之一，
+
+   * fec：转发纠错设置，必须为NONE FC 或 RS之一，其中 NONE 禁用
+     转发纠错，FC指BASE-R FEC（Fire Code FEC）
+     RS 是指 Reed-Solomon FEC (RS-FEC)
+
+   注意：如果不使用自动协商，您必须确保 SPEED
+   并且端口的 FEC 设置与其链路伙伴的设置相匹配。
+
+   这些 CLI 命令调用 Barefoot 平台的端口管理 API
+   （“port-mgmt API”）定义在
+   <bf_pltfm_pm/bf_pltfm_pm_intf.h>。 bf_pltfm_pm API 映射前面板
+   在调用 Tofino 之前将端口号设置为 Tofino device_port_ids
+   用于管理端口和 SerDes 的驱动程序 API。
+
+   例如，要在 QSFP 连接器 1、通道 0 上创建 10G 端口，您需要
+   会输入：
+
+
+   #+begin_example
+   bf-sde.bf_pltfm.pm> port-add 1/0 10G NONE
+   #+end_example
+   
+
+   要检查端口是否已创建，您可以检索端口
+   使用 =show= 命令获取信息
+
+**** 启用端口
+
+   默认情况下，当添加端口时，端口保持禁用状态，如
+   在 show 命令输出中显示：
+
+   #+begin_example
+   bf-sde.bf_pltfm.pm> show
+   |------+------+-----+------+-------+------+------+-----+-----+-----------+-----------+---|
+   | PORT | MAC  | D_P | P/PT | SPEED | FEC  | QSFP | ADM | OPR | FRAMES RX | FRAMES TX | E |
+   |------+------+-----+------+-------+------+------+-----+-----+-----------+-----------+---|
+   | 1/0  | 31/0 | 188 | 1/60 | 10G   | NONE | NO   | DIS | DWN |           |         0 | 0 |
+   #+end_example
+
+   使用以下 CLI shell 命令启用端口：
+   #+begin_example
+   bf-sde.bf_pltfm.pm> port-enb 1/0
+   bf-sde.bf_pltfm.pm> show
+   |------+------+-----+------+-------+------+------+-----+-----+-----------+-----------+---|
+   | PORT | MAC  | D_P | P/PT | SPEED | FEC  | QSFP | ADM | OPR | FRAMES RX | FRAMES TX | E |
+   |------+------+-----+------+-------+------+------+-----+-----+-----------+-----------+---|
+   | 1/0  | 31/0 | 188 | 1/60 | 10G   | NONE | NO   | ENB | DWN |         0 |         0 |   |
+   #+end_example
+
+   没有插入 QSFP 模块的端口不完全
+   启用以节省电力。
+
+*** 管理端口功能
+
+**** 端口自动协商
+
+   自动协商 (AN) 允许 Switch 端口与其通信
+   链接伙伴选择通用传输设置。您可以启用或
+   为每个 QSFP 端口/通道组合禁用 AN。
+
+   注意：任何端口都可以开启自动协商，但自动协商生效
+   仅适用于符合条件的 QSFP 类型，如 Copper 0.5m、1m 和 3m。
+
+   创建端口时，默认情况下 AN 为 OFF。要为端口启用 AN，
+   使用 port-auto-neg-set 命令
+
+   打开它。您必须在添加端口之后和启用它之前执行此操作
+   。用于 AN 的命令在 bf-sde.bf_pltfm.pm 上下文中可用。
+   
+
+   bf-sde.bf_pltfm.pm> an-set <conn_id/chnl_id> <AN_setting>
+
+   
+   AN_setting 是以下之一：
+
+   * 0 接受SDE 确定的默认值；
+
+   * 1 强制启用 AN；
+
+   * 2 强制禁用 AN。
+
+   例如，要打开 AN：
+   #+begin_example
+   bf-sde.bf_pltfm.pm> an-set 1/0 1
+   #+end_example
+   
+
+   要为所有端口启用 AN，请使用 conn_id 的通配符选项
+   和 chnl_id 参数：
+
+
+   #+begin_example
+   bf-sde.bf_pltfm.pm> an-set -/- 1
+   #+end_example
+   
+
+***** 为使用自动协商的端口设置去抖动时间间隔
+
+
+   启用 AN 时，如果 Tofino 的平台管理器 (bf-platforms)
+   检测到正在自动协商的端口关闭并保持
+   下降的时间长于为此设置的去抖动时间间隔
+   端口，它将尝试启动端口。经理通过
+   每次在内部禁用和启用端口
+   LINK_BRING_UP_TIME_INTV_MS 已过。它会尝试这样做，直到
+   端口出现或被用户禁用。
+
+   您可以使用
+   link-dbn-time CLI 命令。  =bf-sde.bf_pltfm.pm> link-dbn-time
+   <conn_id/chnl_id> <debounce time（以毫秒为单位）>=
+
+   此命令支持 conn_id 和 chnl_id 的通配符选项参数。
+
+*** 禁用和删除端口
+
+**** 禁用端口
+
+   可以使用以下 CLI shell 命令禁用已启用的端口
+   #+begin_example
+   bf-sde.bf_pltfm.pm> port-dis 1/0
+   bf-sde.bf_pltfm.pm> show
+   |------+------+-----+------+-------+------+------+-----+-----+-----------+-----------+---|
+   | PORT | MAC  | D_P | P/PT | SPEED | FEC  | QSFP | ADM | OPR | FRAMES RX | FRAMES TX | E |
+   |------+------+-----+------+-------+------+------+-----+-----+-----------+-----------+---|
+   | 1/0  | 31/0 | 188 | 1/60 | 10G   | NONE | NO   | DIS | DWN |         0 |         0 |   |
+   bf-sde.bf_pltfm.pm>
+   #+end_example
+**** 删除端口
+
+   以下 CLI shell 命令用于删除端口
+
+   port-del <conn_id/chnl>
+
+   例如：
+   #+begin_example
+   bf-sde.bf_pltfm.pm> port-del 1/0 
+   bf-sde.bf_pltfm.pm>
+   #+end_example
+   
+
+*** 通配符端口操作
+
+   代替特定的 <QSFP> 和/或 <lane> 连字符（“-”）
+   可以用作通配符。例如，QSFP 连接器 1 上的所有通道
+   可以使用以下命令添加为 10G 端口：
+
+
+   #+begin_example
+   
+   
+   bf-sde.bf_pltfm.pm> port-add 1/- 10G NONE
+
+   bf-sde.bf_pltfm.pm> show
+
+   ----+----+---+----+------+----+----+----+---+------ ----------+----------------+-
+   端口 |MAC |D_P|P/PT|速度  |FEC |QSFP|ADM |OPR|FRAME RX         |FRAME TX        |E
+   ----+----+---+----+------+----+----+----+---+------ ----------+----------------+-
+   1/0 |31/0|188|1/60| 10G  |无  |否  |DIS |DWN|                0|               0|
+   1/1 |31/1|189|1/61| 10G  |无  |否  |DIS |DWN|                0|               0|
+   1/2 |31/2|190|1/62| 10G  |无  |否  |DIS |DWN|                0|               0|
+   1/3 |31/3|191|1/63| 10G  |无  |否  |DIS |DWN|                0|               0|
+   #+end_example
+   例如，可以使用以下命令一次性启用所有端口
+   
+
+   bf-sde.bf_pltfm.pm> port-enb -/-
+
+   同样，可以在单个命令中删除所有端口，如下所示：
+
+   bf-sde.bf_pltfm.pm> port-del -/-
+
+*** 获取有关端口的信息
+
+**** 在 bf_pltfm.pm 中显示命令
+
+   CLI 提供了一个 port show 命令来显示有关端口的信息
+   在Tofino。在 bf_pltfm.pm 上下文中，使用 show 命令来
+   检索交换机端口的运行状态和 MAC 统计信息。
+   有关命令输出的说明，请参阅前面的部分，
+   “Switch 端口命名。”
+   #+begin_example
+   
+   
+   bf-sde.bf_pltfm.pm> 显示
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   PORT|MAC |D_P|P/PT|SPEED |FEC |QSFP|ADM|OPR|FRAMES RX       |FRAMES TX       |E
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   1/0 |31/0|188|1/60| 10G  |NONE| NO |DIS|DWN|0               |               0|
+   bf-sde.bf_pltfm.pm>
+   #+end_example
+
+   以下可选参数可以传递给‘show’命令
+
+   * “-p <conn_id>/<chnl>”显示指定端口 (conn_id) 的状态
+     和通道（chnl）。对于一个非通道化连接，必须传递通道(lane)值为 0。
+
+   * “-d”显示详细输出
+
+   * “-a”显示所有端口，包括尚未配置或启用的物理端口
+
+
+   提示：您还可以从根上下文运行 port show 命令， 如下：
+   #+begin_example
+   bf-sde> pm show
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   PORT|MAC |D_P|P/PT|SPEED |FEC |QSFP|ADM|OPR|FRAMES RX       |FRAMES TX       |E
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   5/0 |27/0|172|1/44| 100G |NONE|YES |ENB|UP |0               |               0|
+   #+end_example
+   重置端口计数器：端口计数器（Frames RX、Frames TX）可以仅通过删除并重新创建端口重置。使用 port-del 和 port-add
+   命令。
+   #+begin_example
+   bf-sde.bf_pltfm.pm> show -p 1/0 -d
+   ================================================================================
+         1/0  : Port
+         31/0 : MAC
+         188  : Dev Port
+         1/60 : Pipe/Port
+         10G  : Speed
+         NONE : FEC
+         NO   : QSFP
+         DIS  : Admin State
+         DOWN : Operational Status
+         0    : FramesReceivedOK
+         0    : FramesReceivedAll 
+           <snip>
+           <snip>
+         0    : FramesTruncated
+   #+end_example      
+**** 显示所有端口
+
+   使用端口管理器的 show -a 命令打印当前信息
+   关于所有物理交换机端口，包括尚未访问的端口
+   配置：
+   #+begin_example
+   bf-sde> pm 
+   bf-sde.bf_pltfm.pm> show -a
+   bf-sde.bf_pltfm.pm> show
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   PORT|MAC |D_P|P/PT|SPEED |FEC |QSFP|ADM|OPR|FRAMES RX       |FRAMES TX       |E
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   1/0 |31/0|188|1/60| 100G |NONE|YES |ENB|UP |               0|               0|
+   2/0 |30/0|184|1/56| 100G |NONE|YES |ENB|UP |               0|               0|
+   3/0 |29/0|180|1/52| 100G |NONE|YES |ENB|UP |               0|               0|
+   4/0 |28/0|176|1/48| 100G |NONE|YES |ENB|UP |               0|               0|
+   #+end_example
+
+**** 使用 dump-info 命令获取连接器信息
+
+   在 bf_pltfm 上下文中，使用 dump-info <conn_id/chnl> 命令来
+   获取有关连接到的 QSFP 端口的模块硬件信息。
+
+
+   #+begin_example
+
+   bf-sde.bf_pltfm> dump-info 1/0
+   Port 1
+   ID: 0x0d
+   Status: 0x00 0x06
+   Interrupt Flags:
+   LOS: 0x00
+   Fault: 0x00
+   ...
+   Vendor Defined: 0x00 0x00 0x00
+   Temperature: 1.503906 C
+   Supply Voltage: 0.000000 V
+   Channel Data:
+   RX Power
+   Channel 1:
+   0.000000mW
+   Channel 2:
+   0.000000mW
+   ...
+   Barefoot Networks Confidential and Proprietary
+   TX Bias
+   0.000000mA
+   0.000000mA
+   #+end_example
+
+
+*** 从 PTF 脚本管理端口
+
+   pltfm_pm_rpc Python 包将以下函数导出到
+   在端口上执行添加、删除、启用和禁用功能。
+   以下参数与函数一起使用
+
+   * device = 0（Tofino 的实例）
+
+   * dev_port（Tofino 的 9 位 device_port_id）
+
+   * ps（端口的 MAC 速度）
+
+   * fec（端口的 MAC 转发纠错设置）
+
+     #+begin_example
+     
+     pltfm_pm_port_add(self,
+       device,
+       dev_port,
+       ps,
+       fec)
+     pltfm_pm_port_del(self,
+       device,
+       dev_port)
+     pltfm_pm_port_enable(self,
+       device,
+       dev_port)
+     pltfm_pm_port_dis(self,
+       device,
+       dev_port)
+     #+end_example
+     
+   使用上述函数的例子可以在
+   <bf-platforms>/ptf-tests/pltfm_pm/test.py 找到
+
+
+   
+** 使用 PTF 脚本来配置 Tofino
+
+   可以在 Switch 上运行 PTF 脚本来配置 Tofino
+   ASIC。 PTF脚本可以调用Python
+
+   通过 Thrift-RPC 公开的 API 版本。以下
+   API 类通过 Python Thrift RPC 接口导出：
+
+   * P4 PD API：由 p4-build 编译程序时自动生成的 P4  API
+
+   * switchAPI：与 switch.p4 相关的更高级别的语义 API
+
+   * switchSAI：与switch.p4相关联的交换机抽象接口 (SAI)
+
+   * diagAPI：与diag.p4 相关的更高级别的语义API
+
+   * Platform Port Mgmt API：添加、编辑和监控端口
+
+   下面，我们提供了一些示例来展示如何在系统上运行 PTF 脚本。
+
+   注意！在本文档中，我们使用 <p4-examples> 来表示 SDE 的
+   示例switch 程序目录。确切的路径取决于你运行的 SDE 的版本
+   。例如，对于 SDE 9.3.1，<p4-examples> 具有
+   路径，$SDE/pkgsrc/switch-p4-16。有关安装的信息
+   SDE 和设置 $SDE，请参阅支持文章，
+
+
+*** 示例 1：为 basic_switching.p4 设置 P4 表规则
+
+   以下步骤演示了 P4 表规则的配置   简单的 P4 程序，basic_switching.p4。该设置假定使用两个
+   端口。
+
+**** 使用 basic_switching.p4 启动 bf_switchd
+
+   使用 -p 标志，并指定您的 P4 程序的名称，而不是
+   “.p4”后缀。
+   #+begin_example
+   $ cd $SDE
+   $ ./run_switchd.sh -p basic_switching
+   #+end_example
+
+**** 运行 PTF 脚本设置 P4 表规则
+     #+begin_example
+     $ cd $SDE     
+     $ ./run_p4_tests.sh -t <p4-examples>/ptf-tests/eval/basic_switching/ --setup
+     #+end_example
+
+
+*** 示例 2：使用以下switchAPI 给switch.p4 设置 IPv4 路由表
+   以下步骤演示了第 3 层路由的配置使用 switchAPI 的 ECMP 表。有关测试的更多详细信息
+   配置可以在 <p4-examples>/ptf-tests/eval/api/l3.py 中找到。
+
+
+
+**** 使用 switch.p4 和 switchAPI 库启动 bf_switchd
+
+     #+begin_example
+     $ cd $SDE
+     $ ./run_switchd.sh -p switch -c $SDE_INSTALL/share/p4/targets/switch.conf
+     #+end_example
+
+
+**** 运行 PTF 脚本来设置 IPv4 路由表
+     #+begin_example
+     $ cd $SDE     
+     $ ./run_p4_tests.sh -t <p4-examples>/ptf-tests/eval/api/ --setup
+     #+end_example
+
+
+
+
+*** 示例 3：使用以下   P4-PD-API 为 switch.p4 设置 IPv4 路由表
+
+
+   以下步骤演示了 使用 P4 PD API 配置 L3 ECMP路由表
+   。有关测试配置的更多详细信息
+   可以在 =<p4-examples>/ptf-tests/eval/pd/l3.py= 中找到。
+
+**** 使用 switch.p4 和 PD-API 库启动 bf_switchd
+     #+begin_example
+     $ cd $SDE
+     $ ./run_switchd.sh -p switch -c $SDE_INSTALL/share/p4/targets/switch-pd.conf
+     #+end_example
+
+**** 运行 PTF 脚本来设置 IPv4 路由表
+     #+begin_example
+     $ cd $SDE
+     $ ./run_p4_tests.sh -t <p4-examples>/ptf-tests/eval/pd/ --setup
+     #+end_example
+
+**** 转储/dump IPv4 路由表
+
+   python 脚本 <p4-examples>/ptf-tests/eval/dump.py 可用于
+   switch.p4 中使用的转储表和操作配置文件。脚本读取
+   使用 P4 PD API 的硬件条目。在脚本中，
+   类变量 TABLES 和 ACTION_PROFILES 枚举列表
+   可以转储的表和操作配置文件。要使用脚本，
+   调用它如下：
+   #+begin_example
+   $ cd $SDE
+   $ python <4-examples>/ptf-tests/eval/dump.py --install-dir $SDE_INSTALL
+   #+end_example
+
+** 管理 Switch 平台
+
+*** bf-sde CLI 概述
+
+   bf-sde 命令行界面 (CLI) 可让您访问命令
+   用于管理和监控 Tofino 芯片和 Switch 网络
+   端口和机箱。
+
+**** 启动 bf-sde CLI
+
+   bf-sde CLI 在您启动交换机后立即可用
+   在 bf-switchd 中运行其 P4 程序。在您启动的 shell 中
+   bf-switchd，等待交换机初始化完成，然后
+   按 <Enter> 键。将出现 bf-sde> 提示，指示
+   CLI 已准备好接受命令。
+
+**** 导航 bf-sde CLI
+
+   在 CLI 的任何级别，键入 ?显示命令子包和
+   在那个级别可用。输入子包的名称
+   输入它。键入 .. 退出子包并返回到其父包。
+
+   要退出 CLI，请键入 exit 。
+
+**** bf-sde 中的顶级 CLI 命令
+
+   CLI 顶层可用的命令有：
+
+   * quit：停止 bf-sde shell 线程
+
+   * dump-trace：显示跟踪日志
+
+   * reset-trace：清除跟踪日志
+
+   * set-trace-level：设置模块的跟踪级别
+
+   * set-log-level：设置模块的日志级别
+
+   * get_trace：get_trace <大小>
+
+   * ver：显示所有加载/链接的 BF SDE 组件的版本
+
+   * add-vdev：添加虚拟设备
+
+   * rmv-dev：删除设备
+
+*** 板卡端口配置
+
+   bd_cfg 中提供了板口配置命令包
+   #+begin_example
+   bf-sde> bd_cfg
+   #+end_example
+   
+
+   对于以下命令，您必须传递一个斜杠分隔的
+   “conn_id/chnl”参数指定 QSFP 端口 (conn_id) 和通道
+   (chnl)。对于非通道化的 QSFP 连接，您必须通过一个通道
+   值为 0。其他选项在它们适用的地方列出：
+
+   * mac_get <conn_id/chnl>
+
+   * tx_phy_lane_get <conn_id/chnl>
+
+   * rx_phy_lane_get <conn_id/chnl>
+
+   * tx_pn_swap_get <conn_id/chnl>
+
+   * rx_pn_swap_get <conn_id/chnl>
+
+   * Lane_info_get <conn_id/chnl>
+
+   * rptr_info_get <conn_id/chnl> <Egress->0, Ingress->1>
+
+   * bd_type_get
+
+
+
+   * show -p <conn_id/chnl> [-d -r]
+
+     例如，要显示板端口配置，请使用 bd_cfg 的
+     上下文的 =show= 命令：
+
+
+     #+BEGIN_EXPORT latex
+     {\small
+     #+END_EXPORT
+   #+begin_example
+   bf-sde.bf_pltfm.bd_cfg>show -p 1/0
+   ----+----+----+-----+-----+-----+-----+------+---- --+-------+----
+   PORT|QUAD|CHNL|TX LN|TX PN|RX LN|RX PN|TX ATT|TX PRE |TX POST|RPTR
+   ----+----+----+-----+-----+-----+-----+------+---- --+-------+----
+   1/0 | 31 | 0  | 2   | 0   | 2   |   0 |    0 |     4 | 0     | 0
+   #+end_example
+   #+BEGIN_EXPORT latex
+   }
+   #+END_EXPORT
+
+   显示端口的配置：
+   #+begin_example
+   
+   
+   bf-sde.bf_pltfm.bd_cfg> show -p 1/0 -d
+
+   ================================================================================
+    QSFP Port : 1
+    QSFP Lane : 0
+    MAC id : 31
+    MAC channel id : 0
+    TX PHY lane id : 2
+    TX PN swap : 0
+    RX PHY lane id : 2
+    RX PN swap : 0
+    TX Attenuation : 0
+    TX Pre Emphasis : 4
+    TX Post Emphasis : 0
+    Repeater present : 0
+    Egress Repeater Number : 255
+    Egress Repeater I2C Address : 255
+    Egress Repeater Channel : 255
+    Egress Repeater EQ Boost 1 : 255
+    Egress Repeater EQ Boost 2 : 255
+    Egress Repeater EQ BW : 255
+    Egress Repeater EQ Bypass Boost 1 : 255
+    Egress Repeater VOD : 255
+    Ingress Repeater Number : 255
+    Ingress Repeater I2C Address : 255
+    Ingress Repeater Channel : 255
+    Ingress Repeater EQ Boost 1 : 255
+    Ingress Repeater EQ Boost 2 : 255
+    Ingress Repeater EQ BW : 255
+    Ingress Repeater EQ Bypass Boost 1 : 255
+    Ingress Repeater VOD : 255
+   #+end_example
+*** 机箱管理
+    #+begin_src 
+    bf-sde> chss_mgmt    
+    #+end_src
+
+
+   chss_mgmt 中提供了平台机箱管理命令：
+
+   * sys_mac_get - 系统 MAC 地址和扩展地址数
+
+   * port_mac_get - <conn_id> <channel> 的 MAC 地址，其中 conn_id 是
+   QSFP 端口号和通道是 QSFP 通道号。
+
+   * eeprom_data - 系统序列号和其他标识   EEPROM解析的信息
+
+   * tmp_show - 显示所有温度传感器的读数
+
+   * tofino_tmp_show - 显示 Tofino CPU 温度
+
+   * vrail_show - 显示所有电压轨读数
+
+   * ps_show - 显示电源编号 <1|2> 的状态
+
+   * fan_show - 显示所有风扇速度数据
+
+   * fan_speed_set - 以 <%(0...100)> 的最大速度设置 <fan number> 速度
+
+**** 获取 MAC 地址
+
+   要获取主 CPU 管理接口的 MAC 地址，请使用
+   sys_mac_get:
+   #+begin_example
+   bf-sde.bf_pltfm.chss_mgmt> sys_mac_get
+   System Mac addr: 8c:ea:1b:93:ff:a7
+   Number of extended addr available 8
+   #+end_example
+   
+   要获取前面板 QSFP 端口和通道的 MAC 地址，请使用
+   port_mac_get 命令。例如，要获取 QSFP 端口 7 的地址，
+   lane 3，输入：
+   #+begin_example
+   bf-sde.bf_pltfm.chss_mgmt> port_mac_get 7 3
+   Port/channel:1/0 Port Mac addr: 8c:ea:1b:a8:10:0c
+   #+end_example
+
+**** 转储 EEPROM 内容
+
+   检索 Switch 系统序列号、型号和
+   其他识别信息，使用 eeprom_data 命令。
+   #+begin_example
+   bf-sde.bf_pltfm.chss_mgmt> eeprom_data
+   Version: 1
+   Product Name: Lower MAV
+   Product Number: 20-000001
+   ...
+   System Manufacturer: BAREFOO
+   System Manufacturing Date: 01-07-17
+   #+end_example
+   
+**** Tofino 温度监测
+
+   使用 tofino_tmp_show 检查 CPU 温度：
+   #+begin_example
+   Use tofino_tmp_show to check CPU temperature:
+   bf-sde.bf_pltfm.chss_mgmt> tofino_tmp_show
+   TOFINO MAIN TEMP SENSOR: 40 C
+   TOFINO REMOTE TEMP SENSOR 43 C
+   #+end_example
+
+**** 电源监控
+
+   使用 ps_show 检查电源单元，传递参数 1
+   或 2 表示您要检查的单位：
+   #+begin_example
+
+   bf-sde.bf_pltfm.chss_mgmt> ps_show 1
+   Vin             200 V
+   Vout             12 V
+   ...
+   Load Sharing    false
+   #+end_example
+   
+
+
+**** 风扇监控
+
+   使用 fan_show 查看主机箱风扇：
+
+   #+begin_example
+   bf-sde.bf_pltfm.chss_mgmt> fan_show
+   Fan tray present
+   FAN FRONT RPM REAR RPM MAX SPEED%
+   1     6150       3900         32%
+   ...
+   10   16800      16500        100%
+   #+end_example
+
+
+*** QSFP 管理
+
+   QSFP 管理在 bf_pltfm.qsfp 上下文中提供。来自
+   root CLI 上下文，您可以键入 qsfp 进入 qsfp 上下文。这
+   命令是：
+
+   * detect-xver：detect-xver <端口>
+
+   * get-xver-info：get-xver-info <端口>
+
+   * dump-info：dump-info <端口>
+
+   * qsfp-init：qsfp-init
+
+   * get-ini：get-int
+
+   * get-pres：get-pres
+
+   例如，要检索有关 QSFP 连接器 5 的操作信息，   你会输入：
+   #+begin_example
+   bf-sde.bf_pltfm.qsfp> dump-info 5
+   Port 5
+     ID: 0x11
+     Status: 0x07 0x04
+   ...
+     Vendor SN: 63222364
+     Date Code: 16111
+   #+end_example
+
+
+
+
+** 平台概览
+
+   Switch BF-65Z 提供 65 个 QSFP28 网络端口，用于
+   总吞吐量为 6.5 Tbps。每个QSFP28端口支持100GE（4x25G），
+   50GE (2x25G)、25GE、40GE (4x10G) 或 4x10GE。 4x10GE 选项是
+   通过 QSFP 到 SFP+ 分支电缆实现。
+
+   #+CAPTION:Switch BF-65Z 前面板视图
+   [[./media/image2.jpeg]]
+   
+
+   #+CAPTION:Switch BF-32Z 前面板视图
+   [[./media/image3.jpeg]]
+*** 主 CPU 模块
+
+   Switch 的主 CPU 是 COM Express Type 6
+   模块。这是一款符合行业标准的嵌入式 CPU 板，运行
+   具有以下配置的 Intel x86 Broadwell-DE 系列 CPU：
+
+   * Broadwell-DE、奔腾 D1517、4 核、1.6 GHz、6 MB 缓存、25W
+
+   * 4、8 或 16 GB DDR4 DRAM 内存，最多使用三个 SODIMM   CPU 板上的插槽
+
+   * 128 GB M.2 SSD 驱动器可通过 SATA 访问
+
+   这是 Barefoot Networks 所在系统的主 CPU
+   Capilano™ 软件开发环境 (SDE) 可以作为
+   独立软件或与网络操作系统集成
+   (NOS)。
+
+   在主 CPU 上，以下软件在加电时运行：
+
+   * AMI BIOS
+
+
+
+   * 操作系统，可以是 Ubuntu 16.04 Linux 或 ONL
+   
+
+   * 要连接到主 CPU，请参阅[[*管理交换机]]。
+
+
+
+*** BMC CPU 模块
+
+   系统的一般控制由基板管理提供
+   控制器 CPU (BMC)。为此，Switch 使用 Aspeed
+   Technologies AST1250 集成远程管理处理器。这个CPU
+   运行 [[https://github.com/facebook/openbmc][OpenBMC]] 软件
+   执行以下平台管理功能：
+
+   * 重置编排
+
+   * 电源管理
+
+   * 电压监控
+
+   * 温度监控和风扇控制
+
+   更多信息：
+
+   * /要连接到 BMC CPU/，请参阅[[*管理交换机]]。
+
+
+
+*** Tofino 交换机专用集成电路
+
+**** PCIe x4 Gen 3
+
+   Tofino ASIC 通过 PCIe 连接到 CPU 的 PCIe 根联合体
+   4x 在 Gen3 模式下运行。在启动时，BIOS 和操作系统枚举
+   PCIe 总线并为 Tofino 设置基地址寄存器。你可以
+   使用 lspci 命令从 Ubuntu shell 确认此设置。这
+   应该返回一个值，显示 Tofino 是
+
+   在 pcie_bus '5' 处枚举。
+
+   重要的！运行 lspci 时不要省略结尾的冒号
+   命令。
+
+   root@Switch:~$ sudo lspci -vv -d 1d1c:
+
+   05:00.0 未分配的类 [ff00]：设备 1d1c:0001 子系统：设备
+   1d1c:0001
+
+   物理插槽：1
+
+   控制：I/O- Mem- BusMaster- SpecCycle- MemWINV- VGASnoop- ParErr-
+
+**** Tofino端口
+
+***** 64x100GE QSFP28 端口
+
+   Tofino 支持 64 个 QSFP28 端口（共 16 个 2x2 zQSFP 笼
+   连接器，带有 8 个 2x2 zQSFP 笼
+
+   上板上的连接器和下板上的八个连接器）。每条战线
+   面板端口可配置支持100GE、50GE、40GE、25GE和
+   10GE 速度。
+
+***** 1x100GE QSFP28“CPU”端口
+
+   * 这是一个额外的 100GE 网络端口，用作第 65 个
+   100GE网口
+
+   * 此端口的特殊之处在于它具有以下附加功能：
+   与其他 64 个端口不同，以 1G 的速度运行。
+
+
+
+*** AC/DC 电源装置
+
+   有两个冗余的 1100W AC/DC 电源装置 (PSU)，带有
+   内部 40 毫米风扇单元。每个 PSU 具有以下特性：
+
+   * 输入为 90V-264V AC
+
+   * 输出为 12V 和 3.3V/5V 待机（Switch 设计中不使用待机）
+
+   * 支持热插拔
+
+   * 2 个 PSU 之间的负载共享
+
+*** 风扇
+
+   系统中有十个热插拔风扇单元，五个用于
+   上卡和五个下卡。上卡和下卡
+   共享由五个风扇组成的同一个风扇板。
+
+   该系统支持从前到后和从后到前的气流
+   方向。在给定的系统中，风扇和 PSU 具有相同的气流
+   方向，并通过颜色编码的手柄进行区分。
+
+   其他风扇功能包括：
+
+   * 风扇具有显示运行状态的状态 LED。
+
+   * 风扇可单独热插拔。
+
+   * 每个风扇速度都可以通过平台单独控制
+   BMC 上运行的软件。
+
+*** LED 状态灯
+
+**** 使用 LED 端口通道状态灯
+
+   Switch 端口通道状态灯以四个一组的形式出现
+   顶部/底部之间的三角形灯
+   （奇数/偶数）一对 QSFP 端口。三角灯的方向
+   不 /not/ 指示灯对应哪个 QSFP 端口。基于
+   您使用端口 LED 选择器按钮选择的设置，四个
+   指示灯指示 QSFP 端口上 MAC 通道的状态
+   灯上方，或 QSFP 端口上 MAC 通道的状态
+   灯下。
+    [[.//media/image4.jpeg]]
+
+
+
+
+   端口 LED 选择器按钮位于右下角
+   前面板，标有“LED Select”，如下图所示。
+   按钮右侧是两个BANK指示灯，TOP和BOT，
+   指示是否所有端口灯都显示端口状态
+   它们上方 (TOP) 或下方 (BOT) 的端口。按下按钮切换   。
+
+   [[.//media/image5.jpeg]]
+
+   例如，让我们看看面板最左边的顶部/底部对
+   Switch QSFP 端口并假设一个
+
+   每个 QSFP 端口上配置 4x25G（4 个 25G 的 MAC 通道
+   每个）。如果您选择 TOP 库，四个指示灯将显示
+   顶部 QSFP 端口的四个通道从左到右为：
+
+   * QSFP 端口 1/MAC 通道 1
+
+   * QSFP 端口 1/MAC 通道 2
+
+   * QSFP 端口 1/MAC 通道 3
+
+   * QSFP 端口 1/MAC 通道 4
+
+**** 端口状态 LED 颜色的关键
+
+   在 Switch 默认配置中，LED 的颜色和状态
+   端口通道状态灯指示如下所示的状态：
+
+   * 绿色：端口/通道处于活动状态（链接已启动）
+
+   * 蓝色：端口/通道已启用但链接未启动
+
+   * 橙色：端口/通道已被管理员禁用。
+
+   * LED 熄灭：端口/通道未启用或尚未添加。
+
+   Switch 目前不使用 LED 来显示端口速度。
+
+**** LED 控制：概述
+
+   对于带有片上微控制器的开关，可以将
+   switch直接控制端口速度
+
+   指示灯 LED 灯。由于 Tofino 开关没有内置
+   微控制器，LED 控制最终来自主机 CPU。
+   其一般程序如下：
+
+   1. 主机 CPU 轮询 Tofino 以获取链接状态。
+
+   2. 主机 CPU 通过 PCIe 将 LED 状态信息写入 Tofino。
+
+   3.主机CPU触发Tofino上的i2c_ctrl寄存器来转移stateout
+   位到 CPLD。 （或者，主机 CPU 可以直接写入 CPLD，
+   但这可能是通过 I2C 实现的，因此速度很慢。通过沟通
+   Tofino 对于主机 CPU 来说更快。）
+
+   CPLD 具有与 Tofino 通信的 I2C 接口。减少
+   CPLD 上需要的 IO 操作数，使用移位寄存器
+   在板上。 CPLD 会将数据移出到移位寄存器。
+
+**** LED 控制：软件实现
+
+   重要提示：请注意 /port LED 选择器按钮 / 的作用。如果
+   您没有看到端口或通道的预期 LED 状态，请按
+   端口 LED 选择器按钮来切换 LED。有关详细信息，请参阅
+   前面的部分“使用 LED 端口通道状态灯”。
+
+   LED 控制功能主要在 bf_platfm API 中实现，
+   您可以在 $SDE/packages/bf-platforms-3.2.0.40/drivers/src 中找到它。
+   这些功能是平台相关的。用户建立自己的
+   切换平台可以将这些作为示例代码进行修改。
+
+   主机 CPU 通过以下方式定期轮询 Tofino 链接状态
+   bf_pltfm_pm_intf.c 中的 link_poll_timer_cb()。获取当前
+   每个端口的操作状态，link_poll_timer_cb() 调用
+   bf_port_oper_state_get()。
+
+   修改LED状态的函数是
+   bf_pltfm_port_led_by_cpld_set()（目前由 SDE 使用）或
+
+   bf_pltfm_mav_led.c 中的 bf_pltfm_port_led_set()。已发布的 SDE
+   目前使用“替代”方式
+
+
+
+   通过直接写入 CPLD 存储器来修改 LED 状态。到
+   切换到使用 Tofino，我们基本上会调用 
+   
+   =bf_pltfm_port_led_set()= 在
+   bf_pltfm_port_led_by_cpld_set() 被调用。
+
+   bf_pltfm_port_led_by_cpld_set()方法被平台调用
+   负责更新每个 LED 状态的端口管理功能
+   启用、禁用或删除端口的时间。
+
+   在 bf_pltfm_mav_led.c 的顶部，可以看到定义
+   我们用于我们的 LED。给定的 QSFP 通道有一个 LED 来指示其
+   状态，并设置颜色，系统对一个
+   一组四位。这四位定义为：
+
+   * 位 0：绿色
+
+   * 位 1：蓝色
+
+   * 位 2：红色
+
+   * 位 3：闪烁
+
+**** 设备硬件支持
+
+   有两个设备上的独立 GPIO 块。每个GPIO块最多可以支持
+   到 6 个 I2C 主接口。但是，只需要发送一个
+   LED 信息。每个 GPIO 都有一个共享的 2048 位内存，组织成 64
+   32b 寄存器的条目。每个 I2C 接口可以指定一个开始
+   地址（0 到 63）和要写入的字节数。如果你连接
+   GPIO_0/1 和 GPIO_12/13（即每个 GPIO 块中的一个），您将
+   具有高达 4096b 的 LED 控制。
+
+**** 详细的设备注册信息
+
+   本节提供的信息可帮助您导航设备
+   与 GPIO 控制相关的寄存器映射。
+
+   请检查寄存器组 gpio_pair_regs。该组包含
+   每个 GPIO 对有 11 个寄存器。请参阅“数组维度”
+   和地址字段。有六个 gpio_pair_regs 组。首先
+   组（地址 0x1820000 到 0x1820028）控制第一个 GPIO 对
+   群组。第二组（0x182002C 到 0x1820058）控制
+   第二个 GPIO 对。
+
+   以下是 Tofino 上寄存器组的顶级视图：
+
+   * Ethgpiobr：模具视图的右下角。这对应于左下角
+   封装视图中的 6 对 GPIO。通用输入输出口 12-23。
+
+   * gpio_pair_regs X 6 个副本 控制 6 个 I2C 对
+
+     * 第一组控制GPIO 12-13
+
+   * gpio_common_regs：只有 1 个副本
+
+     * 状态寄存器（32b x 64 个条目 = 2048 位）
+     * 和   GPIO12-23 共享
+
+   * Ethgpiotl：模具视图的左上角。这对应于右上角 6
+   包视图中的 GPIO 对。通用输入输出口 0- 11
+
+   * 与上述相同的设置
+
+   * 第一组控制 GPIO 0-1
+
+
+
+
+
+   要了解 I2C 帧格式，请参见下图。
+   #+CAPTION:从 I2C 32b 配置寄存器事务
+   #+ATTR:htop
+   [[.//media/image6.jpeg]]
+   
+
+   在 I2C 事务中，您发送以下字段（注册
+   字段名称映射如下）：
+
+   * I2C 设备地址：i2c_ctrl.i2c_devaddr
+
+   * I2C 读/写_b：i2c_ctrl.i2c_cmd。对于 LED 数据写入，这将
+   是 00b
+
+   * I2C CPLD 寄存器地址（在图中标记为“CPLD Device Addr”
+   3): i2c_addr.i2c_addr
+
+   * I2C 写数据：它可以是 i2c_wdata.i2c_wdata 的 1-4 字节或
+   它可以是 2048b 状态寄存器中的内容。
+
+   * i2c_ctrl.type 确定写入数据是否来自 i2c_wdata 或
+   状态
+
+   * i2c_ctrl.i2c_stateaddr：在 stateout 中开始发送数据的位置。
+   这是 2048b 寄存器数组的字节偏移量
+
+   * i2c_ctrl.i2c_datanum：要写出的字节数。所有数据
+   将在单个 I2C 事务中写出。例如，如果 16
+   要写出字节，它将作为 16 个字节的突发发送
+   并且没有分解成四个 4 字节的 I2C 事务。
+
+   * i2c_ctrl.i2c_exec：执行 I2C 事务
+
+   有关更多信息，请参阅 Barefoot 知识库文章，
+   [[https://support.barefootnetworks.com/hc/en-us/articles/115001308327-Slave-I2C-Usagehttps://support.barefootnetworks.com/hc/en-us/articles/115001308327-Slave-I2C-用法https://support.barefootnetworks.com/hc/en-us/articles/115001308327-Slave-I2C-Usage][Slave  I2C 用法。]]
+
+
+
+
+** COMMENT 固件和软件更新
+
+*** 主 CPU 引导加载程序更新
+
+**** 安装 BF-Wedge-ONIE
+
+   如果您的 Barefoot Networks Switch 系统未预装
+   使用所需的 ONIE 引导加载程序，
+
+   按照本节中的步骤在主机上安装或重新安装 ONIE
+   Switch 主 CPU。为此，您将启动 Switch 系统
+   从包含 ONIE 图像的 USB 驱动器。此程序适用
+   到自定义 BF-Wedge ONIE 引导加载程序映像，可从 Barefoot 获得
+   网络。
+
+   什么是ONIE？开放式网络安装环境 (ONIE)
+   裸机网络交换机的操作系统，它提供了一个
+   自动配置的环境。 ONIE 定位并执行一个
+   网络操作系统 (NOS) 供应商的安装程序。在这
+   在这种情况下，NOS 是与 Open Network Linux (ONL) 兼容的版本
+   使用 Switch 和 Tofino。
+
+   当启用 ONIE 的网络交换机第一次启动时，启动
+   loader 启动内核，启动 ONIE 发现和
+   执行 (ODE) 应用程序。
+
+   ODE 使用扫描本地文件和 DHCP 等方法来
+   找到并下载（通过 HTTP 或 TFTP）操作系统安装程序。
+   一旦找到安装程序，ODE 就会执行安装程序，
+   然后继续以特定于 NOS 的方式配置该框。
+
+   要安装 ONIE，请遵循以下两个步骤。
+
+***** 过程：创建可引导的 ONIE 映像
+
+   1. 下载ONIE镜像
+   [[https://support.barefootnetworks.com/hc/en-us][Barefoot Networks
+   支持门户，]] 或从您的 Barefoot Networks 帐户获取
+   代表。在撰写本文时，文件名是：
+
+   SwitchF-65（65 端口）：
+   onie-recovery-x86_64-accton_wedge100bf_65x-r0.iso Switch BF-32Z (32
+   端口）：onie-recovery-x86_64-accton_wedge100bf_32x-r0.iso
+
+   2. 将 ISO 转换为可启动映像并将其加载到 USB
+   设备。使用下面的命令创建可启动的USB。 看
+
+   * 下面的 Linux (Ubuntu) 步骤，或
+   * 第 38 页的 MacOS 步骤。
+
+ ****.1 Linux (Ubuntu) 步骤
+
+   在 Ubuntu 上，您可以将 ISO 文件转换为可启动映像，如
+   如下：
+
+   1. 找到您的 USB 驱动器所在的分区。在这
+   例如，它是 /dev/sdb1。您可以使用诸如 gnome-disks 之类的工具来
+   找到名字。单击 USB 驱动器图标并在其中查找名称
+   设备字段。
+
+   笔记！在您的系统上，设备的名称可能与
+   /dev/sdb1.在您的系统上，该设备可能被称为 /dev/sdb 或
+   /dev/sdc1.
+
+
+ [[.//media/image8.jpeg]]
+
+
+   > gnome 磁盘
+
+   2. 使用 dd 命令创建可启动映像，如图所示
+   下面的例子。这里我们使用 /dev/sdb1 作为我们的示例分区名称。在
+   下面的命令，您必须用您的名称替换 /dev/sdb1
+   USB设备分区：
+
+   须藤 dd if=./onie-recovery-x86_64-accton_wedge100bf_65x-r0.iso
+   of=/dev/sdb1
+
+   3. 继续第 39 页的“从 ONIE 映像启动主 CPU”。
+
+ ****.2 MacOS 的步骤
+
+   在 Mac OS 上，您可以将 ISO 文件转换为可启动映像，如
+   如下：
+
+   1.转换ISO：
+
+   > hdiutil 转换-格式 UDRW -o
+   onie-recovery-x86_64-accton_wedge100bf_65x-r0.img
+   onie-recovery-x86_64-accton_wedge100bf_65x-r0.iso
+
+   2. 找到您的 USB 驱动器所在的分区。在这
+   例如，/dev/disk2 这对应于 USB 设备。使用
+   diskutil list 命令如下所示：
+
+
+
+   > 磁盘工具列表
+
+   /开发/磁盘0
+
+   #: 类型名称大小标识符
+
+   0：GUID_partition_scheme *251.0 GB disk0
+
+   1：EFI EFI 209.7 MB disk0s1
+
+   /开发/磁盘1
+
+   #: 类型名称大小标识符
+
+   0：Apple_HFS Macintosh HD *249.8 GB disk1
+
+   /开发/磁盘2
+
+   #: 类型名称大小标识符
+
+   0：FDisk_partition_scheme *2.0 GB disk2
+
+   1: 0xEF 213.0 KB disk2s1
+
+   笔记！在运行 dd 命令之前，请确保您的 USB 驱动器已
+   已卸载但保持物理连接。卸载命令将
+   类似于“sudo diskutil unmount /dev/disk2s1”。
+
+   3. 使用dd命令将镜像放到U盘上，如图
+   下面的例子。这个例子假设一个 SwitchF-65：
+
+   须藤 dd if=./onie-recovery-x86_64-accton_wedge100bf_65x-r0.img.dmg
+   of=/dev/disk2 bs=1m
+
+   4. 继续执行下面的“从 ONIE 映像启动主 CPU”。
+
+***** 从 ONIE 镜像启动主 CPU
+
+   1. 将控制台会话连接到 Switch 上的 BMC CPU。为了
+      说明，请参阅“访问 BMC CPU 和
+   主 CPU 通过串行控制台端口。”
+
+   2. 将可启动 USB 驱动器插入 Switch 上的 USB 端口
+   前面板。
+
+   3、重启Switch系统。在 BMC 提示符下，键入
+   下列的。重新启动后，您必须运行 sol.sh 脚本，该脚本
+   在 Switch 主 CPU 上启动一个终端会话：
+
+   root@bmc:~#wedge_power.sh 重置；安装文件
+
+   电源重置微服务器...完成
+
+   4. 按 <ESC> 或 <DEL> 键进入 Aptio Setup Utility。
+   Boot 菜单，将 Boot mode select 设置为 /LEGACY/ 并设置 Boot Option #1
+   到/USB 设备/。
+
+
+ [[.//media/image9.jpeg]]
+
+
+   5、按F4保存退出。 （如果您从 MacOS 登录
+   机器使用默认设置，您可能需要
+
+   按 fn + F4）。
+
+   6. 当您到达 GRUB 下的 ONIE 启动屏幕时，选择 /ONIE EMBED
+   MODE/，安装 ONIE。
+
+   7.ONIE安装完成后，先拔掉USB设备
+   交换机重新启动。
+
+   8、出现ONIE提示时（用户是root，没有密码是
+   必填），输入以下内容：
+
+   ONIE:/ # onie-discovery-stop
+
+   停止：发现……完成。
+
+   9. 检查 ONIE 安装是否成功
+   ONIE 日志文件：
+
+   ONIE:/ # 尾 /var/log/onie.log
+
+   后续步骤：安装 ONL 网络的 Barefoot 特定版本
+   操作系统，如“主 CPU 操作系统更新”中所述，
+   以下。作为替代方案，您可以安装第三方网络
+   协议栈和工具链。联系 Barefoot Networks 客户
+   如果您想安装第三方工具链，请支持。
+
+*** 主 CPU 操作系统更新
+
+**** 安装 ONL
+
+   在本节中，我们将展示如何安装与 Switch 兼容的构建
+   [[https://opennetlinux.org/][ONL 操作系统]]
+   Switch 主 CPU。这是推荐的操作系统
+   用于练习 Capilano SDE 的 Switch 主 CPU。如果您使用的是
+   Switch 上的第三方网络协议栈和工具链，
+   你应该使用推荐的操作系统
+   协议栈供应商。
+
+   先决条件：您的 Switch 主 CPU 必须运行 ONIE 启动
+   装载机。请参阅第 37 页的安装 BF-Wedge-ONIE。
+
+   过程：ONIE引导加载程序安装完毕，Switch启动后，即可安装所需的Open Network Linux
+   (ONL) 图像，请按照以下说明操作。在这种情况下，我们显示
+   安装 Barefoot ONL (Open Network Linux) 所需的步骤
+   操作系统分布。
+
+
+
+   1. 下载 ONL 安装程序
+   [[https://support.barefootnetworks.com/hc/en-us][Barefoot Networks
+   支持门户，]] 或从您的 Barefoot Networks 帐户获取
+   代表。在撰写本文时，ONL 安装程序文件是
+   称为 ONL-2.0.0_ONL-OS_2017-05-
+
+   10.2057-b7cf361_AMD64_INSTALLED_INSTALLER。请咨询支持
+   门户以获取最新图像。
+
+   2. 在 ONIE 提示下，将 ONL 安装程序文件复制到 /root
+   以用户 /root/ 身份在 Switch 系统硬盘驱动器上打开文件夹。这样做
+   使用 scp 或通过安装 USB 通过网络复制文件
+   包含文件并从 USB 复制它的设备。
+
+   如何在 ONIE 所在的 SwitchF 系统上挂载 USB 驱动器
+   安装：
+
+   在 ONIE 提示符下，执行以下操作：
+
+   ONIE:/ # fdisk -l
+
+   ONIE:/ # mkdir /mnt/usb
+
+   ONIE:/ # mount /dev/sdb1 /mnt/usb ONIE:/ # ls -l /mnt/usb
+
+   上述 ONIE 命令序列假设“/dev/sdb1”是 USB
+   驱动器的文件系统，您应该从输出中确认
+   运行“fdisk -l”命令。一旦你复制了必要的
+   文件从 USB 设备到 SwitchF 系统硬盘，您
+   可以通过发出 umount 命令卸载 USB 设备：
+
+   ONIE:/ # 卸载 /mnt/usb
+
+   3. 通过运行 onie-nos-install 命令安装 ONL：
+
+   ONIE:~ # onie-nos-install
+   ONL-2.0.0_ONL-OS_2017-05-10.2057-b7cf361_AMD64_INSTALLED_INSTALLER
+
+   相同的 ONL 安装程序文件适用于 Switch BF-65Z
+   和 Switch BF-32Z 盒子。
+
+  4. 一旦系统在 ONL 安装和
+   随后重新启动，您可以使用以下命令登录到 Switch 主 CPU
+   用户名/密码：root/onl。
+
+   下一步：
+
+   * 如果您将使用 Barefoot Networks 的 Capilano SDE，/您必须安装
+   SDE 依赖项/，如“安装 SDE
+   依赖关系”，第 16 页。
+
+   * 如果您将使用交换机管理/开发环境
+   另一个供应商，请查阅该供应商的文档。
+
+*** BMC CPU 操作系统更新
+
+   本节介绍如何更新操作系统
+   Switch 上的基板管理控制器 CPU (BMC CPU)。
+
+**** BMC 镜像架构
+
+   Barefoot Networks 的 Switch BMC 镜像有四个分区。引导，
+   uboot 环境、内核和根文件系统。只有内核
+   和根文件系统可以从命令行进行现场更新。这
+   uboot 和 uboot 环境文件系统预计不需要
+   更新。可以更新内核或根文件系统
+   独立，但我们不建议这样做。相反，赤脚
+   Networks 建议您在更新之前更新两个文件系统
+   重启 BMC CPU，除非 Switch/SDE Release Notes
+   另有明确说明。
+
+
+
+**** 程序：BMC 更新
+
+   按照以下步骤更新 Barefoot Networks 的 Switch BMC
+   图像：
+
+   1. 下载 OpenBMC 镜像
+   [[https://support.barefootnetworks.com/hc/en-us][Barefoot Networks
+   支持门户。]] 文件名将类似于 bf-
+   BMC05092017.tar。
+
+   2. 解压档案。您需要的文件是：
+
+   * mavericks-image-mavericks.cpio.lzma.u-boot
+   * uImage
+
+   5. 传输内核（uImage）和rootfs
+   （mavericks-image-mavericks.cpio.lzma.u-boot，或简称 rootfs）到
+   BMC 文件系统的 /tmp 文件夹。首先，给 rootfs 文件
+   较短的名称。对于此过程的其余部分，我们将这些文件称为
+   uImage 和 rootfs，分别为：
+
+   mv Mavericks-image-mavericks.cpio.lzma.u-boot rootfs
+
+   然后将文件放在 BMC 文件系统的 /tmp 文件夹中
+   * 如果
+   您的 BMC CPU 可在网络上访问：
+
+   scp uImage rootfs root@<bmc-ip-address>:/tmp/.
+
+   * 如果您的 BMC CPU 不在可访问的网络上，则传输
+   文件首先传输到主 CPU（通过网络或通过 Switch 前面板 USB 端口上的 USB），然后传输到 BMC。从终端
+   session 在主 CPU 上，复制操作如下。经过
+   默认情况下，BMC CPU 可在该地址本地（机上）访问
+   192.168.0.1。
+
+   root@Switch:~$scp uImage rootfs
+   [[mailto:root@192.168.0.1:/tmp/][root@192.168.0.1:/tmp/]]。
+
+   6. 通过串行 telnet 或 scp 连接连接到 BMC shell。
+
+   root@bmc:~# cd /tmp
+
+   7、使用flashcp命令将内核文件写入/dev/mtd2。
+   重要提示：小心使用名称
+
+   “mtd2”，如下面的命令所示。
+
+   root@bmc:~# flashcp uImage /dev/mtd2
+
+   上述操作最多需要 30 秒才能返回
+   迅速的。
+
+   8. 使用flashcp 命令将rootfs 文件写入/dev/mtd3。
+   重要提示：小心使用名称
+
+   “mtd3”，如下面的命令所示。
+
+   root@bmc:~# flashcp rootfs /dev/mtd3
+
+   上述操作最多需要两分钟才能返回
+   迅速的。
+
+   9. 重启 Switch BMC CPU：
+
+   root@bmc:~# 重启
+
+   一些升级引入了对 BMC 命令的更改。对于 BMC 命令行
+   说明，请参阅前面的部分“访问 BMC CPU 和主
+   CPU 通过串行控制台端口”（第 13 页）。
+
+
+
+**** 检查 BMC 映像版本
+
+   显示在您的 BMC 上运行的 Switch BMC 映像的版本
+   CPU，输入以下命令：
+
+   root@bmc:~# cat /etc/issue
+
+   root@bmc:~# cat /etc/version
+
+
+
+** COMMENT Tofino 测试和故障排除
+
+   在本节中，我们将解释用于测试和故障排除的工具
+   Tofino 上的流量转发，包括 bf-shell CLI
+   故障排除和日志记录命令，以及生成工具
+   用于测试的数据包。
+
+*** 生成测试流量
+
+**** 使用 Diags 测试数据平面生成数据包
+
+   本节中显示的许多示例都基于 diag.p4 程序，
+   被称为迪亚格。有关 Diags 的更多信息，请参阅 /Barefoot Diags
+   CLI 和 API 用户指南/.此处显示的 CLI 命令可在
+   其他 P4 数据平面程序也是如此。
+
+   小费！创建示例匹配操作表并生成的快速方法
+   流量是使用Barefoot的diag.p4演示程序，称为
+   “诊断。”设置一些示例中显示的匹配操作表
+   下面，首先运行 Diags：
+
+   root@localhost:~/doc/bf-sde-5.0.0.11# 。 ./set_sde.bash
+
+   root@localhost:~/doc/bf-sde-5.0.0.11# ./run_switchd.sh -p diag
+
+   接下来，添加端口。例如：
+
+   bf-sde> 下午
+
+   bf-sde.bf_pltfm.pm> 端口添加 -/- 100G 无 bf-sde.bf_pltfm.pm>
+   端口-enb -/-
+
+   检查端口是否已启动（检查 QSFP、ADM、OPR 列）：
+
+   bf-sde.bf_pltfm.pm> 显示
+
+   检查端口状态：
+
+   端口|MAC |D_P|P/PT|速度|FEC |QSFP|ADM|OPR|帧接收|帧发送|E
+
+   1/0|31/0|188|1/60| 100G |无|是 |ENB|UP | 0| 0|
+
+   2/0|30/0|184|1/56| 100G |无|是 |ENB|UP | 0| 0|
+
+   转到 Diags 上下文并设置 VLAN：
+
+   bf-sde> 诊断
+
+   bf-sde.diags> vlan-create 0 1
+
+   将 VLAN 设置为某些端口的默认 VLAN：
+
+   bf-sde.diags> def-vlan-set 0 188 1 bf-sde.diags> def-vlan-set 0 184 1
+
+   您可以使用在 Diags 中运行蛇测试来测试流量转发
+   蛇设置，
+
+   蛇开始、蛇状态、蛇停止和蛇清理命令。
+   见
+
+   /Barefoot Diags CLI 和 API 用户指南/了解详情。
+
+
+
+**** 从 CPU 注入数据包
+
+   为了进行测试，您可以使用 CPU 端口从控制面注入数据包。 通常，您将使用 PCIe 端口
+
+   （Tofino 4 管道设备上的端口号 320（如 SwitchF-65X），以及 2 管道设备上的端口号 192（如 SwitchF-32X））。在某些系统上，端口 64 也可能连接到
+   CPU 通过专用以太网 MAC。
+
+   从 P4 编程的角度来看，这些是常规端口，这意味着
+   数据包经过常规的 Tofino 数据平面处理。用于检测，
+   如果你想让这样的数据包直接去某个端口，你必须
+   设计一个特殊的头，将携带所需的端口号，添加
+   它到数据包，然后在你的 P4 程序中处理数据包
+   相应地（可能在发送之前删除该特殊标头
+   数据包到出口处理等）。
+
+   注入有两种选择：
+
+   * 您可以使用用户级 API，定义在
+   $SDE_INSTALL/include/pkt_mgr/pkt_mgr_intf.h 和 bf_pkt.h。如果
+   在 Thrift 中，SDE 也提供了一些简化的 API。 看
+   $SDE_INSTALL/lib/python2.7/site-packages/tofino/pkt_pd_rpc/pkt.py 用于
+   细节。
+
+   * 您可以使用/bf_kpkt/ 驱动程序。这个驱动程序创建了一个 Linux
+   选择 PCIe 端口的网络接口。使用它，您可以打开一个
+   原始套接字，使用 /libpcap/ 或您的任何其他标准 Linux 方法
+   选择向/从 CPU PCIe 端口发送/接收数据包。
+
+**** 使用 pktgen 在 Tofino 中生成数据包
+
+   Tofino 上的每个管道都有自己的数据包生成引擎，能够
+   根据用户指定的触发事件批量注入数据包。
+   有关信息，请参阅中定义的 p4_pd_pktgen API
+
+   $SDE_INSTALL/include/tofino/pdfixed/pd_conn_mgr.h 和
+   p4_pd_pktgen_app_cfg 结构体
+   $SDE_INSTALL/include/tofino/pdfixed/pd_common.h。
+
+*** 日志文件位置
+
+   当你运行一个 P4 程序时，程序的日志被写入到一个文件中
+   程序执行的目录。日志文件的名称
+   取决于您用来运行 P4 程序的脚本：
+
+   * run_switchd.sh：bf_drivers.log
+
+   * run_p4_tests.sh：ptf.log
+
+   * run_tofino_model.sh：model_0.log
+
+*** 转储匹配操作表条目
+
+   对于 Tofino 上给定的匹配操作表，您可以转储匹配规范，
+   动作和动作数据如下：
+
+**** 列出所有匹配动作表
+
+   要列出 P4 程序使用的所有表，请使用 pipe_mgr
+   table dump 命令，tbl -d <dev>（其中 <dev> 是交换机设备 ID，
+   在单 ASIC 系统上通常为“0”）：
+
+
+
+   bf-sde> pipe_mgr
+
+   bf-sde.pipe_mgr> tbl -d 0
+
+   match action 表：
+
+   match action 表：
+   #+begin_example
+   -------------------------|----------|----|--------| -----|----|---|---|---|---|----
+   Name                     |Handle    |Type| Entries|Keysz |Stgs|Adt|Sel|Sta|Met|Sful
+   -------------------------|----------|----|--------| -----|----|---|---|---|---|----
+   tbl_stage0               |0x1000001 |exm |2       |0     |1   |NA |NA |NA |NA |NA
+   ...
+   def_vlan_mapping         |0x100000e |exm |512     |0     |1   |NA |NA |NA |NA |NA
+   #+end_example
+   在表列表输出中，注意以下值：
+
+   * Handle列。这是表的唯一标识符；和
+
+   * 类型列。这表示表的类型：exm 表示
+   精确匹配表，tcam表示三元匹配（模糊匹配）
+
+**** 显示有关匹配操作表的信息
+
+   要转储（dump）匹配操作表，请使用表信息命令 tbl_info，在
+   表管理器上下文之一：
+
+   * 对于精确匹配表 (exm)。采用 exm_tbl_mgr 上下文。
+
+   * 对于三元匹配表 (tcam)。使用 tcam_tbl 上下文。
+   命令摘要：
+     #+begin_example
+     tbl_info -d <dev_id> -h <tbl_hdl> 
+     #+end_example
+
+   其中
+   * <dev> 是交换机设备 ID，在单 ASIC 系统上通常为“0”
+   * <tbl_hdl> 是标识表的句柄
+
+   例如：
+   #+begin_example
+   bf-sde.pipe_mgr> exm_tbl_mgr
+
+   bf-sde.pipe_mgr.exm_tbl_mgr> tbl_info -d 0 -h 0x100000e
+
+     -------------------------------------------------
+     Exact match table info for table 0x100000e device 0
+     -------------------------------------------------
+     Size : 512, Number occupied : 4
+     Symmetric : true
+     ...
+     Number of stages : 1
+     Stages : 1,
+     ---------------------------
+     Stage 1 info :
+     ---------------------------
+     Num entries : 1024, Num Occupied : 4
+     Packing format :
+     Number of entries per wide-word : 1
+     ...
+     Entries :
+     Default entry hdl for ALL PIPES : 1
+        Entry Hdl |Stage|Pipe     |Mem-id(s) |Line-no
+     ----------|-----|---------|----------|---------
+           0x2 |    1|所有管道  |67,       | 188
+           0x3 |    1|所有管道  |67,       | 184
+   #+end_example
+   
+   在表的转储中，Entry_Hdl 列提供每个条目的
+   句柄，您可以使用它来查找有关该表的信息
+   入口。
+
+**** 显示有关匹配操作表条目的信息
+
+   要转储匹配操作(match-action)表条目，请使用 entry info 命令，
+   entry_info，在 exm_tbl_mgr 上下文中： 
+   命令摘要：
+   #+begin_example
+   entry_info -d  <dev_id> -h <tbl_hdl> -e <entr_hdl>
+   #+end_example
+   其中
+   * <dev id> 是交换机设备 ID，在单 ASIC 的交换机上通常为“0”
+   * <tbl_hdl> 是标识表的句柄
+   * <entr_hdl> 是标识条目的句柄
+
+   例如：
+   #+begin_example
+   
+
+   bf-sde.pipe_mgr.exm_tbl_mgr> entry_info -d 0 -h 0x100000e -e 0x2 
+     Info for entry handle 2 for exact match table 16777230
+     Match Spec :
+     -----------------
+     ig_intr_md_ingress_port :
+     Value: 00 bc
+     Mask: ff ff
+     Action Spec:
+     -----------------
+     Action function :set_def_vlan
+     vid :
+     Value: 00 01
+     ingress_rid :
+     Value: 00 01
+     Action function handle : 0x2000002e
+     Entry location info:
+     Pipe id : ALL PIPES
+     Stage id : 1
+     Logical entry index : 188
+     Ram line num : 188
+   #+end_example
+*** 丢包故障排除
+
+   显示丢包原因和有关丢包的计数器，包括丢包
+   在不同阶段下降（例如入口管道，出口管道
+   和流量管理器），使用 pkt_path_counter 命令。请参阅下面的[[*端口和管道计数器][端口和管道计数器]]。
+   对于流量管理(TM) 丢包计数器，使用命令bf-sde.traffic_mgr.counter 。请参阅[[*流量管理器计数器命令][流量管理器计数器命令]]。
+
+*** 检查内存寄存器值
+
+   在 Tofino 上对流量进行故障排除时，您通常不需要
+   如果您使用 P4 和 Capilano SDE API，请检查寄存器值
+   对您的数据平面进行编程。编译器和 SDE 句柄寄存器
+   设置，以便它们对客户保持透明。
+
+   您可以使用 Diags 测试 Tofino 内存模块和寄存器
+   记忆测试。有关说明，请参阅“诊断已修复”部分
+   /Barefoot Diags CLI 和 API 用户指南/中的内存/寄存器测试”。
+
+*** 数据包快照
+
+   Tofino 的数据包快照 (pipe_mgr: snap) 功能允许您
+   跟踪数据包处理路径通过管道从
+   通过表和触发动作的传入接口
+   输出接口。此命令捕获几乎所有元数据和
+   下一个捕获数据包的查找结果。
+
+   这是它的工作原理：在给定的阶段，您可以指定三元匹配
+   对于将触发快照的数据包头向量 (PHV)。
+
+
+
+   什么是PHV？数据包头向量或“PHV”是一个由 8-
+   16 位和 32 位字段
+
+   存储数据包头数据和元数据。 Tofino 的解析器分析一个
+   数据包并映射它
+
+   成一组相应的字段，称为 PHV。 PHV 包括一个
+   一组标头字段，例如 IP 目的地、以太网目的地和
+   很快。此外，包头向量包括元数据字段
+   例如数据包到达的输入端口和其他路由器
+   状态变量（例如，路由器队列的当前大小）。在
+   Tofino，PHV 流经一系列逻辑匹配阶段（
+   匹配操作管道的匹配操作单元 (MAU)），其中每个
+   抽象数据包处理的逻辑单元（例如，以太网
+   或 IP 处理）。在 PHV 由 MAU 操作后
+   在管道中，Tofino 的解析器将修改后的数据包从
+   PHV。
+
+   例如，您可以定义三元匹配，如“触发快照
+   在第 5 阶段，如果 ipv4.srcAddr 匹配 0xC0A80100 掩码 0xFFFFFF00”
+   （即 192.168.1.0/24）。
+
+   一旦发生这种情况，将在该阶段拍摄快照
+   并在您想要的多个后续阶段（您可以指定）。
+   它将在请求的阶段捕获 PHV，因此您可以真正地
+   观察数据包通过时元数据是如何变化的
+   芯片。除此之外，它还将捕获有关
+   哪些表被击中，等等。
+
+   您可以同时设置多个非相交快照，如果你喜欢，例如
+
+   * 在入口管道 0 中：在阶段 0 中触发，收集快照
+     直到第 2 阶段
+   * 在入口管道 0 中：在第 3 阶段触发，收集快照直到阶段 11
+   * 在出口管道 0 中：在阶段触发， 直到第 11 阶段收集快照
+
+   拍摄快照后，后续数据包将无法更改
+   即使它们匹配相同的触发条件。你需要
+   “重新武装”快照以捕获更多。
+
+**** 快照命令
+
+   switchd 和 API 中都有 diag shell (CLI) 命令可用
+   （其中一些是固定的，一些依赖于程序）使您能够使用
+   这个设施。
+
+   使用 CLI 时，快照相关的命令在 pipe_mgr
+   部分：
+
+   bf-sde> pipe_mgr
+
+   bf-sde.pipe_mgr> snap snap-create
+
+   快速删除
+
+   snap-trig-add snap-trig-clr snap-state-set snap-timer-en snap-intr-clr
+   snap-hdl-dump snap-cfg-dump snap-state-get
+
+   捕捉捕捉
+
+**** 创建快照触发器
+
+   您可以按如下方式创建和准备快照触发器：
+
+   1. 创建快照并获取它的句柄。在这种情况下。我们创造
+   设备 0 ( -d 0 )、管道 0 ( -p 0 ) 上的快照，
+
+   阶段 0 到 5 ( -s 0 -e 5 )，在入口管道中（将其设置为
+   -i 0 用于入口，或至 -i 1 用于出口）：
+
+
+
+   bf-sde.pipe_mgr> snap-create -d 0 -p 0 -s 0 -e 5 -i 0 快照创建
+   带句柄 0x141
+
+   重要的！您可以在入口或出口上设置快照，但不能同时设置
+   同时。
+
+   2. 指定触发条件。多个条件将进行 AND 运算
+
+   bf-sde.pipe_mgr> snap-trig-add -h 0x141 -n ipv4_srcAddr -v 0xc0a80000
+   -m 0xffff0000
+
+   触发器：添加字段 ipv4_srcAddr，值 0xc0a80000，掩码 0xffff0000
+   成功添加字段 ipv4_srcAddr 来触发
+
+   3. 启用（布防）快照。
+
+   bf-sde.pipe_mgr> snap-state-set -h 0x141 -e 1 快照状态设置为 1
+
+   4. 监控快照状态直到它命中（或者，如果你知道你
+   正在发送到交换机，只需确认）
+
+   bf-sde.pipe_mgr> snap-state-get -h 0x141
+
+   句柄 0x141 的快照状态转储
+
+   转储开发 0、管道 0、开始阶段 0、结束阶段 5 的快照状态，
+   目录入口
+
+   --- 转储阶段 0 的快照状态 ---
+
+   中断状态：设置
+
+   管理状态：禁用 FSM 状态：完整
+
+   定时器状态：禁用
+
+   当前时间：0x285123ea0时钟触发时间：0x0时钟
+
+   --- 转储阶段 1 的快照状态 --- 中断状态：设置
+
+   管理状态：禁用 FSM 状态：完整
+
+   定时器状态：禁用
+
+   当前时间：0x253aa23960个时钟触发时间：0x0个时钟
+
+**** 查看快照
+
+   如果中断状态为“设置”，则可以查看捕获。这
+   可以查看单个阶段或所有阶段的捕获
+   为。每个阶段都是单独捕获的。捕获包含
+   阶段执行后所有字段的值，摘要
+   所有表的（包括命中的条目的地址，但
+   它们不是 entryID）和 Next-Table 指针。还要注意的是
+   由于 PHV 容器是重叠的，因此您会看到许多字段
+   可能认为没有意义（例如 IPv4 数据包中的 ipv6 字段）。忽略
+   那些。
+
+
+
+   bf-sde.pipe_mgr> snap-capture-get -h 0x141
+
+   句柄 0x141 的快照捕获
+
+   为 dev 0、pipe 0、start-stage 0、end-stage 转储快照捕获
+   5、dir入口
+
+   -------------- 阶段 0 的快照捕获，方向 Ingress
+   ----------------快照触发类型：
+
+   上一阶段：否
+
+   本地阶段：是定时器：否
+
+   ------------------- 捕获的字段
+   -----------------------------------------------字段名 值
+
+   -------------------------------------------------- ---------------------------------l2_metadata_lkp_mac_sa
+   00 00 00 00 00 00
+
+   多播_元数据_多播_路由_mc_index 0x0
+   tunnel_metadata_ingress_tunnel_type 0x0 l3_metadata_l3_copy 0x0
+
+   l2_metadata_bd_stats_idx 0x0 acl_metadata_if_label 0x0
+
+   多播_元数据_ipv4_multicast_enabled 0x0 ipv4_fragOffset 0x0
+
+   multicast_metadata_outer_mcast_route_hit 0x0
+
+   ipv6___srcAddr 00 69 00 00 00 00 00 00 00 00 00 00 c0 a8 00 01
+   l3_metadata_lkp_l4_sport 0x0
+
+   l3_metadata_rmac_group 0x0 ipv6_version 0x40
+
+   内部_ipv4_ihl 0x40
+
+   hash_metadata_entropy_hash 0x0 mpls_2__bos 0x0
+
+   l2_metadata_learning_enabled 0x0
+
+   表信息：
+
+   ----------------------- 表信息
+   -------------------------------------------------
+
+   -------------------------------------------------- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 桌子
+   名称 类型 Hit Hit-Addr Inhibited Executed
+
+   _condition_48 确切 否 0x0 否 否
+
+   ingress_port_properties 精确 是 0x2 否 是 镜像 Tcam 否 0x0 否 否
+
+   摆脱 确切 否 0x0 否 否
+
+   validate_outer_ethernet Tcam 是 0x1c8 否 是
+
+   validate_outer_ipv4_packet Tcam 是 0x1f0 否 是
+   validate_outer_ipv6_packet Tcam 是 0x0 是 否 validate_mpls_packet
+   Tcam 是 0x0 是 否 switch_config_params Tcam 否 0x0 否 是
+   port_vlan_mapping 准确 是 0x4d 否 是
+
+   -------------------------------------------------- -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - -下一个
+   表：spanning_tree
+
+
+
+*** 端口和管道计数器
+
+**** 转储端口 (MAC) 计数器
+
+   使用下面显示的命令，您可以打印特定端口MAC的接收和 MAC 传输计数器的快速摘要。 “E”列表示是否观察到错误计数器非零。
+   #+begin_example
+   bf-sde.bf_pltfm.pm> show -p 1/0
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+   PORT|MAC |D_P|P/PT|SPEED |FEC |QSFP|ADM|OPR|FRAMES RX       |FRAMES TX       |E
+   ----+----+---+----+------+----+----+---+---+----------------+----------------+-
+    1/0|31/0|188|1/60|  10G |NONE| NO |DIS|DWN|0               |               0|
+   #+end_example
+
+   端口 MAC 计数器的详细视图可以通过执行
+   #+begin_example
+   bf-sde.bf_pltfm.pm> show -p 1/0 -d
+   #+end_example
+   获得。
+
+**** 管道流量计数器
+
+   管道中各个点的流量计数器可以使用 pkt_path_counter  命令。
+   #+begin_example
+   bf-sde> pkt_path_counter
+   bf-sde.pipe_mgr.pkt_path_counter>
+   #+end_example
+
+   可以使用 pipe_cnt 打印管道计数器的摘要
+   #+begin_example
+   bf-sde.pipe_mgr.pkt_path_counter> pipe_cnt -p <pipe>
+   #+end_example
+   
+
+   此工具中的命令接受以下选项标志:
+
+   * -d <devid>
+
+   * -p <管道>
+
+   * -m <端口>
+
+   * -z <也打印零计数器>
+
+   pkt_path_counter 中的计数器检索命令是：
+
+   * ibuf - 打印 ibuf 计数器。接受标志：-d、-p、-m
+
+   * iprsr - 打印入口解析器计数器。接受标志：-d、-p、-m
+
+   * idprsr - 打印入口解析器计数器。接受标志：-d、-p
+
+   * eprsr - 打印出口解析器计数器。接受标志：-d、-p、-m
+
+   * epb_ebuf - 打印出口解析器缓冲区计数器。接受标志：-d，  -p, -m
+
+   * edprsr - 打印出口解析器计数器。接受标志：-d、-p
+
+   * pipe_cnt - 打印入口和出口解析器计数器。接受标志：-d，-p
+
+   * device - 打印所有设备级计数器。接受标志：-d、-z
+
+   * 管道——打印所有管道级计数器。接受标志：-d、-z
+
+   * port - 打印管道中的所有端口级计数器。接受标志：-d，   -p, -m, -z
+
+   pkt_path_counter 中的计数器清除命令：
+
+   * clear_pipe - 清除入口和出口解析器计数器。接受   标志：-d，-p
+
+   * clear_ibuf - 清除ibuf 计数器。接受标志：-d、-p、-m
+
+   * clear_iprsr - 清除入口解析器计数器。接受标志：-d、-p、   -m
+
+   * clear_idprsr - 清除入口解析器计数器。接受标志：-d， -p
+
+   * clear_eprsr - 清除出口解析器计数器。接受标志：-d、-p、   -m
+
+   * clear_edprsr - 清除出口解析器计数器。接受标志：-d，   -p
+
+   * clear_epb_ebuf - 清除出口解析器缓冲区计数器。接受标志：-d、-p、-m
+
+   * clear_all_pipe - 清除数据路径中的所有端口计数器。接受标志：-d，-p
+
+   pkt_path_counter 中的解析器命令：
+
+   * intr_status - 解析器-解析器逻辑的中断。接受标志：   -d, -p, -m
+
+   * deparser_intr_status - 解析器-解析器逻辑的中断。接受   标志：-d，-p
+
+*** 流量管理器 (TM) 和流量计数器
+
+   流量管理器 (TM) 故障排除命令和计数器允许您读取 TM 状态、队列和端口通过/丢弃计数、XON/XOFF
+   状态和其他有用的流量管理信息。Traffic_mgr 包中提供了这些命令。
+   #+begin_example
+   bf-sde> traffic_mgr
+   bf-sde.traffic_mgr> counter
+   bf-sde.traffic_mgr.counter> blocklevel -z
+   #+end_example
+
+   流量管理器子命令：
+
+   * log
+   * cfg_table
+   * usage
+   * watermark
+   * dropstatus
+   * dl_dropstatus
+   * pfcstatus
+   * counter
+   * clr_counter
+   * ut_hitles
+   * mirror
+
+**** 流量管理器 cfg_table 命令
+
+   这些命令出现在 bf-sde.traffic_mgr.cfg_table CLI 部分 .它们返回有关
+   Tofino 数据包缓冲区管理设置的信息。有关这些设置的详细信息参见
+   Tofino /Switch Architecture Specification/。
+
+***** ppg_min 命令
+
+   显示用于基于优先级的流量管理的PFC 优先级组 (PPG) 的最小流量限制 。
+   
+   用法：
+   #+begin_example
+   ppg_min -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+   
+
+***** ppg_hdr 命令
+
+   显示 PPG headroom 限制。用法：
+
+   #+begin_example
+   ppg_hdr -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** port_limit 命令
+
+   显示 Tofino 包数据缓冲区的写准入控制 (WAC) 最大端口限制。
+
+   用法：
+
+   #+begin_example
+   port_limit -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** ppg_resume_limit 命令
+
+   显示 PPG resume 限制。
+
+   用法：
+   #+begin_example
+   ppg_resume_limit -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+   
+
+
+***** port_ppg 命令
+
+   显示端口到 PPG 映射表的用法：
+
+   #+begin_example
+   port_ppg -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** ppg_shared_limit 命令
+
+   显示 PPG 共享限制
+
+   用法：
+
+   #+begin_example
+   ppg_shared_limit -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** ppg_icos_map 命令
+
+   显示 PPG iCOS 映射
+
+   用法：
+   
+   #+begin_example
+   ppg_icos_map -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+
+***** ppg_offset_prof 命令
+
+   显示 PPG 偏移配置文件
+
+   用法：
+
+   #+begin_example
+   ppg_offset_prof -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** q_min_thrd 命令
+
+   Q 最小限制
+
+   用法：
+
+
+   #+begin_example
+   q_min_thrd -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** q_shr_thrd 命令
+
+   Q 共享限制
+
+   用法：
+   #+begin_example
+   q_shr_thrd -d <devid> -p <pipe> -X [print in hex] -z [print zero counts too]
+   #+end_example
+   
+
+***** q_ap 命令
+
+   Q 应用池映射用法：
+
+   #+begin_example
+   q_ap -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** q_color_limit 命令
+
+   Q color 限制
+
+   用法：
+
+   #+begin_example
+   q_color_limit -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** qac_port_limit 命令
+
+   QAC 端口限制
+
+   用法：
+
+   #+begin_example
+   qac_port_limit -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+***** qac_qid_profile 命令a
+
+   QAC Q 配置文件 ID
+
+   用法：
+
+   #+begin_example
+   qac_qid_profile -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** qac_qid_map 命令
+
+   QAC Q 映射
+
+   用法：
+
+   #+begin_example
+   qac_qid_map -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** q_min_shaper 命令
+
+   SCH Q 最低速率
+
+   用法：
+
+
+
+   #+begin_example
+   q_min_shaper -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+
+***** q_max_shaper 命令
+
+   SCH Q 最大速率
+
+   用法：
+   #+begin_example
+   q_max_shaper -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+   
+
+***** Port_max_shaper 命令
+
+   SCH 端口最大速率
+
+   用法：
+   #+begin_example
+   Port_max_shaper -d <devid> -p <pipe> -X [print in hex] -z [print zero counters too]
+   #+end_example
+   
+
+***** wac_eg_qid_map 命令
+
+   WAC 出口 QID 映射
+
+   用法：
+   #+begin_example
+   wac_eg_qid_map -d <devid>, -X [print in hex] -z [print zero counters too]
+   #+end_example
+   
+
+**** 流量管理器 cfg 命令
+
+   CLI 部分：bf-sde.traffic_mgr.cfg
+
+***** ppg 命令
+
+   PPG 详情
+
+   用法：
+
+   ppg -d <devid> -p <pipe> -r <ppg#/q#/port#> -X [以十六进制打印] -z
+   [也打印零计数器]
+
+***** q 命令
+
+   队列详情
+
+   用法：
+
+   q -d <devid> -p <pipe> -r <ppg#/q#/port#> -X [以十六进制打印] -z [打印
+   零计数器]
+
+***** 端口命令
+
+   端口详情
+
+   用法：
+
+   port -d <devid> -p <pipe> -r <ppg#/q#/port#> -X [以十六进制打印] -z
+   [也打印零计数器]
+
+**** 流量管理器使用命令
+
+   CLI 部分：bf-sde.traffic_mgr.usage
+
+
+
+***** ppg_gmin_usage 命令
+
+   Gmin 池中的 PPG 单元使用情况
+
+   用法：
+
+   ppg_gmin_usage -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** ppg_shrd_usage 命令
+
+   共享池中的 PPG 单元使用情况：
+
+   ppg_shrd_usage -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** ppg_skid_usage 命令
+
+   撬池中的 PPG 单元使用情况
+
+   用法：
+
+   ppg_skid_usage -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** wac_portusage 命令
+
+   wac 中的端口单元使用情况
+
+   用法：
+
+   wac_portusage -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** qac_portusage 命令
+
+   QAC 中的端口单元使用
+
+   用法：
+
+   qac_portusage -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** qac_q_usage 命令
+
+   QAC 中的队列单元使用情况
+
+   用法：
+
+   qac_q_usage -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+**** 流量管理器水印命令
+
+   CLI 部分：bf-sde.traffic_mgr.watermark
+
+***** ppg_wm 命令
+
+   PPG 使用水印使用方法：
+
+
+
+   ppg_wm -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** wac_port_wm 命令
+
+   WAC Usage中的端口使用水印：
+
+   wac_port_wm -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** q_wm 命令
+
+   Q 使用水印
+
+   用法：
+
+   q_wm -d <devid> -p <pipe> -X [以十六进制打印] -z [也打印零值]
+
+***** qac_port_wm 命令
+
+   QAC Usage中的端口使用水印：
+
+   qac_port_wm -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+**** 流量管理器 dropstatus 命令
+
+   CLI 部分：bf-sde.traffic_mgr.dropstatus
+
+***** ppg0_31 命令
+
+   PPG 0 到 31 的丢弃状态用法：
+
+   ppg0_31 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** ppg32_63 命令
+
+   PPG 32 到 63 的丢弃状态用法：
+
+   ppg32_63 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** ppg64_95 命令
+
+   PPG 64 到 95 的丢弃状态用法：
+
+   ppg64_95 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** ppg96_127 命令
+
+   PPG 96 至 127 的丢弃状态
+
+
+
+   用法：
+
+   ppg96_127 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** ppg128_159 命令
+
+   PPG 128 到 159 的丢弃状态用法：
+
+   ppg128_159 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** ppg160_191 命令
+
+   PPG 160 到 191 的丢弃状态用法：
+
+   ppg160_191 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** ppg192_200 命令
+
+   PPG 192 到 200 的丢弃状态用法：
+
+   ppg192_200 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** port0_31 命令
+
+   Wac Usage 中端口 0 到 31 的丢弃状态：
+
+   port0_31 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** port32_63 命令
+
+   Wac Usage 中端口 32 到 63 的丢弃状态：
+
+   port32_63 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+ ****0 port64_72 命令
+
+   Wac Usage 中端口 64 到 71 的丢弃状态：
+
+   port64_72 -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+ ****1 q_green_drop 命令
+
+   QAC Q Drop 状态（绿色）
+
+   用法：
+
+
+
+   q_green_drop -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+ ****2 q_yellow_drop 命令
+
+   QAC Q Drop 状态（黄色） 用法：
+
+   q_yellow_drop -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+ ****3 q_red_drop 命令
+
+   QAC Q Drop 状态（红色）
+
+   用法：
+
+   q_red_drop -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+ ****4 port_drop_State 命令
+
+   QAC 中的端口丢弃状态
+
+   用法：
+
+   port_drop_State -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+**** 流量管理器 dl_dropstatus 命令
+
+   CLI 部分：bf-sde.traffic_mgr.dl_dropstatus
+
+***** colordrop 命令
+
+   wac 中的颜色下降状态用法：
+
+   colordrop -d <devid>, -X [以十六进制打印] -z [也打印零值]
+
+*****skiddrop 命令
+
+   wac 中的 Skid Pool Drop 状态用法：
+
+   skiddrop -d <devid>, -X [以十六进制打印] -z [也打印零值]
+
+***** wac_qshadowstate 命令
+
+   wac 中的队列影子状态
+
+   用法：
+
+   wac_qshadowstate -d <devid>, -X [以十六进制打印] -z [打印零值
+   也]
+
+***** ap_drop_state 命令
+
+   qac 中的应用程序池丢弃状态
+
+
+
+   用法：
+
+   ap_drop_state -d <devid>, -X [以十六进制打印] -z [也打印零值]
+
+***** apg_green_drop_state 命令
+
+   qac中green包的Application Pool Drop状态用法：
+
+   apg_green_drop_state -d <devid>, -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** apy_yel_drop_state 命令
+
+   qac中green包的Application Pool Drop状态用法：
+
+   apy_yel_drop_state -d <devid>, -X [以十六进制打印] -z [打印零值
+   也]
+
+***** apr_red_drop_state 命令
+
+   qac中green包的Application Pool Drop状态用法：
+
+   apr_red_drop_state -d <devid>, -X [以十六进制打印] -z [打印零值
+   也]
+
+***** p0_prefifo_drop_state 命令
+
+   管道 0 中的前 FIFO 丢弃状态
+
+   用法：
+
+   p0_prefifo_drop_state -d <devid>, -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** p1_prefifo_drop_state 命令
+
+   pipe1 中的 Pre FIFO Drop 状态
+
+   用法：
+
+   p1_prefifo_drop_state -d <devid>, -X [以十六进制打印] -z [打印零
+   价值观]
+
+ ****0 p2_prefifo_drop_state 命令
+
+   pipe2 中的 Pre FIFO Drop 状态
+
+   用法：
+
+   p2_prefifo_drop_state -d <devid>, -X [以十六进制打印] -z [打印零
+   价值观]
+
+ ****1 p3_prefifo_drop_state 命令
+
+   pipe3 中的 Pre FIFO Drop 状态
+
+   用法：
+
+
+
+   p3_prefifo_drop_state -d <devid>, -X [以十六进制打印] -z [打印零
+   价值观]
+
+**** 流量管理器 pfcstatus 命令
+
+   CLI 部分：bf-sde.traffic_mgr.pfcstatus
+
+***** port_pfc 命令
+
+   在 wac 中生成的每个端口 pfc 状态用法：
+
+   port_pfc -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** port_pfc_rx 命令
+
+   qac 中收到的每端口 pfc 状态用法：
+
+   port_pfc_rx -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   价值观]
+
+***** q_pfc_rx 命令
+
+   qac 中收到的每个 q pfc 状态用法：
+
+   q_pfc_rx -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零值
+   也]
+
+***** 日志命令
+
+**** 流量管理器计数器命令
+
+   CLI 部分：bf-sde.traffic_mgr.counter
+
+***** 块级命令
+
+   转储所有块级计数器用法：
+
+   blocklevel -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   柜台也是]
+
+***** wac_perport 命令
+
+   在 wac 中看到的每个端口丢弃计数器的转储用法：
+
+   wac_perport -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   柜台也是]
+
+***** wac_perppg 命令
+
+   在 wac 中看到的每 ppg 丢弃计数器的转储用法：
+
+
+
+   wac_perppg -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   柜台也是]
+
+***** qac_q_drop 命令
+
+   转储每个队列丢弃计数器，如 qac 用法所示：
+
+   qac_q_drop -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   柜台也是]
+
+***** qac_port_drop 命令
+
+   转储每个端口丢弃计数器，如 qac 用法所示：
+
+   qac_port_drop -d <devid> -p <pipe> -X [以十六进制打印] -z [打印零
+   柜台也是]
+
+**** 流量管理器 clr_counter 命令
+
+   CLI 部分：bf-sde.traffic_mgr.clr_counter
+
+***** clr_blocklevel 命令
+
+   清除所有块中的块级计数器用法：
+
+   clr_blocklevel -d <devid> -p <pipe>
+
+***** clr_wacperport 命令
+
+   清除每个端口丢弃计数器，如 wac 用法所示：
+
+   clr_wacperport -d <devid> -p <pipe>
+
+***** clr_wacperppg 命令
+
+   清除每 ppg 掉落计数器，如 wac 中所示：
+
+   clr_wacperppg -d <devid> -p <pipe>
+
+***** clr_qac_qdrop 命令
+      清除每个队列丢弃计数器，如 qac 用法中所示：
+
+   clr_qac_qdrop -d <devid> -p <pipe>
+
+***** clr_qac_portdrop 命令
+
+   清除每个端口丢弃计数器，如 qac 所示
+
+
+
+   用法：
+
+   clr_qac_portdrop -d <devid> -p <pipe>
+
+*** 中断监控
+
+   Tofino 中断可以提供潜在问题的线索，
+   正在遇到。可以使用以下命令序列
+   转储自上次检查以来新触发的中断。
+
+   bf-sde> int_poll 0
+
+   bf-sde> int_new
+
+   000400a0：000400a4：ffffffff：03000000：0x7f8d8c0fdf18：
+   __device_select__misc_regs__int_stat
+
+   : [12:12] : 1 : sbm0_dbe_err : SBus Master 0 报告双时置位
+   位错误
+
+   : [15:15] : 1 : sbm1_sbe_err : SBus Master 1 报告时设置
+   单位错误
+
+   Barefoot Networks 建议您在初始化时清除
+   使用上述命令中断一次。这确保您只看到
+   初始化后发生的新触发的中断。
+
+
+
+** COMMENT 已知注意事项和解决方法
+
+*** SYS-1：OpenBMC 启动时主 CPU 未启动
+
+   症状：
+
+   上电时，Switch 主 CPU 不响应串行
+   控制台或通过管理 IP。
+
+   状况：
+
+   这是在系统加电时间歇性地观察到的。这个问题不
+   如果 NOS 启动延迟小于 40 秒，预计会发生。
+
+   解决方法：
+
+   通过将“1”然后“0”重定向到 BMC 的 pwr_main_n 标志
+   如下：
+
+   根@bmc:~#
+
+   回声 0 > /sys/class/i2c-adapter/i2c-12/12-0031/pwr_main_n
+
+   echo 1 > /sys/class/i2c-adapter/i2c-12/12-0031/pwr_main_n;安装文件
+
+   注意：一定要添加上图所示的 sol.sh 命令。通过做这个，
+   您确保 BMC CPU 将在以下位置与主 CPU 建立连接
+   一个合适的时间。
+
+   大约 40 秒后，您应该会看到 BIOS 启动和引导
+   进入 Ubuntu。
+
+*** SYS-2：主 CPU 卡在 BIOS 屏幕
+
+   症状：
+
+   开机时，主 CPU 卡在 BIOS 屏幕上
+
+   状况：
+
+   这是在系统加电时间歇性地观察到的。这个问题不
+   如果 NOS 启动延迟小于 40 秒，预计会发生。
+
+   解决方法：
+
+   点击 <ESC> 并导航 BIOS 菜单以继续启动 Ubuntu
+   无需更改或保存 BIOS 配置。
+
+*** SYS-3：Switchd 因 BF_PLTFM CURL 错误而失败
+
+   症状：
+
+   switchd 应用程序无法运行并退出并显示此消息
+   控制台：...BF_PLTFM 错误 - CURL 错误：7
+
+   状况：
+
+   如果 USB 以太网接口在主 CPU 上不起作用，则此
+   每次尝试运行 switchd 时都会出现条件。
+
+   解决方法：
+
+   1. 在主 CPU 上找到 USB-Ethernet 接口的名称：
+
+
+
+   root@Switch:~$ ifconfig | grep enp0
+
+   enp0s20u1u2 Link encap:Ethernet HWaddr 02:00:00:00:00:02 名称
+   可能是 enp0s20u1u2，如上所示，或 enp0s20u1u1。
+
+   2. 确保在 USB-Ethernet 上启用 IPv6 协议
+   界面。 如果禁用，编辑
+
+   /etc/sysctl.conf 文件并注释掉或删除禁用的行
+   所有和默认的 IPv6
+
+   接口。有关详细信息，请参阅 /SDE 6.0.x 发行说明/，在
+   部分，“升级过程：在主 CPU 上启用 IPv6”。
+
+   3. 检查 interfaces 文件中的 USB-Ethernet 接口设置：
+   root@Switch:~$ sudo vim /etc/network/interfaces
+
+   确保 USB 以太网接口的设置与粗体匹配
+   文字，下面。在这里，我们使用一个示例接口名称 enp0s20u1u2。
+   您的将是 enp0s20u1u2 或 enp0s20u1u1。
+
+   自动低速
+
+   iface lo inet环回
+
+   自动 enp0s20u1u2
+
+   iface enp0s20u1u2 inet6 静态地址 fe80::2
+
+   网络掩码 64
+
+   pre-up sysctl -w net.ipv6.conf.enp0s20u1u2.autoconf=0
+
+   pre-up sysctl -w net.ipv6.conf.enp0s20u1u2.router_solicitations=0 up
+   ifconfig enp0s20u1u2 txqueuelen 64 向上
+
+   4. 保存interfaces文件，退出，重启主CPU
+   更改配置。
+
+   5. USB-Ethernet 接口应该在其 IPv6 上启动并可以访问
+   重启后的地址。如果不是，则打开文件，
+   /etc/rc.local 并在文件末尾添加这一行：
+
+   ifconfig enp0s20u1u2 txqueuelen 64 向上
+
+   如果接口配置正确但问题仍然存在，请登录
+   进入 OpenBMC shell 并执行“ifconfig usb0 down”和“ifconfig
+   USB 以太网接口上的 usb0 up”。
+
+
+* Footnotes
+
+[fn:4] 在这里，我们展示了如何在 Tofino 硬件上启动交换机。
+   如果用于测试，您还可以选择其它启动行为模型（例如 BMV）
+   模拟 Tofino 交换机行为。  
+
+[fn:3] 在ONL 操作系统下，管理口识别为ma1,不同操作系统注意调整。 
+
+
+
+[fn:1]管理网络不可以设置为192.168.0.0/24 子网。
+   这是因为 BMC CPU 和 主 CPU分别占用
+    192.168.0.1 和 192.168.0.2 。 
+[fn:2]如果您通过 SSH 连接，您将被注销。使用新的 IP 地址重新连接。 

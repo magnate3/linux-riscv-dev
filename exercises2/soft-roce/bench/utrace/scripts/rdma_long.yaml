@@ -1,0 +1,13 @@
+duration: 1
+scheduler_p: 1
+
+flows:
+  type: rdma
+  num: 300
+  distribution: uniform
+  distribution_params: [100000000, 100000000]
+  client_nic: mlx5_1
+  client_ip: 172.16.200.6
+  server_nic: mlx5_1
+  server_ip: 172.16.200.1
+  server_port_base: 60001

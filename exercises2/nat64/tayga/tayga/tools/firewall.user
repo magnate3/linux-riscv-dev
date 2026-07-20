@@ -1,0 +1,20 @@
+#!/bin/sh
+
+#
+# Firewall rules appendix
+#
+
+# Essential
+iptables -I FORWARD 1 -i nat64 -j ACCEPT
+iptables -I FORWARD 2 -o nat64 -j ACCEPT
+
+ip6tables -I FORWARD 1 -o nat64 -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+ip6tables -I FORWARD 2 -o nat64 -j ACCEPT
+ip6tables -I FORWARD 3 -i nat64 -j ACCEPT
+
+# IPv4 masquerading (-s with your own configured subnet)
+# iptables -t nat -I POSTROUTING 1 -s 10.40.0.0/16 -j MASQUERADE
+
+# Redirect upstream DNS queries to local DNS64 service
+iptables -t nat -I OUTPUT 1 -d 127.0.64.53 -p udp --dport 53 -j REDIRECT --to 1053
+

@@ -1,0 +1,11 @@
+server 10.1.9.3 5001
+server 10.1.1.3 5001
+server 10.1.2.3 5001
+server 10.1.3.3 5001
+server 10.1.4.3 5001
+server 10.1.5.3 5001
+server 10.1.6.3 5001
+server 10.1.7.3 5001
+req_size_dist /users/alimusa/RANS-TG/conf/deterministic_CDF.txt
+dscp 0 100
+fanout 2 100

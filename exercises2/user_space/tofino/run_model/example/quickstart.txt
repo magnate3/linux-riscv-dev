@@ -1,0 +1,21 @@
+Quickstart
+----------
+1. Setup virtual ethernet ports:
+    veth-setup 8
+2. Compile and install "patch_panel" program:
+    ./p4/build.sh
+3. Start model using command in the second pane.
+    ./run_tofino_model.sh -p patch_panel -f ~/work/example/ports.json
+4. Start bf_switchd uing command in the third pane
+    ./run_switchd.sh -p patch_panel
+3. Write to program table. Use Ctrl+c to end process.
+    python3 ./add_rule_bfrt_helper.py
+        or
+    \${SDE_INSTALL}/bin/python3.8 ./add_rule_bfrt_client.py
+4. Verify Pipeline:
+    pytest
+5. Get Extended (non-P4) Tables:
+    python3 ./get_extended_tables.py
+
+
+

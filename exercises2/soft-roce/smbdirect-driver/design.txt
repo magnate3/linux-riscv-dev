@@ -1,0 +1,279 @@
+Design of the SMB Direct Kernel Module for Samba
+Richard Sharpe
+21-Aug-2013 and updated on 25-Aug-2013
+
+INTRODUCTION
+
+When Windows uses SMB Direct, or SMB over RDMA, it does so in a way that is 
+not easy to integrate into Samba as it exists today.
+
+Samba uses a forking model of handling connections from Windows clients. The
+master smbd listens for new connections and forks a new smbd before handling
+any SMB PDUs. It is the new smbd process that handles all PDUs on the new
+connection.
+
+Please see the documents [MS-SMB2].pdf and [MS-SMBD].pdf for more details about
+SMB Over additional channels and the SMB Direct protocol. However, in brief,
+what happens is the following:
+
+1. The client establishes an SMB connection over TCP to a server. For Samba,
+   this involves the forking of a new process.
+
+2. The client NEGOTIATES the protocol and then does a SESSION SETUP. If this
+   is successful, the client now has a Session ID it will use in establishing
+   additional channels, including any via SMB Direct (RDMA).
+
+3. The client uses a TREE CONNECT request to connect to a share.
+
+4. The client issues an FSCTL_QUERY_NETWORK_INTERFACE_INFO IOCTL to determine
+   what interfaces are available.
+
+5. If there are any RDMA interfaces in common between the client and the 
+   server, and the server supports MULTI_CHANNEL, the client initiates an 
+   RDMA connection to the server.
+
+6. The client then sends a NEGOTIATE requesting SMB3.0 and above as well as
+   support for MULTI_CHANNEL.
+
+7. It that succeeded, the client then sends a SESSION_SETUP and specifies
+   SMB2_SESSION_FLAG_BINDING along with the Session ID obtained on the first
+   connection.
+
+At this point, we now have an RDMA channel between the client and server.
+
+SMB Direct actually involves a small protocol but the details are not relevant
+here and can be read about in [MS-SMBD].pdf.
+
+There is a problem here for Samba in handing any form or MULTI_CHANNEL support
+but there is an even bigger problem in handling SMB Direct.
+
+The problem for MULTI_CHANNEL is that we cannot determine which smbd should 
+handle the new channel (be it TCP or RDMA based) until we have seen the 
+SESSION_SETUP request on the new channel. In addition, Windows clients always
+connect on port 445 for TCP and 5445 for SMB Direct.
+
+Here, I only want to handle SMB Direct and not generic MULTI_CHANNEL. However,
+to fully support generic MULTI_CHANNEL would require that Samba defer passing
+a new TCP connection to a subsidiary smbd until it determines that the
+connection is not destined to join an existing session.
+
+In a like manner, we cannot hand an RDMA connection to an existing smbd until
+we have determined which session it wishes to join.
+
+However, there is an additional issue with RDMA. The RDMA connections have to 
+be terminated in a single process (as only one process can listen on port 5445)
+but then they would have to be transferred to the process that should control 
+that connection, but only after some RDMA RECVs and RDMA SENDs have occurred.
+
+I am told by Mellanox folks that there is no real support for transferring all
+the RDMA state between processes at this stage.
+
+Another approach would be to have a single process responsible for all RDMA 
+handling and have the smbd's communicate with that process about new incoming
+connections and reads and writes. While this would work, and could eliminate
+multiple copies of the data with shared memory, it would involve a context 
+switch for most if not all RDMA transfers.
+
+A LINUX KERNEL SMB DIRECT MODULE
+
+An alternative model is to develop a Linux kernel driver to handle RDMA
+connections.
+
+While this approach locks us into Linux for the moment, it seems to be a
+useful alternative.
+
+It would function somewhat like this:
+
+The smbdirect device driver would be a character device driver and would be 
+loaded after any drivers for the RDMA cards and ipoib.
+
+When Samba starts, it would attempt to open the device driver, and if 
+successful, would call an IOCTL to set the basic SMB Direct parameters, as
+explained below. This would allow the smbdirect driver to start accepting 
+incoming connections.
+
+When an smbd gets to the point of accepting a SESSION SETUP request it would
+call another IOCTL against the driver to register this session with the 
+driver.
+
+The driver would accept all incoming SMB Direct RDMA connections via the 
+connection manager and would:
+
+1. Initialize the SMB Direct protocol
+
+2. Handle the NEGOTIATE request once the SMB Direct protocol engine is running
+
+3. Accept the SESSION_SETUP request, and if it matches a registered Session ID
+   of an established session, would pass the request to the smbd that owns
+   that session. Otherwise it would reject the SESSION setup and drop the 
+   connection.
+
+This is discussed in more detail below.
+
+STEPS TO BE TAKEN BY SAMBA
+
+1. When an smbd successfully handles a SESSION SETUP, and the smbdirect 
+   driver has been successfully opened, it will call an IOCTL on the device
+   to register the current Session ID. It would also enable the device as
+   a FD to be monitored by tevent using tevent_add_fd for READ and possibly
+   WRITE events.
+
+2. When an FSCTL_QUERY_NETWORK_INTERFACE_INFO IOCTL request is received, it 
+   will respond with the IP address(es) of all the RDMA interfaces as specified
+   in [MS-SMB2].pdf.
+
+3. When the handler for READ events on the smbdirect FD is called, it will
+   retrieve a set of events and process them. Any that are for incoming
+   SMB PDUs will be sent down the stack for processing. Responses will be
+   sent back possibly by the next IOCTL to the driver.
+
+4. When a LOGOFF is received on the smbdirect connection, a response will be
+   sent. Once that has completed, the device will be closed, which will cause
+   the RDMA connection to be dropped.
+
+REQUIREMENTS OF THE DRIVER
+
+When the driver loads it will begin listening for incoming RDMA connections
+to IP_ADDR_ANY:5445. If there are no sessions registered by smbds or if the
+smbd layer has not been initialized by Samba, these connection attempts
+will be rejected.
+
+When Samba opens the driver the first time, it will use an IOCTL to register
+the following parameters:
+
+ - ReceiveCreditsMax
+ - SendCreditMax
+ - MaxSendSize
+ - MaxFragmentSize
+ - MaxReceiveSize
+ - KeepAliveInterval
+ - The initial security blob required to handle the SMB3 Negotiate response.
+
+The security blob is a constant, in any case, and needs to be available to
+handle the SMB3 Negotiate response.
+
+When an smbd is forked to handle a TCP connection, that smbd will also open
+the device. It will subsequently perform the following actions:
+
+1. Register the Session ID for the current session once the SESSION_SETUP has
+   been processed.
+
+2. Call an IOCTL to retrieve the shared memory parameters (typically) the
+   size of the shared memory region required.
+
+3. Call mmap on the device to mmap the shared memory region that allows us 
+   to avoid copying large amounts of data between userspace and the kernel.
+
+When PDUs are available for the smbd to process, or when RDMA READ or WRITE
+operations have completed (and possibly when PDU SENDs have completed) the
+device will set in a POLLIN state so that the smbd can process the new events.
+
+IOCTLS
+
+The following IOCTLS are needed:
+
+1. SET_SMBD_PARAMETERS
+
+This IOCTL sets the set of parameters that SMB Direct operates under:
+
+  - ReceiveCreditMax
+  - SendCreditMax
+  - MaxSendSize
+  - MaxFragmentSize
+  - MaxReceiveSize
+  - KeepaliveInterval
+  - The initial security blob required to handle the SMB3 Negotiate response.
+
+2. SET_SMBD_SESSION_ID
+
+This ioctl tells the smbd driver the session ID in use by the current smbd
+process and thus allows connections over RDMA using this session id.
+
+3. GET_MEM_PARAMS
+
+This ioctl is used to retrieve important memory parameters established when an
+smbd opens the device. Each open after the first open allocates memory that
+will be used to receive and send PDUs as well as buffers to be used for
+RDMA READs and WRITES.
+
+The information retrieved by this IOCTL includes the size of the memory area
+that the smbd should mmap against the device.
+
+4. GET_SMBD_EVENT
+
+This ioctl is used by the smbd to retrieve the latest events from the driver.
+Events can be of the following type:
+
+a. PDU received
+b. PDU sent
+c. RDMA READ/WRITE complete and thus the buffers can be reused.
+
+A list of events is provided for the smbd to deal with.
+
+When PDUs received events are handled, the PDU will be copied into memory
+pointed to by the event array passed in. The reason for this copy is to allow
+the SMB Direct protocol engine to turn its internal buffers around and return
+credits to the client. The cost of copying these PDUs is small in return for
+getting more requests in.
+
+The device will remain in a POLLIN state if there are outstanding events
+to be handled.
+
+5. SEND_PDU
+
+This ioctl takes an array of pointers to memory containing PDUs. These are 
+copied to internal buffers and then scheduled for sending. When the IOCTL
+returns the data has been copied but not yet sent.
+
+An event will be returned when the send is complete.
+
+6. RDMA_READ_WRITE
+
+This ioctl takes a set of shared memory areas as well as remote memory
+descriptors and schedules RDMA READs or RDMA WRITEs as needed. 
+
+Each memory region is registered prior to the RDMA operation and unregistered
+after the RDMA operation.
+
+7. SET_SMBD_DISCONNECT.
+
+Not sure if I need this.
+
+EVENT SIGNALLING
+
+The driver will maintain a queue of events to userland. When events are
+available, the device will be placed in the POLLIN state, allowing poll/epoll
+to be used to determine when events are available.
+
+MEMORY LAYOUT
+
+When the smbd driver is opened for the second and subsequent times by a
+different user, it will allocate 64MB of memory (which might need to be
+physically contiguous.) Subsequent opens by the same process will not
+allocate more memory.
+
+This memory will be available via mmap. It is expected that the GET_MEM_PARAMS
+IOCTL will be called to get the size and other parameters before mmap is
+called.
+
+This memory will be available via mmap. It is expected that the GET_MEM_PARAMS
+IOCTL will be called to get the size and other parameters before mmap is
+called.
+
+The memory will be organized as 64 1MiB buffers for RDMA READs or RDMA WRITEs.
+
+SAMBA CHANGES
+
+There will need to be a few changes to Samba, including:
+
+1. During startup to attempt to open /dev/smbd.
+
+2. The FSCTL_QUERY_NETWORK_INTERFACE_INFO ioctl will need to be implemented.
+
+3. SMB2_READ and SMB2_WRITE handling code in the SMB2 code-path will need to
+   be modified to understand remote buffer descriptors and call the correct
+   driver IOCTL to initiate RDMA_WRITE or RDMA_READ operations as needed.
+
+4. Changes might be needed to have Samba understand that the PDUs have come
+   from another source other than the TCP socket it expects.
+

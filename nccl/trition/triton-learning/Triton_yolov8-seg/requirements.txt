@@ -1,0 +1,9 @@
+# Usage: pip install -r requirements.txt
+
+# Base ----------------------------------------
+numpy>=1.26.4
+opencv-python>=4.10.0.84
+tritonclient[http]>=2.49.0
+
+# Extras --------------------------------------
+pre-commit>=3.8.0

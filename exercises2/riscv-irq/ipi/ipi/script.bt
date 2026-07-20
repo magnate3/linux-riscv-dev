@@ -1,0 +1,77 @@
+#!/usr/bin/env bpftrace
+
+#include <linux/smp.h>
+#include <linux/threads.h>
+#include <linux/types.h>
+
+tracepoint:csd:csd_queue_cpu
+{
+	@csd_queue[cpu, args.func] = nsecs;
+}
+
+tracepoint:csd:csd_function_entry
+/@csd_queue[cpu, args.func]/
+{
+	$t1 = nsecs;
+	$t0 = @csd_queue[cpu, args.func];
+	$dt = $t1 - $t0;
+	@csd_queue_latency = hist($dt);
+	@start_csd_func[cpu] = $t1;
+
+	delete(@csd_queue[cpu, args.func]);
+}
+
+tracepoint:csd:csd_function_exit
+/@start_csd_func[cpu]/
+{
+	$t1 = nsecs;
+	$t0 = @start_csd_func[cpu];
+	$dt = $t1 - $t0;
+	@csd_func_latency[ksym(args.func)] = hist($dt);
+
+	delete(@start_csd_func[cpu]);
+}
+
+tracepoint:ipi:ipi_send_cpu
+/args.callback == kaddr("generic_smp_call_function_single_interrupt")/
+{
+	@ipi_sent[args.cpu] = nsecs;
+}
+
+tracepoint:ipi:ipi_send_cpumask
+{
+	//for_each_cpu(i, args.cpumask) {
+	//	printf("cpu:%u\n", i);
+	//}
+	//printf("send cpumask:%lu, callsite:%s, callback:%s\n",
+	//	args.cpumask, ksym(args.callsite), ksym(args.callback));
+	//@sent[args.cpumask, args.callback] = count();
+}
+
+kfunc:generic_smp_call_function_single_interrupt
+/@ipi_sent[cpu]/
+{
+	$t1 = nsecs;
+	$t0 = @ipi_sent[cpu];
+	$dt = $t1 - $t0;
+	@ipi_response_latency = hist($dt);
+	@interrupt[cpu] = $t1;
+
+	delete(@ipi_sent[cpu]);
+}
+
+kretfunc:generic_smp_call_function_single_interrupt
+/@interrupt[cpu]/
+{
+	$t1 = nsecs;
+	$t0 = @interrupt[cpu];
+	$dt = $t1 - $t0;
+	@interrupt_latency = hist($dt);
+
+	delete(@interrupt[cpu]);
+}
+
+END
+{
+	clear(@csd_queue);
+}

@@ -1,0 +1,12 @@
+SRCS := $(notdir $(wildcard $M/*.c))
+MODULE_NAME1 := noarp-dev-test
+obj-m += $(MODULE_NAME1).o
+$(MODULE_NAME1)-y := $(SRCS:.c=.o)
+#ccflags-y += -g -include $M/kernel-config.h
+all:
+	make -C /lib/modules/$(shell uname -r)/build \
+	M=$(PWD) modules
+clean:
+	make -C /lib/modules/$(shell uname -r)/build \
+	M=$(PWD) clean
+

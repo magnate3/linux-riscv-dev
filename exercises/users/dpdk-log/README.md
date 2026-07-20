@@ -1,0 +1,1 @@
+rte_log_set_global_level(RTE_LOG_WARNING);

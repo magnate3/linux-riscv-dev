@@ -1,0 +1,350 @@
+
+
+# nccl
+
+[NCCL：chunk，slice，step的关系](https://blog.csdn.net/shanleo1986/article/details/145949742)  
+[PyTorch的集合通信与计算并行](https://zhuanlan.zhihu.com/p/690116679)    
+ 
+
+# pytorch cpp
+
+[使用Cpp扩展自定义进程组后端](https://github.com/pytorch/tutorials/blob/main/intermediate_source/process_group_cpp_extension_tutorial.rst)      
+[rstorch](https://github.com/Kylejeong2/rstorch/tree/c0958b9593d23e647806cefddd7876d82b5bbe42)
+
+
+```
+ python3 -c 'import torch;print(torch.utils.cmake_prefix_path())' 
+root@ubuntu:/# find ./ -name torch.h
+./usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/api/include/torch/torch.h
+root@ubuntu:/# find ./ -name ProcessGroupMPI.hpp
+./usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/distributed/c10d/ProcessGroupMPI.hpp
+root@ubuntu:/# 
+```
+
+```
+
+ 
+ 
+ c++  -std=c++17 -lm -ldl dist-mnist.cpp -o dist-mnist -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC -I/usr/local/lib/python3.8/dist-packages/torch/include -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/api/include -I/usr/local/lib/python3.8/dist-packages/torch/include/TH -I/usr/local/lib/python3.8/dist-packages/torch/include/THC -I/usr/include/python3.8 -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/distributed
+
+```
+
+```
+
+ 
+ c++  -std=c++17 -lm -ldl dist-mnist.cpp -o dist-mnist -pthread -Wno-unused-result -Wsign-compare -DNDEBUG -g -fwrapv -O2 -Wall -g -fstack-protector-strong -Wformat -Werror=format-security -g -fwrapv -O2 -g -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -fPIC -I/usr/local/lib/python3.8/dist-packages/torch/include -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/api/include  -I/usr/include/python3.8 -I/usr/local/lib/python3.8/dist-packages/torch/include/torch/csrc/distributed
+
+```
+
+# cuda   
+```
+ root@ubuntu:/pytorch/cuda2/cuda/nccl# ls /usr/local/cuda/lib64/libcudart.so
+/usr/local/cuda/lib64/libcudart.so
+root@ubuntu:/pytorch/cuda2/cuda/nccl# ls /usr/local/cuda/include
+CL                           cuda_occupancy.h            curand_lognormal.h                   host_defines.h                            nvml.h
+ 
+```
+
+```
+export LD_LIBRARY_PATH="/usr/local/cuda-11.6/lib64:$LD_LIBRARY_PATH"
+export PATH="/usr/local/cuda-11.6/bin:$PATH"
+ export CUDA_INCLUDE_DIRS=/usr/local/cuda-11.6/include
+  export CUDA_CUDART_LIBRARY=/usr/local/cuda-11.6/lib64  
+```
+
+#  rankhasroot 
+```
+cat rankhasroot.cu 
+/*
+no gpu was used. if it was, itll be need 4
+*/
+#include <iostream>
+
+// This function determines if a given rank is the root of its group.
+// It divides nRanks among nIds groups. The groups may have different sizes
+// if nRanks isn't exactly divisible by nIds.
+bool rankHasRoot(const int rank, const int nRanks, const int nIds) {
+  // rmr: remainder of total ranks divided by the number of IDs.
+  const int rmr = nRanks % nIds;
+  // rpr: quotient, representing the base number of ranks per ID.
+  const int rpr = nRanks / nIds;
+  // rlim: threshold rank that separates groups with one extra rank.
+  const int rlim = rmr * (rpr + 1);
+
+  // For the first rmr groups, each group has (rpr+1) ranks.
+  if (rank < rlim) {
+    // The first rank in the group (i.e., a "root") will be at an index that's a multiple of (rpr+1)
+    return (rank % (rpr + 1)) == 0;
+  } else {
+    // For the remaining groups, each group has rpr ranks.
+    return ((rank - rlim) % rpr) == 0;
+  }
+}
+
+int main() {
+  // Example configuration:
+  // Total number of ranks and the number of groups (IDs)
+  const int nRanks = 16;
+  const int nIds = 4;
+
+  std::cout << "Total Ranks: " << nRanks << ", Number of IDs (groups): " << nIds << "\n";
+  std::cout << "Determining which rank is the group root:\n";
+
+  // Loop through each rank and use the function to check if it's a root.
+  for (int rank = 0; rank < nRanks; ++rank) {
+    bool hasRoot = rankHasRoot(rank, nRanks, nIds);
+    std::cout << "Rank " << rank << (hasRoot ? " is a root." : " is NOT a root.") << "\n";
+  }
+
+  return 0;
+}
+```
+
+```
+/pytorch/cuda2/cuda/nccl# ./rankhasroot 
+Total Ranks: 16, Number of IDs (groups): 4
+Determining which rank is the group root:
+Rank 0 is a root.
+Rank 1 is NOT a root.
+Rank 2 is NOT a root.
+Rank 3 is NOT a root.
+Rank 4 is a root.
+Rank 5 is NOT a root.
+Rank 6 is NOT a root.
+Rank 7 is NOT a root.
+Rank 8 is a root.
+Rank 9 is NOT a root.
+Rank 10 is NOT a root.
+Rank 11 is NOT a root.
+Rank 12 is a root.
+Rank 13 is NOT a root.
+Rank 14 is NOT a root.
+Rank 15 is NOT a root.
+```
+
+
+#  learnnccl
+```
+root@ubuntu:/pytorch/cuda2/learnnccl# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:./build/lib
+root@ubuntu:/pytorch/cuda2/learnnccl# make CUDA_HOME=/usr/local/cuda clean
+rm -rf build
+root@ubuntu:/pytorch/cuda2/learnnccl# make CUDA_HOME=/usr/local/cuda test 
+```
+
+```
+./build/test/all_reduce_test 10 1 
+# Using devices
+Segmentation fault (core dumped)
+```
+
+# ring
+
+[NCCL源码图解之基本通信算子](https://mubai.tech/nccl_primitives_ops)   
+
+构建prims对象
+
+```cpp
+__device__ Primitives(
+    const int tid, const int nthreads, int const *recvPeers, int const *sendPeers,
+    void const *inputBuf, void *outputBuf, uint64_t redOpArg, int group=0
+):
+
+Primitives<T, RedOp, FanSymmetric<1>, 1, Proto, 0> prims
+      (tid, nthreads, &ring->prev, &ring->next, args->sendbuff, args->recvbuff, args->redOpArg);
+```
+
+几步走
+
+```cpp
+// step 0: push data to next GPU
+chunk = modRanks(ringIx + nranks-1);
+offset = calcOffset(chunk);
+nelem = min(realChunkSize, size-offset);
+prims.send(offset, nelem);
+
+// k-2 steps: reduce and copy to next GPU
+for (int j=2; j<nranks; ++j) {
+  chunk = modRanks(ringIx + nranks-j);
+  offset = calcOffset(chunk);
+  nelem = min(realChunkSize, size-offset);
+  prims.recvReduceSend(offset, nelem);
+}
+
+// step k-1: reduce this buffer and data, which will produce the final
+// result that we store in this data and push to the next GPU
+chunk = ringIx + 0;
+offset = calcOffset(chunk);
+nelem = min(realChunkSize, size-offset);
+prims.directRecvReduceCopySend(offset, offset, offset, nelem, /*postOp=*/true);
+
+// k-2 steps: copy to next GPU
+for (int j=1; j<nranks-1; ++j) {
+  chunk = modRanks(ringIx + nranks-j);
+  offset = calcOffset(chunk);
+  nelem = min(realChunkSize, size-offset);
+  prims.directRecvCopySend(offset, offset, nelem);
+}
+
+// Make final copy from buffer to dest.
+chunk = modRanks(ringIx + 1);
+offset = calcOffset(chunk);
+nelem = min(realChunkSize, size-offset);
+prims.directRecv(offset, nelem);
+```
+
+
+#  netTransport
+
+
+```
+struct ncclTransport netTransport = {
+  "NET",
+  canConnect,
+  { sendSetup, sendConnect, sendFree, proxySharedInit, sendProxySetup, sendProxyConnect, sendProxyFree, sendProxyProgress, sendProxyRegBuffer, sendProxyDeregBuffer },
+  { recvSetup, recvConnect, recvFree, proxySharedInit, recvProxySetup, recvProxyConnect, recvProxyFree, recvProxyProgress, recvProxyRegBuffer, recvProxyDeregBuffer }
+};
+```
+
+#    Async TP
++ Async-TP算法核心在于拆散通信操作，人为创造通信与计算的并行空间。
+与Megatron的SP+TP的组合相比：将allgather\reduce_scatter通信拆分为局部的send\recv，并手动做reduce(累加)。      
++ P2P的内存拷贝尽量不用SM，改用CE（Copy Engines）。方案的核心在于：不再下发send/recv kernels改用tensor.to(device)的D2D拷贝    
+```
+Asynchronous Tensor Parallelism (Async TP) in CUDA utilizes techniques to overlap computation (specifically MatMul operations) with communication (NCCL send and recv primitives) to improve model training performance. 
+```
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    用户代码                               │
+└──────────────────────────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │    ncclGroupStart()           │
+        └───────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │  ncclAllReduce(...)           │ ──→ 添加CollTask
+        │  ncclSend(...)                │ ──→ 添加P2pTask
+        │  ncclRecv(...)                │ ──→ 添加P2pTask
+        │  ncclAllGather(...)           │ ──→ 添加CollTask
+        └───────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │    ncclGroupEnd()             │
+        └───────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│              Kernel Planner处理                          │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  1. 任务排序 (按大小降序)                               │
+│     CollTaskQueue: [Task1(10GB), Task2(1GB), ...]       │
+│                                                          │
+│  2. 通道分配                                            │
+│     Task1 → Channels [0,1,2,3]                          │
+│     Task2 → Channels [0,1]                              │
+│                                                          │
+│  3. 算法/协议选择                                       │
+│     Task1: Ring + Simple                                │
+│     Task2: Tree + LL                                    │
+│                                                          │
+│  4. 构建Work元素                                        │
+│     ┌──────────────┐  ┌──────────────┐                 │
+│     │ WorkColl     │  │ WorkP2p      │                 │
+│     │ - func       │  │ - sendRank   │                 │
+│     │ - sendbuff   │  │ - recvRank   │                 │
+│     │ - recvbuff   │  │ - buff       │                 │
+│     │ - count      │  │ - count      │                 │
+│     └──────────────┘  └──────────────┘                 │
+│                                                          │
+│  5. 构建WorkBatch                                       │
+│     Batch包含多个Work元素                               │
+│                                                          │
+│  6. 生成KernelPlan                                      │
+│     ┌────────────────────────────────────┐             │
+│     │ KernelPlan                          │             │
+│     │ - kernelFn                          │             │
+│     │ - kernelArgs                        │             │
+│     │ - channelMask                       │             │
+│     │ - workQueue                         │             │
+│     │ - proxyOpQueue                      │             │
+│     └────────────────────────────────────┘             │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+┌─────────────────────────────────────────────────────────┐
+│              Enqueue & Launch                            │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  1. 分配WorkFifo空间                                    │
+│     workFifoBuf[workFifoProduced]                       │
+│                                                          │
+│  2. 拷贝Work到Device                                    │
+│     cudaMemcpyAsync(workFifoBuf, workBatch, ...)        │
+│                                                          │
+│  3. 启动CUDA Kernel                                     │
+│     ┌────────────────────────────────────┐             │
+│     │ ncclDevKernel<<<blocks, threads>>> │             │
+│     │   (kernelArgs)                      │             │
+│     └────────────────────────────────────┘             │
+│          ↓                                               │
+│     GPU执行work                                         │
+│                                                          │
+│  4. 唤醒Proxy线程                                       │
+│     proxyQueue.enqueue(proxyOps)                        │
+│          ↓                                               │
+│     Proxy处理网络通信                                   │
+│                                                          │
+└─────────────────────────────────────────────────────────┘
+                        ↓
+        ┌───────────────────────────────┐
+        │    等待完成                    │
+        │  cudaStreamSynchronize()       │
+        └───────────────────────────────┘
+```
+
+```
+import torch
+
+torch.distributed.init_process_group(backend='nccl')
+rank = torch.distributed.get_rank()
+
+torch.cuda.set_device(rank)
+
+torch.distributed.barrier()
+
+with torch.profiler.profile(
+    activities=[
+        torch.profiler.ProfilerActivity.CPU,
+        torch.profiler.ProfilerActivity.CUDA,
+    ]
+) as p:
+
+    if rank == 0:
+        x = torch.empty(1000000000, device='cuda')
+        x.fill_(2.3)
+        work = torch.distributed.isend(x, 1)
+        work.wait()
+    else:
+        y = torch.empty(1000000000, device='cuda')
+        work = torch.distributed.irecv(y, 0)
+        a = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        b = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        c = a @ b
+        work.wait()
+
+    if rank == 0:
+        x = torch.empty(1000000000, device='cuda')
+        x.fill_(2.3)
+        work = torch.distributed.isend(x, 1)
+        work.wait()
+    else:
+        y = torch.empty(1000000000, device='cuda')
+        work = torch.distributed.irecv(y, 0)
+        a = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        b = torch.ones((10000, 10000), dtype=torch.float32, device='cuda')
+        c = a @ b
+        work.wait()
+
+p.export_chrome_trace(f"rank{rank}.json")
+```

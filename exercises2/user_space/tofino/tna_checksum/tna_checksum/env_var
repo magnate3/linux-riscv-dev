@@ -1,0 +1,2 @@
+export SDE=/sde/bf-sde-9.7.1
+export SDE_INSTALL=$SDE/install

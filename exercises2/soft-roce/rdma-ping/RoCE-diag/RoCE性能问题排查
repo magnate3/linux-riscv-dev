@@ -1,0 +1,33 @@
+
+#RoCE出现性能的问题和排查的方向
+
+#目前如果出现RoCE的问题，没有特别好的debug手段，基本上是以下：
+1. 是否有链路故障，比如线、模块等
+2. 检查PFC和ECN的配置，看看是否有漏配
+3. 网卡的问题，收包不够快
+
+#而除了配置检查之外，甚至是包括配置检查，主要排查手段都是分析counter从而判断问题可能出在什么地方
+可以分析的主要counter是
+1. ethernet相关基础counter，尤其涉及到不同的priority和phy部分与rdma流量的关系很有参考意义： 
+   ethtool -S eth0 
+#这个链接介绍了ethtool的各个counter的含义：https://support.mellanox.com/s/article/understanding-mlx5-ethtool-counters
+
+2. RDMA相关的counter
+装好驱动后，这些counter可以在这个目录下看到：/sys/class/infiniband/<mlx_device>/ports/1/hw_counters
+可以通过这个命令来实时观察变化：
+watch -d -n 1 'for F in /sys/class/infiniband/mlx5_bond_0/ports/1/hw_counters/* ; do echo -n "$F: " ; cat $F; done'
+
+3. 硬件counter（只适用于CX4，因此现在没有了）
+
+#因此我们这里主要描述一下各个RDMA counter的含义，以及出现可能对应的解决方向：
+
+链路问题相关，这些问题，最好在链路和对端找原因，如果同时ethtool的rx_discards_phy增加，报文在网卡丢了，反之在交换机丢了
+
+- duplicate_request - 重复收包，好理解
+- implied_nak_seq_err - 发送方收到ACK的PSN比预期的大，实际上是有乱序和丢包
+- local_ack_timeout_err - 对方没有在预期时间响应ACK，也是丢包
+- out_of_sequence (RDMA) - 收到的乱序包，但是没超出QP重传限制
+
+
+#可以通过下面的github取到跑perftest的参考脚本
+https://github.com/Mellanox/ngc_multinode_perf

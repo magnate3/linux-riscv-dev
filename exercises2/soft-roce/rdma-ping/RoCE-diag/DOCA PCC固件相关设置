@@ -1,0 +1,20 @@
+
+#DoCA PCC使用方法及查询命令的解释参见文档 https://docs.nvidia.com/doca/sdk/pcc/index.html
+#例如，打开DOCA PCC的基础设置
+mlxconfig -d <mlx_device> -y s USER_PROGRAMMABLE_CC=1
+
+
+#一些特殊的设置未在PCC文档中体现，参见如下：
+
+#设置pcc的速率，per dest ip，per qp或者per 5 tuple
+ROCE_CC_SHAPER_COALESCE
+
+#设置RTT response响应的优先级（通过DSCP值实现）
+ROCE_RTT_RESP_DSCP_MODE
+  0为default
+  1为Fixed value，从ROCE_RTT_RESP_DSCP中取得
+  2为RTT_REQUEST，是从RTT request中得到
+
+ROCE_RTT_RESP_DSCP
+  与前一个参数配合使用，会覆盖PCC_INT_NP_RTT_DSCP值
+  如果不设，默认从RTT req里面取值

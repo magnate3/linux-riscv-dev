@@ -1,0 +1,16 @@
+# entries for basic12
+
+table_add feature1_exact set_actionselect1 0->10 => 1 1
+table_add feature2_exact set_actionselect2 0->10 => 1 1
+table_add feature3_exact set_actionselect3 0->10 => 1 1
+table_add feature4_exact set_actionselect4 0->10 => 1 1
+table_add ipv4_exact ipv4_forward 1->1 1->1 1->1 1->1 => 08:00:00:00:03:33 3 1
+table_add feature1_exact set_actionselect1 10->20 => 2 1
+table_add feature2_exact set_actionselect2 10->20 => 2 1
+table_add feature3_exact set_actionselect3 10->20 => 2 1
+table_add feature4_exact set_actionselect4 10->20 => 2 1
+table_add ipv4_exact ipv4_forward 2->2 2->2 2->2 2->2 => 08:00:00:00:02:22 2 1
+table_add class_forward_t class_forward_a 2 => 08:00:00:00:02:22 2
+table_add class_forward_t class_forward_a 3 => 08:00:00:00:03:33 3
+table_add be_forward_t be_forward_a 0 => 08:00:00:00:03:33 3
+table_add MyIngress.process_int.int_t MyIngress.process_int.int_a =>

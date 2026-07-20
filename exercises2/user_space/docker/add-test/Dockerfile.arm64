@@ -1,0 +1,73 @@
+# Dockerfile for unitree_rl_gym
+# Based on the setup requirements from doc/setup_en.md
+
+FROM ngc.nju.edu.cn/nvidia/cuda:12.1.0-cudnn8-devel-ubuntu22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/workspace:/workspace/FedML:$PYTHONPATH
+
+# Install Python 3.8
+RUN apt update && apt install -y software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt update && \
+    apt install -y python3.8 python3.8-dev python3.8-distutils && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1
+
+RUN apt update && apt install -y curl
+
+# Install pip for Python 3.8
+RUN curl https://bootstrap.pypa.io/pip/3.8/get-pip.py -o get-pip.py && \
+    python3.8 get-pip.py && \
+    rm get-pip.py
+
+ENV PIP_INDEX_URL=https://pypi.jetson-ai-lab.io/jp6/cu122/+simple
+ENV PIP_EXTRA_INDEX_URL=https://pypi.org/simple
+
+RUN pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+
+#COPY ./isaacgym /opt/isaacgym
+#RUN cd /opt/isaacgym/python && \
+#    pip install -e .
+#
+RUN apt update && apt install -y git
+
+# Clone and install rsl_rl
+#WORKDIR /opt
+#RUN git clone https://github.com/leggedrobotics/rsl_rl.git && \
+#    cd rsl_rl && \
+#    git checkout v1.0.2 && \
+#    pip install -e .
+#
+#WORKDIR /opt
+#
+#RUN apt update && apt install -y cmake build-essential
+#
+#RUN git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x 
+#RUN cd cyclonedds && mkdir build install && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=../install && cmake --build . --target install
+#
+#ENV CYCLONEDDS_HOME=/opt/cyclonedds/install
+#
+## Clone and install unitree_sdk2py (optional)
+#RUN git clone https://github.com/unitreerobotics/unitree_sdk2_python.git && \
+#    cd unitree_sdk2_python && \
+#    pip install -e .
+#
+## Copy the current project
+#COPY . /opt/unitree_rl_gym
+#WORKDIR /opt/unitree_rl_gym
+
+ADD ./devops/requirements.txt ./fedml/requirements.txt
+RUN pip3 install -r ./fedml/requirements.txt
+RUN pip install 'numpy==1.24.0'
+
+# Install unitree_rl_gym
+#RUN pip install -e .
+
+# Set working directory
+WORKDIR /workspace
+
+# Set the default command
+CMD ["/bin/bash"]

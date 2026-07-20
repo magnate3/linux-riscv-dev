@@ -1,0 +1,118 @@
+#!/bin/bash
+LIBROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PKGPATH=$LIBROOT/../pkg
+
+function ss::install() {
+    case $ARCHITECTURE in
+    x86_64)
+            apt-get update
+            apt-get install shadowsocks-libev build-essential cmake libssl-dev pkg-config libnspr4-dev libnss3-dev
+            systemctl stop shadowsocks-libev
+            systemctl disable shadowsocks-libev
+            ss::install_badvpn
+            ;;
+    armv7l)
+            apt-get update
+            apt-get install -y --no-install-recommends gettext build-essential \
+                    autoconf libtool libpcre3-dev asciidoc xmlto \
+                    libev-dev libc-ares-dev automake
+
+            cd $PKGPATH
+            export LIBSODIUM_VER=1.0.18
+            tar xvf libsodium-$LIBSODIUM_VER.tar.gz
+            pushd libsodium-$LIBSODIUM_VER
+            ./configure --prefix=/usr && make
+            make install
+            popd
+            sudo ldconfig
+            cd ..
+
+            # Installation of MbedTLS
+            cd $PKGPATH
+            export MBEDTLS_VER=2.6.0
+            tar xvf mbedtls-$MBEDTLS_VER-gpl.tgz
+            pushd mbedtls-$MBEDTLS_VER
+            make SHARED=1 CFLAGS="-O2 -fPIC"
+            sudo make DESTDIR=/usr install
+            popd
+            ldconfig
+            ./autogen.sh && ./configure && make
+            sudo make install
+            cd $PKGPATH
+            git clone https://github.com/shadowsocks/shadowsocks-libev.git
+            cd shadowsocks-libev
+            git submodule update --init --recursive
+            sh autogen.sh
+            ./configure
+            make
+            make install
+            cd ..
+            ss::install_badvpn
+            ;;
+    *)
+            exit 1
+            ;;
+    esac
+}
+
+function ss::install_badvpn() {
+    apt update
+    apt-get install -y --no-install-recommends build-essential \
+            cmake libssl-dev pkg-config libnspr4-dev libnss3-dev
+    cd $PKGPATH
+    git clone https://github.com/ambrop72/badvpn
+    cd badvpn
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local
+    make install
+}
+
+function ss::server_start() {
+    serverip=$1
+    sport=$2
+    password=$3
+    ssserver -U \
+            -s $serverip:$sport \
+            -k $password \
+            -m chacha20-ietf-poly1305 \
+            --plugin "v2ray-plugin" \
+            --plugin-opts "server" &
+   badvpn-udpgw --listen-addr 127.0.0.1:7300 --loglevel none &
+}
+
+function ss::server_stop() {
+        killall ssserver v2ray-plugin badvpn-udpgw
+}
+
+
+function ss::client_start() {
+    ss::client_stop
+    serverip=$1
+    sport=$2
+    password=$3
+
+    ip tuntap add dev tun64 mode tun
+    ip addr replace 10.198.9.63/24 dev tun64
+    ifconfig tun64 up
+    ss-local \
+            -s $serverip \
+            -p $sport \
+            -k $password \
+            -m chacha20-ietf-poly1305 \
+            --fast-open --reuse-port \
+            --plugin "$V2RAY_PLUGIN_BIN_PATH" -b 10.198.9.63 -l 10800  &
+    route add -net 10.198.9.0/24 dev tun64
+    badvpn-tun2socks --tundev tun64 \
+            --netif-ipaddr 10.198.9.64 \
+            --netif-netmask 255.255.255.0 \
+            --socks-server-addr 10.198.9.63:10800 \
+            --udpgw-remote-server-addr 127.0.0.1:7300 \
+            --loglevel none &
+    route add default gw 10.198.9.64 # replace this
+    systemctl restart dnsmasq
+}
+function ss::client_stop(){
+    killall ss-local badvpn-tun2socks v2ray-plugin
+    ip tuntap del tun64 mode tun
+}

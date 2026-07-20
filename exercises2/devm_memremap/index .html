@@ -1,0 +1,946 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="linux,p2pdma,dma-buf,hmm,">
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0">
+
+
+
+
+
+
+<meta name="description" content="Google检索p2p dma能发现好多技术名词，什么p2pdma, dma-buf, GPUDirect, NVMEoF-P2P, SPIN, XDMA, Donard等等，自然而然就陷入了疑惑，为什么会有这么多解决类似问题的方案呢？它们之间又是什么关系呢?又有什么区别呢？哪种场景下该用哪个技术呢？差异在哪里呢？ 本文在AMD GPU的maintainer Alex Deucher总结材料上，补">
+<meta name="keywords" content="linux,p2pdma,dma-buf,hmm">
+<meta property="og:type" content="article">
+<meta property="og:title" content="p2p dma技术分析总结">
+<meta property="og:url" content="http://joyxu.github.io/2022/07/19/p2p-dma技术分析总结/index.html">
+<meta property="og:site_name" content="记录成长的痕迹">
+<meta property="og:description" content="Google检索p2p dma能发现好多技术名词，什么p2pdma, dma-buf, GPUDirect, NVMEoF-P2P, SPIN, XDMA, Donard等等，自然而然就陷入了疑惑，为什么会有这么多解决类似问题的方案呢？它们之间又是什么关系呢?又有什么区别呢？哪种场景下该用哪个技术呢？差异在哪里呢？ 本文在AMD GPU的maintainer Alex Deucher总结材料上，补">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://joyxu.github.io/images/p2p_dma2.png">
+<meta property="og:image" content="http://joyxu.github.io/images/p2p_dma1.png">
+<meta property="og:updated_time" content="2024-05-10T02:24:53.275Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="p2p dma技术分析总结">
+<meta name="twitter:description" content="Google检索p2p dma能发现好多技术名词，什么p2pdma, dma-buf, GPUDirect, NVMEoF-P2P, SPIN, XDMA, Donard等等，自然而然就陷入了疑惑，为什么会有这么多解决类似问题的方案呢？它们之间又是什么关系呢?又有什么区别呢？哪种场景下该用哪个技术呢？差异在哪里呢？ 本文在AMD GPU的maintainer Alex Deucher总结材料上，补">
+<meta name="twitter:image" content="http://joyxu.github.io/images/p2p_dma2.png">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://joyxu.github.io/2022/07/19/p2p-dma技术分析总结/">
+
+
+
+
+
+  <title> p2p dma技术分析总结 | 记录成长的痕迹 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">记录成长的痕迹</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Linux Kernel</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://joyxu.github.io/2022/07/19/p2p-dma技术分析总结/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="Joy Xu">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/index_header.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="记录成长的痕迹">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                p2p dma技术分析总结
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2022-07-19T07:04:08+08:00">
+                2022-07-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2022/07/19/p2p-dma技术分析总结/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2022/07/19/p2p-dma技术分析总结/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="page-pv"><i class="fa fa-file-o"></i>
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Google检索p2p dma能发现好多技术名词，什么p2pdma, dma-buf, GPUDirect, NVMEoF-P2P, SPIN, XDMA, Donard等等，<br>自然而然就陷入了疑惑，为什么会有这么多解决类似问题的方案呢？它们之间又是什么关系呢?又有什么区别呢？哪种场景下该用哪个技术呢？差异在哪里呢？</p>
+<p>本文在AMD GPU的maintainer Alex Deucher总结材料上，补充些信息，做个总结。</p>
+<h2 id="Out-of-tree方案-暂未何如到linux-kernel主线"><a href="#Out-of-tree方案-暂未何如到linux-kernel主线" class="headerlink" title="Out of tree方案(暂未何如到linux kernel主线)"></a>Out of tree方案(暂未何如到linux kernel主线)</h2><h3 id="MLX的PeerDirect方案"><a href="#MLX的PeerDirect方案" class="headerlink" title="MLX的PeerDirect方案"></a>MLX的PeerDirect方案</h3><p>之前已经介绍过这个技术，就不重复了，想详细了解的可以翻翻以前的文章，也可以看看<a href="https://docs.nvidia.com/networking/pages/viewpage.action?pageId=58753175" target="_blank" rel="noopener">官网</a>。<br>这个方案依赖MLX定制的infiniband内核ko，相关的patch <a href="https://www.spinics.net/lists/linux-rdma/msg33294.html" target="_blank" rel="noopener">Peer-direct memory</a>并没有被主线接受,<br>这组patch的开发过程可以参考这个<a href="https://review.gerrithub.io/plugins/gitiles/Artemy-Mellanox/io_peer_mem/" target="_blank" rel="noopener">链接</a>。</p>
+<p>主要有几个点：</p>
+<ul>
+<li>外设需要使用ib_register_peer_memory_client把自己的内存注册到IB空间中，同时实现自己的内存管理回调函数，比如分配，映射等，后面几步会利用这些回调函数。</li>
+<li>在用户程序register mr的时候，IB Core会尝试调用每个client的acquire函数，让每个client判断自己有没有办法将给定的虚拟地址区间翻译成物理页面。若能成功，就返回True，表示这段内存由该设备来处理</li>
+<li>IB core找到正确的peer client之后，就会调用其get_pages()函数来将虚拟地址区间翻译成物理页面。</li>
+<li>IB core再调用dma_map()来由物理页面map到bus address即dma_address，并将结果保存在sg_head里(sg_head是调用者传入的一个scatterlist指针， scatterlist专门用来描述一组物理内存)。 nv_peer_mem会使用nvidia_p2p_dma_map_pages()。nvidia_p2p_dma_map_pages()需要传入peer device，正巧ib_core也会将dma_device传入dma_map()里。</li>
+</ul>
+<p>如果想看看结合用户态具体怎么用的话，可以参考修改后的<a href="https://github.com/lsgunth/perftest/tree/mmap" target="_blank" rel="noopener">ib perftest</a>。<br>参与这个方案开发的Stephen Bates(Donard系统的作者)后来成为了存储计算芯片公司Eideticom的CTO。</p>
+<h3 id="Nvidia的GPUDirect方案"><a href="#Nvidia的GPUDirect方案" class="headerlink" title="Nvidia的GPUDirect方案"></a>Nvidia的GPUDirect方案</h3><p>这个方案其实和MLX很有渊源，因为GPU的一个主要使用场景就是通过RDMA技术去访问远端的数据。nv_peer_memory的代码实现基本和MLX方案的io_peer_mem基本一致。</p>
+<p>有兴趣的可以看看参考方案的<a href="https://github.com/Mellanox/gpu_direct_rdma_access" target="_blank" rel="noopener">用例代码</a>。<br>它依赖MLX定制的infiniband内核ko，<a href="https://patchwork.kernel.org/project/linux-rdma/list/?series=&amp;submitter=&amp;state=*&amp;q=IB%2Fcore%3A+Introduce+peer+client+interface&amp;archive=both&amp;delegate=" target="_blank" rel="noopener">相关的patch</a>并没有被主线接受。<br>对端设备侧的驱动也需要修改，所以Nvidia的GPU还写了一个<a href="https://github.com/Mellanox/nv_peer_memory" target="_blank" rel="noopener">nv_peer_memory的ko</a>实现内存管理等回调函数，<br>它把GPU的内存通过<code>ib_register_peer_memory_client</code>函数注册到rdma的环境中。<br>另外在再做具体地址映射时，又依赖<a href="https://github.com/NVIDIA/open-gpu-kernel-modules" target="_blank" rel="noopener">nvidia-peermem.ko</a>。</p>
+<h3 id="AMD的kfd-peerdirect方案"><a href="#AMD的kfd-peerdirect方案" class="headerlink" title="AMD的kfd_peerdirect方案"></a>AMD的kfd_peerdirect方案</h3><p>这个方案实际上也是基于MLX的方案的，代码和Nvidia的实现很相似，详细可以看看<a href="https://github.com/RadeonOpenCompute/ROCK-Kernel-Driver/blob/master/drivers/gpu/drm/amd/amdkfd/kfd_peerdirect.c" target="_blank" rel="noopener">源码</a>。</p>
+<h3 id="Donard方案"><a href="#Donard方案" class="headerlink" title="Donard方案"></a>Donard方案</h3><p>这个方案其实可以算是MLX方案，这个作者和基于MLX的方案开发了Donard系统，后面演进成p2pdma方案了。</p>
+<h3 id="SPIN方案"><a href="#SPIN方案" class="headerlink" title="SPIN方案"></a>SPIN方案</h3><p>这是以色列理工学院Technion Accelerated Computing Systems Lab推出的方案，功能是把ssd上的数据直接读到GPU的vram。<br>由于只是一个学术demo方案，所以代码比较粗糙，主要实现一个设备驱动，提供ioctl支持读和分配内存的操作，并截获pread系统api，打开之前定义的设备进行ioctl操作。<br>更详细的信息可以参考其<a href="https://github.com/acsl-technion/spin" target="_blank" rel="noopener">官网</a></p>
+<p><img src="/images/p2p_dma2.png" alt="SPIN pread demo"></p>
+<h3 id="Fusion-io-ioMemory方案"><a href="#Fusion-io-ioMemory方案" class="headerlink" title="Fusion-io ioMemory方案"></a>Fusion-io ioMemory方案</h3><p>Fusion-io是一家做SSD和nvdimm的公司，他们这个方案主要是配合Nvidia的GPU面向CUDA应用的。<br>其实也是基于Nvidia的GPUDirect方案的，而且这家公司在2014年已经被SanDisk收购了，在这里就不做更深入的介绍了。<br>细节可以参考<a href="https://github.com/RemixVSL/iomemory-vsl4/tree/main/root/usr/src/iomemory-vsl4-4.3.7" target="_blank" rel="noopener">源码</a></p>
+<p><img src="/images/p2p_dma1.png" alt="fusion io"></p>
+<h3 id="iopmem"><a href="#iopmem" class="headerlink" title="iopmem"></a>iopmem</h3><p>这个方案更像是一个demo，它基于ZONE_DEVICE，只是把设备的内存映射到CPU地址空间中，供其它设备使用。<br>细节请参考 <a href="https://github.com/sbates130272/iopmem" target="_blank" rel="noopener">源码</a></p>
+<h2 id="In-tree方案（已经合入到linux-kernel主线）"><a href="#In-tree方案（已经合入到linux-kernel主线）" class="headerlink" title="In tree方案（已经合入到linux kernel主线）"></a>In tree方案（已经合入到linux kernel主线）</h2><h3 id="ZONE-DEVICE-IO"><a href="#ZONE-DEVICE-IO" class="headerlink" title="ZONE_DEVICE IO"></a>ZONE_DEVICE IO</h3><p>随着persisttent memory设备的兴起，为了在kernel中能使用这些设备的内存，ZONE_DEVICE的概念被引入了内核。<br>一开始的时候这些内存并不支持页表形式的管理，但4.3之后，内核中引入了<code>devm_memremap_pages</code> 这个API，使用该API注册的设备内存将会映射到内核的virtual address space中。<br>但是并不提倡针对大容量内存的设备使用这个API，因为会浪费掉很多system memory管理页表。<br>更详细的使用限制可以 <a href="https://lwn.net/Articles/672457/" target="_blank" rel="noopener">这个链接</a>。</p>
+<h3 id="P2P-PCI方案"><a href="#P2P-PCI方案" class="headerlink" title="P2P PCI方案"></a>P2P PCI方案</h3><p>这个方案的代码在内核的driver/pci/p2pdma.c中，当前内核只支持NVMe，用户态SPDK支持，但设备侧的内存需要基于page管理，这也就意味着这个方案对于目前使用ttm管理内存的GPU还不能使用。<br>之前也有方案不基于page管理，但是 <a href="https://patchwork.kernel.org/project/linux-pci/cover/20190620161240.22738-1-logang@deltatee.com/" target="_blank" rel="noopener">这组patch Removing struct page from P2PDMA</a> 并没有被社区接受。<br>而且这个方案基于ZONE_DEVICE，这个在arm64平台上默认没有使能。</p>
+<p>在使用这个方案的时候，要显式调用p2pdma框架的api，它并没有和内核中dma框架的api合成一套。<br>比如： <a href="https://elixir.bootlin.com/linux/v5.19-rc7/source/drivers/nvme/host/pci.c#L870" target="_blank" rel="noopener">https://elixir.bootlin.com/linux/v5.19-rc7/source/drivers/nvme/host/pci.c#L870</a></p>
+<p>但目前社区有 <a href="https://patchwork.kernel.org/project/linux-pci/cover/20220708165104.5005-1-logang@deltatee.com/" target="_blank" rel="noopener">一组patch DMA Mapping P2PDMA Pages</a>把它和dma iommu api框架结合起来。<br>完整的 <a href="https://github.com/sbates130272/linux-p2pmem/tree/p2pdma_map_v8" target="_blank" rel="noopener">仓库链接</a>, 作者居然是Eideticom的CTO。</p>
+<p>这个方案还有两个限制：</p>
+<p>仅能支持同一个root port下面的end point设备，对于跨root port的，需要修改p2pdma.c显式增加支持。<br>具体代码修改参考这个链接： <a href="https://elixir.bootlin.com/linux/v5.19-rc7/source/drivers/pci/p2pdma.c#L292" target="_blank" rel="noopener">https://elixir.bootlin.com/linux/v5.19-rc7/source/drivers/pci/p2pdma.c#L292</a><br><a href="https://patchwork.kernel.org/project/linux-pci/patch/20190418115859.2394-1-christian.koenig@amd.com/" target="_blank" rel="noopener">原始patch PCI/P2PDMA: start with a whitelist for root complexes</a></p>
+<p>设备内存是pinned住的。</p>
+<h3 id="DMA-BUF"><a href="#DMA-BUF" class="headerlink" title="DMA-BUF"></a>DMA-BUF</h3><p>这个方案开始的时候并不是用于设备内存的，而是用于系统内存的。<br>它支持unpin的内存(监听move_notify消息)，由于GPU的内存十分宝贵，且需要换入换出，所以在GPU驱动中目前有使用这个方案。<br>另外这个方案已经和dma iommu框架集成在一起，调用dma_map等api的时候，会自动回调它的相关callback函数。</p>
+<p>社区中也有人正在让RDMA设备支持这个方案：<a href="https://lwn.net/Articles/839314/" target="_blank" rel="noopener">RDMA: Add dma-buf support</a></p>
+<h3 id="habanalabs"><a href="#habanalabs" class="headerlink" title="habanalabs"></a>habanalabs</h3><p>intel之前收购了以色列的habanalab，他们在2021年也提出了基于DMA-BUF的方案，让设备可以互相访问对方的内存，且也已经合入到了社区。<br>它提供了一个ioctl，要求用户态发 <code>HL_MEM_OP_EXPORT_DMABUF_FD</code> 命令，把设备的内存暴露到用户态。<br>但是很可惜，没有找到用户态的例子。</p>
+<h3 id="HMM"><a href="#HMM" class="headerlink" title="HMM"></a>HMM</h3><p>这个方案开始的时候，也是针对CPU使用异构内存的，也并不是针对设备内存的。<br>设备内存可以注册到ZONE_DEVICE，但是只能配置成DEVICE_PRIVATE，所以CPU无法访问。</p>
+<p>但是呢，社区里也有人让这款内存变成CPU可以访问的，具体参考这个patch：<a href="https://lwn.net/Articles/869201/" target="_blank" rel="noopener">MEMORY_DEVICE_PUBLIC for CPU-accessible coherent device memory</a><br>上面这个patch是AMD用于构建自己的超算Frontier，希望CPU可以访问GPU的内存，且支持coherence。</p>
+<h2 id="GPU-RDMA-RDMA-NVMe"><a href="#GPU-RDMA-RDMA-NVMe" class="headerlink" title="GPU + RDMA + RDMA + NVMe"></a>GPU + RDMA + RDMA + NVMe</h2><p>回过头来，看看我们的场景，希望本地的GPU通过RDMA网卡，访问远程的NVMe SSD存储介质上的文件数据，这种情况下的限制：</p>
+<ul>
+<li>GPU上的内存并不希望被pin住</li>
+<li>RDMA并不支持GPU上的dma_fence同步概念</li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a href="https://lore.kernel.org/all/MWHPR12MB169484839282E2D56124FA02F7B50@MWHPR12MB1694.namprd12.prod.outlook.com/" target="_blank" rel="noopener">Enabling peer to peer device transactions for PCIe devices</a></li>
+<li><a href="https://usenix.org/sites/default/files/conference/protected-files/atc17_slides_bergman.pdf" target="_blank" rel="noopener">Seamless Operating System Integration of Peer-to-Peer DMA Between SSDs and GPUs</a></li>
+<li><a href="https://lpc.events/event/9/contributions/617/attachments/705/1303/xdc2020_p2p_dma_v4_20200915_clean.pdf" target="_blank" rel="noopener">Why is Peer to Peer DMA so hard on Linux?</a></li>
+<li><a href="https://openamp.github.io/docs/mca/coprocessor-memory-definition-v6.pdf" target="_blank" rel="noopener">Coprocessor memory definition</a></li>
+<li><a href="https://www.microsemi.com/document-portal/doc_download/136008-microsemi-pcie-switch-rdma" target="_blank" rel="noopener">Microsemi PCIE Switch+RDMA</a></li>
+<li><a href="https://zhuanlan.zhihu.com/p/439280640" target="_blank" rel="noopener">浅析nv_peer_memory的实现</a></li>
+<li><a href="https://insujang.github.io/2020-01-25/building-mellanox-ofed-from-source/" target="_blank" rel="noopener">Building Mellanox OFED from source code</a></li>
+<li><a href="https://on-demand.gputechconf.com/gtc/2014/presentations/S4265-rdma-gpu-direct-for-fusion-io-iodrive.pdf" target="_blank" rel="noopener">rdma-gpu-direct-for-fusion-io-iodrive</a></li>
+<li><a href="https://blogs.oracle.com/linux/post/minimizing-struct-page-overhead" target="_blank" rel="noopener">Minimizing struct page overhead</a></li>
+</ul>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+  <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+    <div>知道是不会有人点的，但万一有人呢:)</div>
+    <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+      <span>赏</span>
+    </button>
+    <div id="QR" style="display: none;">
+      
+        <div id="wechat" style="display: inline-block">
+          <img id="wechat_qr" src="/images/87314894.png" alt="Joy Xu WeChat Pay">
+          <p>微信打赏</p>
+        </div>
+      
+      
+        <div id="alipay" style="display: inline-block">
+          <img id="alipay_qr" src="/images/554361081.jpg" alt="Joy Xu Alipay">
+          <p>支付宝打赏</p>
+        </div>
+      
+    </div>
+  </div>
+
+
+      
+    </div>
+
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/linux/" rel="tag"># linux</a>
+          
+            <a href="/tags/p2pdma/" rel="tag"># p2pdma</a>
+          
+            <a href="/tags/dma-buf/" rel="tag"># dma-buf</a>
+          
+            <a href="/tags/hmm/" rel="tag"># hmm</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2022/07/12/computational-storage/" rel="next" title="computational storage计算存储">
+                <i class="fa fa-chevron-left"></i> computational storage计算存储
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2023/01/13/linux-physical-memory-management-md/" rel="prev" title="Linux物理内存管理">
+                Linux物理内存管理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript">
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+          
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div class="ds-thread" data-thread-key="2022/07/19/p2p-dma技术分析总结/" data-title="p2p dma技术分析总结" data-url="http://joyxu.github.io/2022/07/19/p2p-dma技术分析总结/">
+      </div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/index_header.jpg" alt="Joy Xu">
+          <p class="site-author-name" itemprop="name">Joy Xu</p>
+           
+              <p class="site-description motion-element" itemprop="description">技术积累</p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">67</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">54</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/joyxu" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+          <div class="cc-license motion-element" itemprop="license">
+            <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" target="_blank">
+              <img src="/images/cc-by-nc-sa.svg" alt="Creative Commons">
+            </a>
+          </div>
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://makelinux.net/resources/" title="1#" target="_blank">1#</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://www.cse.iitb.ac.in/~mythili/" title="2#" target="_blank">2#</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://adam.younglogic.com" title="software dev leadership" target="_blank">software dev leadership</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://remword.com/kps_result/" title="kernel contribution" target="_blank">kernel contribution</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://jvns.ca/blog/2017/07/05/linux-tracing-systems/" title="linux tracing" target="_blank">linux tracing</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.brendangregg.com/blog/2015-07-08/choosing-a-linux-tracer.html" title="linux tracing advance" target="_blank">linux tracing advance</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.wangchaochao.top" title="wangchao" target="_blank">wangchao</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://tonydeng.github.io/" title="architecure" target="_blank">architecure</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://www.zhihu.com/people/in-nek" title="Kenneth" target="_blank">Kenneth</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://lujun.org.cn" title="arm verification jun's blog" target="_blank">arm verification jun's blog</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://siguza.github.io" title="hacker" target="_blank">hacker</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://blog.foool.net/" title="useful link" target="_blank">useful link</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://jianshu.com/p/2089af1cdea0" title="good" target="_blank">good</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://gngshn.github.io/" title="arm linux boot" target="_blank">arm linux boot</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://minnie.tuhs.org/CompArch/Tutes/week03.html" title="simple emu soc" target="_blank">simple emu soc</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://kernel.taobao.org/" title="ali" target="_blank">ali</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://tinylab.org/" title="泰晓" target="_blank">泰晓</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.wowotech.net/" title="蜗窝" target="_blank">蜗窝</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://www.ffutop.com/" title="ffutop" target="_blank">ffutop</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://happypeter.github.io/" title="peter" target="_blank">peter</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://oenhan.com/" title="virt" target="_blank">virt</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://beej.us/guide/bggdb/" title="gdb" target="_blank">gdb</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://plantegg.github.io/" title="性能调优" target="_blank">性能调优</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://www.qdpma.com/ServerSystems/MemoryLatencyII.html" title="memory latency" target="_blank">memory latency</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://norvig.com/" title="peter-at-google" target="_blank">peter-at-google</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://vonoff.com/comics/nano/a-trip-down-memory-lane-1/" title="内存漫画" target="_blank">内存漫画</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://kernelgo.org/" title="kernelgo" target="_blank">kernelgo</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://makelinux.net/" title="makelinux" target="_blank">makelinux</a>
+                </li>
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://people.kernel.org/read" title="peoplekernel" target="_blank">peoplekernel</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Out-of-tree方案-暂未何如到linux-kernel主线"><span class="nav-number">1.</span> <span class="nav-text">Out of tree方案(暂未何如到linux kernel主线)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#MLX的PeerDirect方案"><span class="nav-number">1.1.</span> <span class="nav-text">MLX的PeerDirect方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Nvidia的GPUDirect方案"><span class="nav-number">1.2.</span> <span class="nav-text">Nvidia的GPUDirect方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AMD的kfd-peerdirect方案"><span class="nav-number">1.3.</span> <span class="nav-text">AMD的kfd_peerdirect方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Donard方案"><span class="nav-number">1.4.</span> <span class="nav-text">Donard方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SPIN方案"><span class="nav-number">1.5.</span> <span class="nav-text">SPIN方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Fusion-io-ioMemory方案"><span class="nav-number">1.6.</span> <span class="nav-text">Fusion-io ioMemory方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#iopmem"><span class="nav-number">1.7.</span> <span class="nav-text">iopmem</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#In-tree方案（已经合入到linux-kernel主线）"><span class="nav-number">2.</span> <span class="nav-text">In tree方案（已经合入到linux kernel主线）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ZONE-DEVICE-IO"><span class="nav-number">2.1.</span> <span class="nav-text">ZONE_DEVICE IO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#P2P-PCI方案"><span class="nav-number">2.2.</span> <span class="nav-text">P2P PCI方案</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DMA-BUF"><span class="nav-number">2.3.</span> <span class="nav-text">DMA-BUF</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#habanalabs"><span class="nav-number">2.4.</span> <span class="nav-text">habanalabs</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HMM"><span class="nav-number">2.5.</span> <span class="nav-text">HMM</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GPU-RDMA-RDMA-NVMe"><span class="nav-number">3.</span> <span class="nav-text">GPU + RDMA + RDMA + NVMe</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2017 - 
+  <span itemprop="copyrightYear">2024</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Joy Xu</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+
+        
+
+<div class="busuanzi-count">
+
+  <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="site-uv"><i class="fa fa-user"></i><span class="busuanzi-value" id="busuanzi_value_site_uv"></span></span>
+  
+
+  
+    <span class="site-pv"><i class="fa fa-eye"></i><span class="busuanzi-value" id="busuanzi_value_site_pv"></span></span>
+  
+  
+</div>
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+    
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+  
+    
+  
+
+  <script type="text/javascript">
+    var duoshuoQuery = {short_name:"joyxu"};
+    (function() {
+      var ds = document.createElement('script');
+      ds.type = 'text/javascript';ds.async = true;
+      ds.id = 'duoshuo-script';
+      ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+      ds.charset = 'UTF-8';
+      (document.getElementsByTagName('head')[0]
+      || document.getElementsByTagName('body')[0]).appendChild(ds);
+    })();
+  </script>
+
+  
+    
+    
+    <script src="/lib/ua-parser-js/dist/ua-parser.min.js?v=0.7.9"></script>
+    <script src="/js/src/hook-duoshuo.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+ # 网络配置
+ ip tuntap add dev  tun0 mode tun
+ 
+ ifconfig tun0 10.0.0.1 netmask 255.255.255.0
+ 
+ route add default gw 10.0.0.2 metric 6
+ route add  -host 10.10.16.82 gw  10.0.0.2 metric 6
+
+ # 编译
+ mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX=/root/programming/kernel/badvpntest1/badvpn/install  && make install
+ root@ubuntux86:/work/badvpn/build/tun2socks# make install -j16
+ 
+ # 运行
+  ./install/bin/badvpn-tun2socks  --tundev tun0 --netif-ipaddr 10.0.0.1 --netif-netmask  255.255.255.0 --socks-server-addr 10.11.11.81:7890  --udpgw-remote-server-addr 21.2.2.151:2999 

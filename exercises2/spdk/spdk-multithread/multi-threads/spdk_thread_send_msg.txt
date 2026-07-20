@@ -1,0 +1,85 @@
+Thread 1 "nvmf_tgt" hit Breakpoint 1, spdk_thread_send_msg (thread=0x55555599b330, fn=fn@entry=0x55555561dcf0 <bootstrap_fn>, ctx=ctx@entry=0x0) at thread.c:891
+891     {
+(gdb) bt
+#0  spdk_thread_send_msg (thread=0x55555599b330, fn=fn@entry=0x55555561dcf0 <bootstrap_fn>, ctx=ctx@entry=0x0) at thread.c:891
+#1  0x000055555561ea4a in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:577
+#2  0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.
+[2023-07-12 12:25:06.934757] reactor.c: 915:reactor_run: *NOTICE*: Reactor started on core 0
+[2023-07-12 12:25:06.934968] accel_engine.c: 692:spdk_accel_engine_initialize: *NOTICE*: Accel engine initialized to use software engine.
+
+Thread 1 "reactor_0" hit Breakpoint 1, spdk_thread_send_msg (thread=0x55555599ebc0, fn=fn@entry=0x5555555c6400 <nvmf_tgt_create_poll_group>, ctx=ctx@entry=0x0)
+    at thread.c:891
+891     {
+(gdb) bt
+#0  spdk_thread_send_msg (thread=0x55555599ebc0, fn=fn@entry=0x5555555c6400 <nvmf_tgt_create_poll_group>, ctx=ctx@entry=0x0) at thread.c:891
+#1  0x00005555555c5d52 in nvmf_tgt_create_poll_groups () at nvmf_tgt.c:205
+#2  0x00005555555c5eb7 in nvmf_tgt_advance_state () at nvmf_tgt.c:400
+#3  0x000055555560ef00 in bdev_module_action_complete () at bdev.c:1429
+#4  spdk_bdev_initialize (cb_fn=<optimized out>, cb_arg=<optimized out>) at bdev.c:1429
+#5  0x00005555556220f3 in spdk_subsystem_init (cb_fn=<optimized out>, cb_arg=<optimized out>) at subsystem.c:212
+#6  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599b330) at thread.c:553
+#7  thread_poll (now=8180697735454, max_msgs=0, thread=0x55555599b330) at thread.c:631
+#8  spdk_thread_poll (thread=thread@entry=0x55555599b330, max_msgs=max_msgs@entry=0, now=8180697735454) at thread.c:740
+#9  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#10 reactor_run (arg=0x55555599ae80) at reactor.c:930
+#11 0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#12 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#13 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.
+
+Thread 1 "reactor_0" hit Breakpoint 1, spdk_thread_send_msg (thread=0x55555599b330, fn=0x5555555c61b0 <nvmf_tgt_create_poll_group_done>, ctx=0x55555599ef60)
+    at thread.c:891
+891     {
+(gdb) bt
+#0  spdk_thread_send_msg (thread=0x55555599b330, fn=0x5555555c61b0 <nvmf_tgt_create_poll_group_done>, ctx=0x55555599ef60) at thread.c:891
+#1  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#2  thread_poll (now=8210348117436, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#3  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=8210348117436) at thread.c:740
+#4  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#5  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#6  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#7  0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#8  0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.
+
+Thread 1 "reactor_0" hit Breakpoint 1, spdk_thread_send_msg (thread=0x55555599ebc0, fn=0x5555556277d0 <_call_channel>, ctx=0x5555559af1e0) at thread.c:891
+891     {
+(gdb) bt
+#0  spdk_thread_send_msg (thread=0x55555599ebc0, fn=0x5555556277d0 <_call_channel>, ctx=0x5555559af1e0) at thread.c:891
+#1  0x00005555555cd857 in nvmf_subsystem_state_change (subsystem=0x55555599ea00, nsid=nsid@entry=0, 
+    requested_state=requested_state@entry=SPDK_NVMF_SUBSYSTEM_ACTIVE, cb_fn=cb_fn@entry=0x5555555c6060 <nvmf_tgt_subsystem_started>, cb_arg=cb_arg@entry=0x0)
+    at subsystem.c:625
+#2  0x00005555555cef86 in spdk_nvmf_subsystem_start (subsystem=<optimized out>, cb_fn=cb_fn@entry=0x5555555c6060 <nvmf_tgt_subsystem_started>, 
+    cb_arg=cb_arg@entry=0x0) at subsystem.c:638
+#3  0x00005555555c5e49 in nvmf_tgt_advance_state () at nvmf_tgt.c:408
+#4  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599b330) at thread.c:553
+#5  thread_poll (now=8229087880854, max_msgs=0, thread=0x55555599b330) at thread.c:631
+#6  spdk_thread_poll (thread=thread@entry=0x55555599b330, max_msgs=max_msgs@entry=0, now=8229087880854) at thread.c:740
+#7  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#8  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#9  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#10 0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#11 0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.
+
+Thread 1 "reactor_0" hit Breakpoint 1, spdk_thread_send_msg (thread=0x55555599b330, fn=0x555555624f10 <_call_completion>, ctx=0x5555559af1e0) at thread.c:891
+891     {
+(gdb) bt
+#0  spdk_thread_send_msg (thread=0x55555599b330, fn=0x555555624f10 <_call_completion>, ctx=0x5555559af1e0) at thread.c:891
+#1  0x00005555555d34c3 in nvmf_poll_group_add_subsystem (group=0x55555599efc0, subsystem=0x55555599ea00, 
+    cb_fn=0x5555555cd720 <subsystem_state_change_continue>, cb_arg=0x5555559af1e0) at nvmf.c:1329
+#2  0x0000555555625a44 in msg_queue_run_batch (max_msgs=<optimized out>, thread=0x55555599ebc0) at thread.c:553
+#3  thread_poll (now=8256921802266, max_msgs=0, thread=0x55555599ebc0) at thread.c:631
+#4  spdk_thread_poll (thread=thread@entry=0x55555599ebc0, max_msgs=max_msgs@entry=0, now=8256921802266) at thread.c:740
+#5  0x0000555555621488 in _reactor_run (reactor=0x55555599ae80) at reactor.c:885
+#6  reactor_run (arg=0x55555599ae80) at reactor.c:930
+#7  0x0000555555621941 in spdk_reactors_start () at reactor.c:1050
+#8  0x000055555561ea4f in spdk_app_start (opts_user=<optimized out>, start_fn=0x5555555805b0 <nvmf_tgt_started>, arg1=0x0) at app.c:580
+#9  0x000055555557c65d in main (argc=1, argv=0x7fffffffe3d8) at nvmf_main.c:75
+(gdb) c
+Continuing.

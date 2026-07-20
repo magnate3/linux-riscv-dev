@@ -1,0 +1,46 @@
+
+#查看设备支持的最大qp数量
+ibv_devinfo -v -d mlx5_x | grep max_qp
+
+#查看当前qp的使用，返回当前使用的qp号
+ls /sys/kernel/debug/mlx5/0000\:03\:00.1/QPs
+
+#查看创建的qp总数
+cat /sys/kernel/debug/mlx5/0000\:03\:00.1/commands/CREATE_QP/n
+
+#查看删除的qp总数
+cat /sys/kernel/debug/mlx5/0000\:03\:00.1/commands/DESTROY_QP/n
+
+#查看当前qp使用情况
+/opt/mellanox/iproute2/sbin/rdma res
+
+#查看qp的状态
+/opt/mellanox/iproute2/sbin/rdma resource show qp
+
+#查看rdma统计数据
+rdma statistic -p
+rdma statistic --pretty link mlx5_0/1    # port #1 of rdma device mlx5_0
+rdma statistic qp show link mlx5_0/1 --pretty   #show LQPN as well
+
+#查看rdma q counters mode
+rdma statistic qp mode
+
+#打开per-pid的qp counter：auto模式
+rdma statistic qp set link mlx5_0 auto type on
+
+#运行roce程序，找到对应的QPN和PID，比如qp是140
+#分配q counter并绑定qp如下
+rdma statistic qp bind link mlx5_0/1 lqpn 140
+#再执行q counter查询，显示的就是当前bind的qp的统计
+rdma statistic qp show link mlx5_0/1 --pretty
+
+#bind & unbind例子
+rdma statistic qp bind link mlx5_0/1 lqpn 141 cntn 4
+rdma statistic qp unbind link mlx5_0/1 cntn 4 lqpn 140
+
+#unbind所有qp
+rdma statistic qp unbind link mlx5_0/1
+
+#注意：这种查看统计方式在client端有效，server端是RTR状态因此无效，并且只能一次看一个QP
+
+

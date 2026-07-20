@@ -1,0 +1,400 @@
+[154704.092555] skb frag : 000002c0: 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
+[154704.100002] skb frag : 000002d0: 20 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f
+[154704.107453] skb frag : 000002e0: 30 31 32 33 34 35 36 37 38 39 3a 3b 3c 3d 3e 3f
+[154704.114904] skb frag : 000002f0: 40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f
+[154704.122355] skb frag : 00000300: 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f
+[154704.129803] skb frag : 00000310: 60 61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f
+[154704.137253] skb frag : 00000320: 70 71 72 73 74 75 76 77 78 79 7a 7b 7c 7d 7e 7f
+[154704.144705] skb frag : 00000330: 80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f
+[154704.152152] skb frag : 00000340: 90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f
+[154704.159602] skb frag : 00000350: a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af
+[154704.167053] skb frag : 00000360: b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 ba bb bc bd be bf
+[154704.174504] skb frag : 00000370: c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 ca cb cc cd ce cf
+[154704.181951] skb frag : 00000380: d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 da db dc dd de df
+[154704.189402] skb frag : 00000390: e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef
+[154704.196853] skb frag : 000003a0: f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff
+[154704.204305] skb frag : 000003b0: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
+[154704.211752] skb frag : 000003c0: 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
+[154704.219202] skb frag : 000003d0: 20 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f
+[154704.226653] skb frag : 000003e0: 30 31 32 33 34 35 36 37 38 39 3a 3b 3c 3d 3e 3f
+[154704.234104] skb frag : 000003f0: 40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f
+[154704.241551] skb frag : 00000400: 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f
+[154704.249002] skb frag : 00000410: 60 61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f
+[154704.256453] skb frag : 00000420: 70 71 72 73 74 75 76 77 78 79 7a 7b 7c 7d 7e 7f
+[154704.263904] skb frag : 00000430: 80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f
+[154704.271351] skb frag : 00000440: 90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f
+[154704.278802] skb frag : 00000450: a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af
+[154704.286253] skb frag : 00000460: b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 ba bb bc bd be bf
+[154704.293704] skb frag : 00000470: c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 ca cb cc cd ce cf
+[154704.301151] skb frag : 00000480: d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 da db dc dd de df
+[154704.308602] skb frag : 00000490: e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef
+[154704.316053] skb frag : 000004a0: f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff
+[154704.323504] skb frag : 000004b0: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
+[154704.330951] skb frag : 000004c0: 10 11 12 13 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f
+[154704.338402] skb frag : 000004d0: 20 21 22 23 24 25 26 27 28 29 2a 2b 2c 2d 2e 2f
+[154704.345853] skb frag : 000004e0: 30 31 32 33 34 35 36 37 38 39 3a 3b 3c 3d 3e 3f
+[154704.353304] skb frag : 000004f0: 40 41 42 43 44 45 46 47 48 49 4a 4b 4c 4d 4e 4f
+[154704.360751] skb frag : 00000500: 50 51 52 53 54 55 56 57 58 59 5a 5b 5c 5d 5e 5f
+[154704.368202] skb frag : 00000510: 60 61 62 63 64 65 66 67 68 69 6a 6b 6c 6d 6e 6f
+[154704.375654] skb frag : 00000520: 70 71 72 73 74 75 76 77 78 79 7a 7b 7c 7d 7e 7f
+[154704.383105] skb frag : 00000530: 80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f
+[154704.390552] skb frag : 00000540: 90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f
+[154704.398003] skb frag : 00000550: a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af
+[154704.405454] skb frag : 00000560: b0 b1 b2 b3 b4 b5 b6 b7 b8 b9 ba bb bc bd be bf
+[154704.412905] skb frag : 00000570: c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 ca cb cc cd ce cf
+[154704.420352] skb frag : 00000580: d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 da db dc dd de df
+[154704.427803] skb frag : 00000590: e0 e1 e2 e3 e4 e5 e6 e7 e8 e9 ea eb ec ed ee ef
+[154704.435254] skb frag : 000005a0: f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 fa fb fc fd fe ff
+[154704.442705] skb frag : 000005b0: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f
+[154704.450153] skb frag : 000005c0: 10 11 12 13 14 15 16 17
+[154704.455527]  ****************** wallk skb frags list 4 timers
+[154704.461334] skb len=588 headroom=164 headlen=0 tailroom=0
+mac=(130,14) net=(144,20) trans=164
+shinfo(txflags=0 nr_frags=1 gso(size=0 type=0 segs=0))
+csum(0x0 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0800 pkttype=0 iif=2
+[154704.489262] is nonlinear
+[154704.489263] sk_buff: len:588  skb->data_len:588  truesize:3200 head:DA762700  data:DA7627A4 tail:164 end:512
+[154704.491872] ******** No.1 page , 
+[154704.505128] skb frag : 00000000: 18 19 1a 1b 1c 1d 1e 1f 20 21 22 23 24 25 26 27
+[154704.512578] skb frag : 00000010: 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 34 35 36 37
+[154704.520026] skb frag : 00000020: 38 39 3a 3b 3c 3d 3e 3f 40 41 42 43 44 45 46 47
+[154704.527476] skb frag : 00000030: 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57
+[154704.534927] skb frag : 00000040: 58 59 5a 5b 5c 5d 5e 5f 60 61 62 63 64 65 66 67
+[154704.542378] skb frag : 00000050: 68 69 6a 6b 6c 6d 6e 6f 70 71 72 73 74 75 76 77
+[154704.549826] skb frag : 00000060: 78 79 7a 7b 7c 7d 7e 7f 80 81 82 83 84 85 86 87
+[154704.557276] skb frag : 00000070: 88 89 8a 8b 8c 8d 8e 8f 90 91 92 93 94 95 96 97
+[154704.564727] skb frag : 00000080: 98 99 9a 9b 9c 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7
+[154704.572175] skb frag : 00000090: a8 a9 aa ab ac ad ae af b0 b1 b2 b3 b4 b5 b6 b7
+[154704.579625] skb frag : 000000a0: b8 b9 ba bb bc bd be bf c0 c1 c2 c3 c4 c5 c6 c7
+[154704.587076] skb frag : 000000b0: c8 c9 ca cb cc cd ce cf d0 d1 d2 d3 d4 d5 d6 d7
+[154704.594527] skb frag : 000000c0: d8 d9 da db dc dd de df e0 e1 e2 e3 e4 e5 e6 e7
+[154704.601974] skb frag : 000000d0: e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 f7
+[154704.609425] skb frag : 000000e0: f8 f9 fa fb fc fd fe ff 00 01 02 03 04 05 06 07
+[154704.616876] skb frag : 000000f0: 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17
+[154704.624329] skb frag : 00000100: 18 19 1a 1b 1c 1d 1e 1f 20 21 22 23 24 25 26 27
+[154704.631776] skb frag : 00000110: 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 34 35 36 37
+[154704.639227] skb frag : 00000120: 38 39 3a 3b 3c 3d 3e 3f 40 41 42 43 44 45 46 47
+[154704.646678] skb frag : 00000130: 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57
+[154704.654129] skb frag : 00000140: 58 59 5a 5b 5c 5d 5e 5f 60 61 62 63 64 65 66 67
+[154704.661576] skb frag : 00000150: 68 69 6a 6b 6c 6d 6e 6f 70 71 72 73 74 75 76 77
+[154704.669026] skb frag : 00000160: 78 79 7a 7b 7c 7d 7e 7f 80 81 82 83 84 85 86 87
+[154704.676477] skb frag : 00000170: 88 89 8a 8b 8c 8d 8e 8f 90 91 92 93 94 95 96 97
+[154704.683930] skb frag : 00000180: 98 99 9a 9b 9c 9d 9e 9f a0 a1 a2 a3 a4 a5 a6 a7
+[154704.691377] skb frag : 00000190: a8 a9 aa ab ac ad ae af b0 b1 b2 b3 b4 b5 b6 b7
+[154704.698828] skb frag : 000001a0: b8 b9 ba bb bc bd be bf c0 c1 c2 c3 c4 c5 c6 c7
+[154704.706279] skb frag : 000001b0: c8 c9 ca cb cc cd ce cf d0 d1 d2 d3 d4 d5 d6 d7
+[154704.713730] skb frag : 000001c0: d8 d9 da db dc dd de df e0 e1 e2 e3 e4 e5 e6 e7
+[154704.721177] skb frag : 000001d0: e8 e9 ea eb ec ed ee ef f0 f1 f2 f3 f4 f5 f6 f7
+[154704.728628] skb frag : 000001e0: f8 f9 fa fb fc fd fe ff 00 01 02 03 04 05 06 07
+[154704.736079] skb frag : 000001f0: 08 09 0a 0b 0c 0d 0e 0f 10 11 12 13 14 15 16 17
+[154704.743530] skb frag : 00000200: 18 19 1a 1b 1c 1d 1e 1f 20 21 22 23 24 25 26 27
+[154704.750978] skb frag : 00000210: 28 29 2a 2b 2c 2d 2e 2f 30 31 32 33 34 35 36 37
+[154704.758429] skb frag : 00000220: 38 39 3a 3b 3c 3d 3e 3f 40 41 42 43 44 45 46 47
+[154704.765880] skb frag : 00000230: 48 49 4a 4b 4c 4d 4e 4f 50 51 52 53 54 55 56 57
+[154704.773331] skb frag : 00000240: 58 59 5a 5b 5c 5d 5e 5f 60 61 62 63
+[154882.594452] ===== test_exit =====
+[160393.637741] ===== test_init =====
+[160435.306722] ===== test_exit =====
+[160438.261211] ===== test_init =====
+[160442.498650] ************** dump jumbo ping request skb begin: 8 
+[160442.504718] is nonlinear
+[160517.966541] ===== test_exit =====
+[160520.700919] ===== test_init =====
+[160523.406790] ************** dump jumbo ping request skb begin: 8 
+[160523.412858] is nonlinear 
+[161330.233203] ===== test_exit =====
+[161335.354008] ===== test_init =====
+[161341.089961] ************** dump jumbo ping request skb begin: 8 
+[161341.096037] is nonlinear 
+[161341.098736] skb len=6528 headroom=16 headlen=1500 tailroom=0
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x5b23 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0800 pkttype=0 iif=0
+[161341.126927] is nonlinear 
+[161341.129624] sk_buff: len:6528  skb->data_len:5028  truesize:10496 head:CEB75800  data:CEB75810 tail:1516 end:1664
+[161341.129625]  ****************** skb frags list:
+[161341.144527]  ****************** wallk skb frags list 1 timers
+[161341.150340] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x7c9b ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.178706] is linear 
+[161341.181149] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:CEB77800  data:CEB77824 tail:1516 end:1664
+[161341.181151]  ****************** wallk skb frags list 2 timers
+[161341.196915] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xa2c1 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.225278] is linear 
+[161341.227716] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:CEB73800  data:CEB73824 tail:1516 end:1664
+[161341.227717]  ****************** wallk skb frags list 3 timers
+[161341.243484] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xc8e7 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.271847] is linear 
+[161341.274284] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:CEB74800  data:CEB74824 tail:1516 end:1664
+[161341.274285]  ****************** wallk skb frags list 4 timers
+[161341.290050] skb len=588 headroom=36 headlen=588 tailroom=16
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xbc97 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[161341.318152] is linear 
+[161341.320594] sk_buff: len:588  skb->data_len:0  truesize:1280 head:2180FC00  data:2180FC24 tail:624 end:640
+[161341.320596] ************** remain: 6494,  offset 0, morefrag: 0 
+[163200.415032] ===== test_exit =====
+[167946.751512] ===== test_init =====
+[167963.513965] ************** dump jumbo ping request skb begin: 8 
+[167963.520042] is nonlinear 
+[167963.522741] skb len=2028 headroom=16 headlen=1500 tailroom=0
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x3a41 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0800 pkttype=0 iif=0
+[167963.550932] is nonlinear 
+[167963.553630] sk_buff: len:2028  skb->data_len:528  truesize:3584 head:D218F000  data:D218F010 tail:1516 end:1664
+[167963.553631]  ****************** skb frags list:
+[167963.568360]  ****************** wallk skb frags list 1 timers
+[167963.574173] skb len=528 headroom=36 headlen=528 tailroom=76
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xc5be ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[167963.602279] is linear 
+[167963.604716] sk_buff: len:528  skb->data_len:0  truesize:1280 head:C75C9800  data:C75C9824 tail:564 end:640
+[167963.604718] ************** remain: 1994,  offset 0, morefrag: 0 
+[168248.718658] ===== test_exit =====
+[168283.505860] ===== test_init =====
+[168291.974464] ************** dump jumbo ping request skb begin: 8 
+[168291.980534] is nonlinear 
+[168291.983244] skb len=2028 headroom=16 headlen=1500 tailroom=0
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x3a41 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0800 pkttype=0 iif=0
+[168292.011437] is nonlinear 
+[168292.014140] sk_buff: len:2028  skb->data_len:528  truesize:3584 head:D218E800  data:D218E810 tail:1516 end:1664
+[168292.014143]  ****************** skb frags list:
+[168292.028870]  ****************** wallk skb frags list 1 timers
+[168292.034684] skb len=528 headroom=36 headlen=528 tailroom=76
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xc5be ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[168292.062791] is linear 
+[168292.065233] sk_buff: len:528  skb->data_len:0  truesize:1280 head:C75CC800  data:C75CC824 tail:564 end:640
+[168292.065235] ************** remain: 1994,  offset 0, morefrag: 0 
+[174323.822719] ************** dump jumbo ping request skb begin: 8 
+[174323.828790] is nonlinear 
+[174323.831501] skb len=6528 headroom=16 headlen=1500 tailroom=0
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x5b23 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0800 pkttype=0 iif=0
+[174323.859692] is nonlinear 
+[174323.862394] sk_buff: len:6528  skb->data_len:5028  truesize:10496 head:C8650000  data:C8650010 tail:1516 end:1664
+[174323.862397]  ****************** skb frags list:
+[174323.877295]  ****************** wallk skb frags list 1 timers
+[174323.883108] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x7c9b ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[174323.911471] is linear 
+[174323.913913] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:C8644800  data:C8644824 tail:1516 end:1664
+[174323.913915]  ****************** wallk skb frags list 2 timers
+[174323.929678] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xa2c1 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[174323.958041] is linear 
+[174323.960479] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:C864A800  data:C864A824 tail:1516 end:1664
+[174323.960480]  ****************** wallk skb frags list 3 timers
+[174323.976247] skb len=1480 headroom=36 headlen=1480 tailroom=148
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xc8e7 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[174324.004610] is linear 
+[174324.007048] sk_buff: len:1480  skb->data_len:0  truesize:2304 head:C864A000  data:C864A024 tail:1516 end:1664
+[174324.007049]  ****************** wallk skb frags list 4 timers
+[174324.022814] skb len=588 headroom=36 headlen=588 tailroom=16
+mac=(-1,-1) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xbc97 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x0 sw=0 l4=0) proto=0x0000 pkttype=0 iif=0
+[174324.050916] is linear 
+[174324.053358] sk_buff: len:588  skb->data_len:0  truesize:1280 head:D5684C00  data:D5684C24 tail:624 end:640
+[174324.053360] ************** remain: 6494,  offset 0, morefrag: 0 
+[250759.689112] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250759.694606] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250759.976587] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250760.439291] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250761.378305] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250766.925267] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250767.393683] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250768.301243] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250770.137555] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250795.853468] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[250801.331071] hns3 0000:7d:00.0 enp125s0f0: L3/L4 error pkt
+[395158.173034] hinic 0000:06:00.0: IO stopped
+[395158.340327] hinic 0000:06:00.0 enp6s0: HINIC_INTF is DOWN
+[395158.533903] hinic 0000:06:00.0: HiNIC driver - removed
+[395159.373018] hinic 0000:05:00.0: IO stopped
+[395159.537837] hinic 0000:05:00.0 enp5s0: HINIC_INTF is DOWN
+[395159.673783] hinic 0000:05:00.0: HiNIC driver - removed
+[395283.205874] *********************** hinic probe  begin
+[395283.205894] in hinic_init_hwif before call pci_ioremap_bar
+[395283.211102] ******bar name : BAR0
+[395283.216649] flags  200,  and addr 80007b00000, and len 20000 
+[395283.225845] ******bar name : BAR1
+[395283.225846] ******bar name : BAR2
+[395283.229231] flags  200,  and addr 80008a20000, and len 8000 
+[395283.238340] ******bar name : BAR3
+[395283.238340] ******bar name : BAR4
+[395283.241730] flags  200,  and addr 80000200000, and len 100000 
+[395283.251010] ******bar name : BAR5
+[395283.251017] map addr ffff00001ada0000
+[395283.254402] in hinic_init_hwif after call pci_ioremap_bar
+[395283.258134] ******bar name : BAR0
+[395283.263599] flags  200,  and addr 80007b00000, and len 20000 
+[395283.272794] ******bar name : BAR1
+[395283.272795] ******bar name : BAR2
+[395283.276181] flags  200,  and addr 80008a20000, and len 8000 
+[395283.285288] ******bar name : BAR3
+[395283.285289] ******bar name : BAR4
+[395283.288674] flags  200,  and addr 80000200000, and len 100000 
+[395283.297954] ******bar name : BAR5
+[395283.297957] in hinic driver attr0 80000000, and attr1 c1502200 
+[395283.307918] hinic 0000:05:00.0: request hinic_aeq irq 
+[395283.313163] hinic 0000:05:00.0: request hinic_aeq irq 
+[395283.318377] hinic 0000:05:00.0: request hinic_aeq irq 
+[395283.323596] hinic 0000:05:00.0: request hinic_aeq irq 
+[395283.561234] hinic 0000:05:00.0: HiNIC driver - probed
+[395283.563476] hinic 0000:05:00.0 enp5s0: renamed from eth0
+[395283.571832] *********************** hinic probe  begin
+[395283.571842] in hinic_init_hwif before call pci_ioremap_bar
+[395283.577042] ******bar name : BAR0
+[395283.582594] flags  200,  and addr 80010400000, and len 20000 
+[395283.591787] ******bar name : BAR1
+[395283.591788] ******bar name : BAR2
+[395283.595173] flags  200,  and addr 80011320000, and len 8000 
+[395283.604279] ******bar name : BAR3
+[395283.604280] ******bar name : BAR4
+[395283.607666] flags  200,  and addr 80008b00000, and len 100000 
+[395283.616944] ******bar name : BAR5
+[395283.616948] map addr ffff000021ee0000
+[395283.620333] in hinic_init_hwif after call pci_ioremap_bar
+[395283.624069] ******bar name : BAR0
+[395283.629530] flags  200,  and addr 80010400000, and len 20000 
+[395283.638722] ******bar name : BAR1
+[395283.638723] ******bar name : BAR2
+[395283.642111] flags  200,  and addr 80011320000, and len 8000 
+[395283.651218] ******bar name : BAR3
+[395283.651218] ******bar name : BAR4
+[395283.654604] flags  200,  and addr 80008b00000, and len 100000 
+[395283.663882] ******bar name : BAR5
+[395283.663886] in hinic driver attr0 80000401, and attr1 c1502200 
+[395283.673814] hinic 0000:06:00.0: request hinic_aeq irq 
+[395283.679034] hinic 0000:06:00.0: request hinic_aeq irq 
+[395283.684255] hinic 0000:06:00.0: request hinic_aeq irq 
+[395283.689470] hinic 0000:06:00.0: request hinic_aeq irq 
+[395283.693449] IPv6: ADDRCONF(NETDEV_UP): enp5s0: link is not ready
+[395283.740945] hinic 0000:05:00.0: request hinic_ceq irq 
+[395283.746174] hinic 0000:05:00.0: request hinic_ceq irq 
+[395283.751400] hinic 0000:05:00.0: request hinic_ceq irq 
+[395283.756618] hinic 0000:05:00.0: request hinic_ceq irq 
+[395283.912243] ***************** ceqe val is 81800000 
+[395283.912250] ***************** ceqe val is        0 
+[395283.917200] ***************** ceqe val is 81800000 
+[395283.922149] ***************** ceqe val is        0 
+[395283.927157] ***************** ceqe val is 81800000 
+[395283.932106] ***************** ceqe val is        0 
+[395283.937057] ***************** ceqe val is 81800000 
+[395283.942002] ***************** ceqe val is        0 
+[395287.440835] hinic 0000:05:00.0 enp5s0: link + intf UP
+[395287.450902] hinic 0000:05:00.0 enp5s0: HINIC_INTF is UP
+[395287.456195] hinic 0000:05:00.0 enp5s0: set rx mode work
+[395287.530832] hinic 0000:05:00.0 enp5s0: set rx mode work
+[395287.571175] hinic 0000:06:00.0: HiNIC driver - probed
+[395287.573470] hinic 0000:06:00.0 enp6s0: renamed from eth0
+[395287.611374] hinic 0000:05:00.0 enp5s0: set rx mode work
+[395287.613730] IPv6: ADDRCONF(NETDEV_UP): enp6s0: link is not ready
+[395287.661706] hinic 0000:06:00.0: request hinic_ceq irq 
+[395287.666935] hinic 0000:06:00.0: request hinic_ceq irq 
+[395287.670835] hinic 0000:05:00.0 enp5s0: set rx mode work
+[395287.677457] hinic 0000:06:00.0: request hinic_ceq irq 
+[395287.682679] hinic 0000:06:00.0: request hinic_ceq irq 
+[395287.833567] ***************** ceqe val is 81800000 
+[395287.833574] ***************** ceqe val is        0 
+[395287.838534] ***************** ceqe val is 81800000 
+[395287.843481] ***************** ceqe val is 81800000 
+[395287.848422] ***************** ceqe val is 81800000 
+[395287.853370] ***************** ceqe val is        0 
+[395291.360773] hinic 0000:06:00.0 enp6s0: link + intf UP
+[395291.370841] hinic 0000:06:00.0 enp6s0: HINIC_INTF is UP
+[395291.376137] hinic 0000:06:00.0 enp6s0: set rx mode work
+[395291.450775] hinic 0000:06:00.0 enp6s0: set rx mode work
+[395291.530768] hinic 0000:06:00.0 enp6s0: set rx mode work
+[395370.439906] skb len=42 headroom=2 headlen=42 tailroom=84
+mac=(2,14) net=(16,-1) trans=-1
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x0 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x20d84bd3 sw=1 l4=0) proto=0x0806 pkttype=0 iif=0
+[395370.468011] is linear
+[395370.468012] sk_buff: len:42  skb->data_len:0  truesize:768 head:CA0AE600  data:CA0AE602 tail:44 end:128
+[395370.470366] skb_shinfo(skb)->nr_frags 0
+[395370.479864] skb len=1514 headroom=2 headlen=1514 tailroom=148
+mac=(2,14) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x83b5 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x1666c778 sw=1 l4=0) proto=0x0800 pkttype=0 iif=0
+[395370.512560] is linear
+[395370.512561] sk_buff: len:1514  skb->data_len:0  truesize:2304 head:DE161000  data:DE161002 tail:1516 end:1664
+[395370.514912] skb_shinfo(skb)->nr_frags 0
+[395370.524869] skb len=1514 headroom=2 headlen=1514 tailroom=148
+mac=(2,14) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x7c9b ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x1666c778 sw=1 l4=0) proto=0x0800 pkttype=0 iif=0
+[395370.557562] is linear
+[395370.557564] sk_buff: len:1514  skb->data_len:0  truesize:2304 head:DE161800  data:DE161802 tail:1516 end:1664
+[395370.559916] skb_shinfo(skb)->nr_frags 0
+[395370.569872] skb len=1514 headroom=2 headlen=1514 tailroom=148
+mac=(2,14) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xa2c1 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x1666c778 sw=1 l4=0) proto=0x0800 pkttype=0 iif=0
+[395370.602565] is linear
+[395370.602566] sk_buff: len:1514  skb->data_len:0  truesize:2304 head:DE162000  data:DE162002 tail:1516 end:1664
+[395370.604917] skb_shinfo(skb)->nr_frags 0
+[395370.614873] skb len=1514 headroom=2 headlen=1514 tailroom=148
+mac=(2,14) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xc8e7 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x1666c778 sw=1 l4=0) proto=0x0800 pkttype=0 iif=0
+[395370.647566] is linear
+[395370.647567] sk_buff: len:1514  skb->data_len:0  truesize:2304 head:DE162800  data:DE162802 tail:1516 end:1664
+[395370.649919] skb_shinfo(skb)->nr_frags 0
+[395370.659874] skb len=622 headroom=2 headlen=622 tailroom=16
+mac=(2,14) net=(16,20) trans=36
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0xbc97 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x1666c778 sw=1 l4=0) proto=0x0800 pkttype=0 iif=0
+[395370.692309] is linear
+[395370.692310] sk_buff: len:622  skb->data_len:0  truesize:1280 head:C9F98000  data:C9F98002 tail:624 end:640
+[395370.694661] skb_shinfo(skb)->nr_frags 0
+[395375.441261] skb len=42 headroom=2 headlen=42 tailroom=84
+mac=(2,14) net=(16,-1) trans=-1
+shinfo(txflags=0 nr_frags=0 gso(size=0 type=0 segs=0))
+csum(0x0 ip_summed=0 complete_sw=0 valid=0 level=0)
+hash(0x20d84bd3 sw=1 l4=0) proto=0x0806 pkttype=0 iif=0
+[395375.473266] is linear
+[395375.473268] sk_buff: len:42  skb->data_len:0  truesize:768 head:CA0AF000  data:CA0AF002 tail:44 end:128

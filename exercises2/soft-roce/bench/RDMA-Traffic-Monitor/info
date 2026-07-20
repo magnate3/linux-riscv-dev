@@ -1,0 +1,237 @@
+06:00.0 Ethernet controller: Mellanox Technologies MT42822 BlueField-2 integrated ConnectX-6 Dx network controller (rev 01)
+<none> [2024-11-14 10:29:29] [c48c1beb] 54:00.0 Ethernet controller: Mellanox Technologies 
+
+root@10:/run/determined/workdir# ifconfig
+cali05040e28634: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 143761  bytes 10784202 (10.7 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 112475  bytes 115184043 (115.1 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali0a2ad9ecf6b: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 380  bytes 31886 (31.8 KB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 65  bytes 80781 (80.7 KB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali24e85283e2e: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 318  bytes 22356 (22.3 KB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 7  bytes 746 (746.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali344b5364939: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 125725  bytes 9198943 (9.1 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 95053  bytes 9787670 (9.7 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali359435dc52c: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 316  bytes 22216 (22.2 KB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 7  bytes 746 (746.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali36a719c44f3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 2273890  bytes 451965528 (451.9 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 2242761  bytes 735429342 (735.4 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali718ca02425b: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 3159833  bytes 375366866 (375.3 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 3247601  bytes 2690664045 (2.6 GB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali71b9166ed49: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 3919  bytes 785862 (785.8 KB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 4723  bytes 1005425 (1.0 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali7e7c1d1317d: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 315  bytes 22166 (22.1 KB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 8  bytes 836 (836.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali85227abc08b: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 5629330  bytes 22118913944 (22.1 GB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 11165819  bytes 31707609629 (31.7 GB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+cali9438544ea3b: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 142355  bytes 10671169 (10.6 MB)
+        RX errors 0  dropped 2  overruns 0  frame 0
+        TX packets 111084  bytes 114849380 (114.8 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+calia48bda236d5: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 1529694  bytes 2045708118 (2.0 GB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 1033243  bytes 318431490 (318.4 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+calic01bba89813: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 316  bytes 22216 (22.2 KB)
+        RX errors 0  dropped 2  overruns 0  frame 0
+        TX packets 7  bytes 746 (746.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+calid200c5090e3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 1108413  bytes 105309298 (105.3 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 1111157  bytes 100073657 (100.0 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+calidc07d6fd563: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 24869798  bytes 7887385005 (7.8 GB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 22423654  bytes 60839412092 (60.8 GB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+calie394176074a: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 1282776  bytes 116009999 (116.0 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 1298582  bytes 129232999 (129.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+califdc01e585e4: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1480
+        inet6 fe80::ecee:eeff:feee:eeee  prefixlen 64  scopeid 0x20<link>
+        ether ee:ee:ee:ee:ee:ee  txqueuelen 1000  (Ethernet)
+        RX packets 143232  bytes 10727450 (10.7 MB)
+        RX errors 0  dropped 1  overruns 0  frame 0
+        TX packets 111986  bytes 114913559 (114.9 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.60.0.53  netmask 255.255.255.0  broadcast 10.60.0.255
+        inet6 fe80::f820:20ff:fe34:583b  prefixlen 64  scopeid 0x20<link>
+        ether fa:20:20:34:58:3b  txqueuelen 1000  (Ethernet)
+        RX packets 24093764681  bytes 35855320453735 (35.8 TB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 5553939952  bytes 7549017412985 (7.5 TB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.9.34  netmask 255.255.255.240  broadcast 25.34.9.47
+        inet6 fe80::1270:fdff:feaf:bcf0  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:bc:f0  txqueuelen 1000  (Ethernet)
+        RX packets 639253  bytes 100403632 (100.4 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 601938  bytes 90713490 (90.7 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth2: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.9.82  netmask 255.255.255.240  broadcast 25.34.9.95
+        inet6 fe80::1270:fdff:feaf:bcf1  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:bc:f1  txqueuelen 1000  (Ethernet)
+        RX packets 639593  bytes 100423948 (100.4 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 602279  bytes 90733876 (90.7 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth3: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.9.130  netmask 255.255.255.240  broadcast 25.34.9.143
+        inet6 fe80::1270:fdff:feaf:d71c  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:d7:1c  txqueuelen 1000  (Ethernet)
+        RX packets 639313  bytes 100971277 (100.9 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 602000  bytes 91281463 (91.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth4: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.9.178  netmask 255.255.255.240  broadcast 25.34.9.191
+        inet6 fe80::1270:fdff:feaf:d71d  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:d7:1d  txqueuelen 1000  (Ethernet)
+        RX packets 639495  bytes 100982293 (100.9 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 602180  bytes 91292151 (91.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth5: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.9.226  netmask 255.255.255.240  broadcast 25.34.9.239
+        inet6 fe80::1270:fdff:feaf:d1a4  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:d1:a4  txqueuelen 1000  (Ethernet)
+        RX packets 639381  bytes 100975359 (100.9 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 602067  bytes 91285475 (91.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth6: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.10.18  netmask 255.255.255.240  broadcast 25.34.10.31
+        inet6 fe80::1270:fdff:feaf:d1a5  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:d1:a5  txqueuelen 1000  (Ethernet)
+        RX packets 639272  bytes 100968904 (100.9 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 601956  bytes 91278692 (91.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth7: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.10.66  netmask 255.255.255.240  broadcast 25.34.10.79
+        inet6 fe80::1270:fdff:feaf:cba8  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:cb:a8  txqueuelen 1000  (Ethernet)
+        RX packets 639259  bytes 100968228 (100.9 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 601943  bytes 91278016 (91.2 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth8: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 4200
+        inet 25.34.10.114  netmask 255.255.255.240  broadcast 25.34.10.127
+        inet6 fe80::1270:fdff:feaf:cba9  prefixlen 64  scopeid 0x20<link>
+        ether 10:70:fd:af:cb:a9  txqueuelen 1000  (Ethernet)
+        RX packets 639373  bytes 101539400 (101.5 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 602057  bytes 91849188 (91.8 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 58369859  bytes 82193309218 (82.1 GB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 58369859  bytes 82193309218 (82.1 GB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+tunl0: flags=193<UP,RUNNING,NOARP>  mtu 1480
+        inet 10.80.39.192  netmask 255.255.255.255
+        tunnel   txqueuelen 1000  (IPIP Tunnel)
+        RX packets 1605879422  bytes 33218777356194 (33.2 TB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 431856544  bytes 4694431905264 (4.6 TB)
+        TX errors 0  dropped 24 overruns 0  carrier 0  collisions 0

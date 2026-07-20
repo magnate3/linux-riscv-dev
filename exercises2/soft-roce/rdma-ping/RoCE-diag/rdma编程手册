@@ -1,0 +1,17 @@
+
+
+rdma分为用户态verbs和内核态verbs，分别以ibv_和ib_作为前缀
+内核态verbs主要处理控制，基于内核模块ib_verbs.ko提供
+用户态verbs给应用接口做rdma的收发，基于用户态模块libibverbs.so + libmlx5.so提供
+
+用户态verbs
+参考手册：https://github.com/linux-rdma/rdma-core/tree/master/libibverbs/man
+
+rdma-core是consolidated的rdma用户态开源包，包括扩展verbs和direct verbs。
+mlnx_ofed包括了开源的额rdma-core的代码
+
+除了基于libibvers的老的ibv编程接口之外，RDMA-core用户态library还引入了两个新的libmlx5 API channels，即mlx5_dv_*和mlx5dv_devx_*:
+• mlx5dv直接访问硬件（is a channel to configure hardware objects with Mellanox specific attributes.）
+• mlx5dv_devx是一个让控制面bypass内核的新方法，通过避免内核限制来增强开发灵活性 （is a channel that exposes raw Mellanox hardware objects, enabling the use of
+hardware features with minimal kernel changes (some of the mlx5dv APIs use mlx5dv_devx in user space level).）
+

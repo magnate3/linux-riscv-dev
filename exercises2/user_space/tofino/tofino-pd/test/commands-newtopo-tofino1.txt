@@ -1,0 +1,9 @@
+ucli
+pm port-add 1/0 10G NONE
+pm port-add 1/1 10G NONE
+pm port-enb 1/0
+pm port-enb 1/1
+pm show
+end
+ucli
+pm show

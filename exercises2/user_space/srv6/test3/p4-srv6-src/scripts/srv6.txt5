@@ -1,0 +1,4 @@
+table_add fwd forward 0 => 1  0x32907899c132
+table_add fwd forward 1 => 0  0x1e4358054de5
+table_add srv6_localsid  srv6_T_Encaps1 fc00:000b::10 => fc00:000a::a  fc00:00ab::b
+table_add srv6_localsid  srv6_End_DT6  fc00:00ab::a => 

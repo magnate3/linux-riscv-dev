@@ -228,7 +228,7 @@ sudo docker logs -f vllm-sch2
 ```
 
 
-+ chat-template(去掉--skip-tokenizer-init )
++ chat-template模式(去掉--skip-tokenizer-init )
 
 
 ```
@@ -415,15 +415,22 @@ ubuntu@ubuntu:/pytorch/lmcache$
 🚀 === LMCache 节省了: 0.0468 秒 ===
 ```
 
-竟然两次都是 0.4 秒左右！这个结果揭示了一个非常核心的技术细节：虽然 drop_caches 成功把系统的 Page Cache 洗掉了（buff/cache 从 55G 跌到 17G），但并没有影响到大模型的响应速度。这说明 LMCache 此时依然在高效运作，而且它的 KV 缓存数据并没有被真正洗掉！🔍 为什么会这样？从数据来看，第一次请求也从原来的 1.6 秒缩短到了 0.4 秒。这代表 vLLM 内部自带的底层前缀缓存（Chunked Prefill 或内部缓存机制）依然常驻在 GPU 显存或容器常驻进程的私有虚拟内存中。
+竟然两次都是 0.4 秒左右！这个结果揭示了一个非常核心的技术细节：虽然 drop_caches 成功把系统的 Page Cache 洗掉了（buff/cache 从 55G 跌到 17G），但并没有影响到大模型的响应速度。这说明 LMCache 此时依然在高效运作，而且它的 KV 缓存数据并没有被真正洗掉！   
+
+为什么会这样？从数据来看，第一次请求也从原来的 1.6 秒缩短到了 0.4 秒。这代表 vLLM 内部自带的底层前缀缓存（Chunked Prefill 或内部缓存机制）依然常驻在 GPU 显存或容器常驻进程的私有虚拟内存中。  
+
 因为：drop_caches 只能回收干净的、未被进程锁定的内核页缓存（Page Cache）。LMCache 的本地 CPU 模式是通过 shm（共享内存）或多进程常驻内存实现的。在你的 Docker 启动命令中，我们配置了 --ipc=host。这意味着容器内的 LMCache 进程直接在系统底层的匿名内存区锁定了这部分虚拟空间。只要 vLLM 容器（vllm-sch2）没有被杀死，这些虚拟内存块就属于“活跃、被锁定状态”，Linux 内核是绝对不会去强行擦除它们的。
 
 
 > ##  独立的 LMCache Server
 
 
-vLLM 推理服务：http://localhost:8000（发送大模型对话请求）LMCache     数据通道：lmserver://localhost:8080（vLLM 内部默默传输 KV Cache，使用 ZMQ 协议）
-LMCache管理控制：http://localhost:8081（供你使用 curl 或 lmcache 命令行去 ping 或 clear 缓存）   
+vLLM 推理服务：http://localhost:8000（发送大模型对话请求）     
+LMCache数据通道：lmserver://localhost:8080（vLLM 内部默默传输 KV Cache，使用 ZMQ 协议）    
+LMCache管理控制：http://localhost:8081（供你使用 curl 或 lmcache 命令行去 ping 或 clear 缓存）
+
+LMCacheConnectorV1：专用于进程内嵌（In-Process）模式。即使你在环境变量里配置了 LMCACHE_REMOTE_URL，这个连接器在 vLLM 内部也会固执地只在进程内分配和查找内存，完全无视远端独立服务器（8080/8081），这就导致了 100% 的 Cache Miss。
+LMCacheMPConnector：专用于多进程/独立服务器（Multi-Process / Standalone）模式。只有改用它，vLLM 内部的推理进程（EngineCore）才会真正激活 ZMQ 客户端，向你的远程独立服务器发起 KV Cache 的数据同步              
 
 
 新增 -e LMCACHE_REMOTE_URL="http://localhost:8080" 配置，通过环境变量 LMCACHE_REMOTE_URL 告诉 vLLM 容器，LMCache Server 运行在哪里
@@ -445,6 +452,10 @@ lmcache kvcache clear --url  http://localhost:8081
 ```
  curl -s -X POST http://localhost:8081/cache/clear
 {"status":"ok","cleared":{"tier":"l1"}}
+
+curl -X POST http://localhost:8081/cache/clear \
+     -H "Content-Type: application/json" \
+     -d '{"tier": "l1", "force": true}'
 ```
 
 
@@ -492,14 +503,64 @@ Status:                                       OK
 ```
 
 ```
+export LMCACHE_LOCAL_CPU=True
+export LMCACHE_CHUNK_SIZE=256
 export LMCACHE_USE_EXPERIMENTAL=True 
-export LMCACHE_REMOTE_URL="lmserver://localhost:8080"  
+#export LMCACHE_REMOTE_URL="lmserver://localhost:8080" 
+export LMCACHE_REMOTE_URL="lm://localhost:8080" 
+```
++ "kv_connector":"LMCacheConnectorV1"   
+```
 vllm serve  --model /models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1 \
     --no-enable-prefix-caching \
+	 --block-size 16
     --kv-transfer-config '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}' \
     --chat-template /workspace/lmcache/my_mistral.jinja
 ```
++ "kv_connector":"LMCacheMPConnector"   
+```
+vllm serve  --model /models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1 \
+    --no-enable-prefix-caching \
+	 --block-size 16
+    --kv-transfer-config '{"kv_connector":"LMCacheMPConnector", "kv_connector_module_path":"lmcache.integration.vllm.lmcache_mp_connector", "kv_role":"kv_both"}'' \
+    --chat-template /workspace/lmcache/my_mistral.jinja
+```
 
+```
+vllm serve  --model /models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1 \
+    --no-enable-prefix-caching \
+	 --block-size 16
+    --kv-transfer-config '{
+        "kv_connector":"LMCacheMPConnector",
+        "kv_connector_module_path":"lmcache.integration.vllm.lmcache_mp_connector",
+        "kv_role":"kv_both",
+        "kv_connector_extra_config": {
+            "lmcache.mp.host": "tcp://localhost",
+            "lmcache.mp.port": 8080
+        }
+    }' \
+    --chat-template /workspace/lmcache/my_mistral.jinja
+```
+
++  Put task failed for key
+
+```
+(EngineCore pid=3293) [2026-07-21 08:38:46,877] LMCache ERROR: Put task failed for key CacheEngineKey(model_name='/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1', world_size=1, worker_id=0, chunk_hash=1079800370724967289, dtype=torch.bfloat16, request_configs=None, tags=None, _dtype_str='bfloat16'): [Errno 32] Broken pipe (remote_backend.py:220:lmcache.v1.storage_backend.remote_backend)
+```
+需要加大服务器内容量并优化 LMCache Server 的参数
+```
+lmcache server \
+    --host 0.0.0.0 \
+    --port 8080 \
+    --http-port 8081 \
+    --l1-size-gb 32 \
+    --eviction-policy LRU \
+    --max-workers 8 \
+    --max-cpu-workers 8
+
+```
+--l1-size-gb 32：将 Server 端缓存容量从 10GB 提升到 32GB（请确保系统有足够的可用内存/显存），给长文本留出充足的写入缓冲空间。    
+--max-workers 8 / --max-cpu-workers 8：显式增加处理线程数，加快独立服务器消化和存储 ZMQ 接收到的 KV 分块的速度，防止写入通道被瞬间“撑爆”。    
 
 + 两个容器
 

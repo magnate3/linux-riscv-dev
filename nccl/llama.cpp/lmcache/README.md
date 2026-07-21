@@ -1,4 +1,7 @@
+
+```
 sudo docker run -it --rm --net=host    --gpus=all     -e UID=root    --ipc host --shm-size="32g" --privileged   -u 0 -d  -p 8000:8000 -v /pytorch/models/:/models -v /pytorch:/workspace --shm-size=4g  --name vllm-sch2   vllm-openai:latest   --model /models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1 --trust-remote-code --max-model-len 16384
+```
 
 
 
@@ -306,7 +309,7 @@ python3 test_cache.py
 ```
 
 
-第 1 次请求（冷启动）：1.6579 秒GPU 必须对几千个 Token 的英文上下文执行完整的 Prefill（预填充）计算，这消耗了绝大部分的时间。计算完成后，LMCache 自动在后台将这批 KV 缓存异步 offload 到了系统的 CPU 内存中。
+第 1 次请求（冷启动）：1.6579 秒GPU 必须对几千个 Token 的英文上下文执行完整的 Prefill（预填充）计算，这消耗了绝大部分的时间。计算完成后，LMCache 自动在后台将这批 KV 缓存异步 offload 到了系统的 CPU 内存中。     
 第 2 次请求（热启动）：0.4449 秒由于上下文内容完全一致，vLLM 完美命中了 LMCache 缓存。LMCache 以超过 20 GB/s 的极高带宽将 0.65 GB 的 KV 缓存秒传回 GPU，直接跳过了耗时的 Prefill 阶段，让大模型直接开始 Decode 吐字。
 
 > ## lmcache ping kvcache
@@ -333,7 +336,7 @@ Round trip time (ms):    11.89
 ==============================
 Cannot connect to http://localhost:8080/healthcheck: [Errno 111] Connection refused
 ```
-LMCache 作为组件**内嵌（In-Process 模式）**在 vLLM 的 8000 端口进程里运行
+LMCache 作为组件**内嵌(In-Process 模式)**在 vLLM 的 8000 端口进程里运行
 
 + 对于 In-Process 模式ping  
 ```

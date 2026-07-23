@@ -437,7 +437,7 @@ vLLM 推理服务：http://localhost:8000（发送大模型对话请求）
 LMCache数据通道：lmserver://localhost:8080（vLLM 内部默默传输 KV Cache，使用 ZMQ 协议）    
 LMCache管理控制：http://localhost:8081（供你使用 curl 或 lmcache 命令行去 ping 或 clear 缓存）
 
-LMCacheConnectorV1：专用于进程内嵌（In-Process）模式。即使你在环境变量里配置了 LMCACHE_REMOTE_URL，这个连接器在 vLLM 内部也会固执地只在进程内分配和查找内存，完全无视远端独立服务器（8080/8081），这就导致了 100% 的 Cache Miss。
+LMCacheConnectorV1：专用于进程内嵌（In-Process）模式。即使你在环境变量里配置了 LMCACHE_REMOTE_URL，这个连接器在 vLLM 内部也会固执地只在进程内分配和查找内存，完全无视远端独立服务器（8080/8081），这就导致了 100% 的 Cache Miss。         
 LMCacheMPConnector：专用于多进程/独立服务器（Multi-Process / Standalone）模式。只有改用它，vLLM 内部的推理进程（EngineCore）才会真正激活 ZMQ 客户端，向你的远程独立服务器发起 KV Cache 的数据同步              
 
 
@@ -677,9 +677,9 @@ vllm serve /models/qwen2.5-0.5b  --port 8000   --enforce-eager   --max-model-len
 ```
 
 关键系统参数解析：
---no-enable-prefix-caching：必须关闭 vLLM 原生的前缀缓存。因为原生缓存只支持头部对齐匹配，开启后会与 CacheBlend 的任意位置匹配逻辑产生致命冲突。
---enforce-eager：必须使用 Eager 执行模式。目前 LMCache 官方指出 CacheBlend 暂不支持 CUDA Graph 模式（由于动态生成的 Attention Mask 和张量形状在每轮选择性重算时都会发生改变，Graph 捕获会直接报错崩溃）。
---kv-transfer-config：声明调用 LMCacheConnectorV1 适配层，使 vLLM 底层 Worker 与 LMCache 守护进程建立双向的 KV 块传输通道
+--no-enable-prefix-caching：必须关闭 vLLM 原生的前缀缓存。因为原生缓存只支持头部对齐匹配，开启后会与 CacheBlend 的任意位置匹配逻辑产生致命冲突。      
+--enforce-eager：必须使用 Eager 执行模式。目前 LMCache 官方指出 CacheBlend 暂不支持 CUDA Graph 模式（由于动态生成的 Attention Mask 和张量形状在每轮选择性重算时都会发生改变，Graph 捕获会直接报错崩溃）。     
+--kv-transfer-config：声明调用 LMCacheConnectorV1 适配层，使 vLLM 底层 Worker 与 LMCache 守护进程建立双向的 KV 块传输通道      
 
 
 ```

@@ -178,6 +178,11 @@ cd LMCache
 
 ```
 
+```
+root@ubuntu:/workspace# export PIP_BREAK_SYSTEM_PACKAGES=1
+root@ubuntu:/workspace# pip install pandas openpyxl
+```
+
 
 
 ```
@@ -596,3 +601,182 @@ sudo docker run -it --rm --net=host \
 
 
 ```
+
+# CacheBlend 
+
+使用 vLLM V0 引擎
+
+```
+/opt/venv/bin/python3 -c "import vllm; print(vllm.__version__)"
+0.24.0
+```
+
+```
+import vllm from lmcache.v1.compute.models.utils import VLLMModelTracker
+```
+
+
+> ## patch
+/opt/venv/lib/python3.12/site-packages/vllm/v1/worker/gpu_worker.py   
+```
+def initialize_from_config(self, kv_cache_config: List[VLLMKeyVectorCacheConfig]) -> None:
+    ...
+    # 注释掉下面这一行
+    # ensure_kv_transfer_initialized(self.vllm_config, kv_cache_config) 
+```
+更改load_model
+```
+# to hijack tensor allocation.
+    def load_model(self, *, load_dummy_weights: bool = False) -> None:
+        with (
+            self._maybe_get_memory_pool_context(tag="weights"),
+            set_current_vllm_config(self.vllm_config),
+            # 20 MiB is the minimum PyTorch allows for max_split_size_mb.
+            self._scoped_allocator_max_split(max_split_size_mb=20),
+        ):
+            self.model_runner.load_model(load_dummy_weights=load_dummy_weights)
+            from lmcache.v1.compute.models.utils import VLLMModelTracker
+            from lmcache.integration.vllm.utils import ENGINE_NAME
+            VLLMModelTracker.register_model(ENGINE_NAME, self.model_runner.model)
+            kv_cfg = getattr(self, '_kv_cache_config', None) or getattr(self, 'kv_cache_config', None)
+            ensure_kv_transfer_initialized(self.vllm_config, kv_cfg)
+        if self.vllm_config.weight_transfer_config is not None:
+            self.weight_transfer_engine = WeightTransferEngineFactory.create_engine(
+                self.vllm_config.weight_transfer_config,
+                self.vllm_config.parallel_config,
+                self.model_runner.get_model(),
+            )
+```
+
+
+
+```
+export VLLM_VERSION=v0
+export VLLM_USE_V1=0
+# 1. 核心开关：强制开启 CacheBlend 功能
+export LMCACHE_ENABLE_BLENDING=True
+
+# 2. 核心开关：启用层级（Layer-wise）张量控制，Blending 模式下必须为 True
+export LMCACHE_USE_LAYERWISE=True
+
+# 3. 指定块间的多段文本切割占位符（例如在 RAG 中用于拼接不同 Chunk 文档）
+export LMCACHE_BLEND_SPECIAL_STR=" # # "
+
+# 4. 指定在高重要度层（通常为第 1 层）计算 KV 偏离度并选择性重算 Token 的比例（官方推荐 15%）
+export LMCACHE_BLEND_CHECK_LAYERS=1
+export LMCACHE_BLEND_RECOMPUTE_RATIOS=0.15
+
+# 5. 【极其关键】指定 vLLM 注意力后端为 FlashInfer，Blending 算子强依赖它来进行块拼接
+export VLLM_ATTENTION_BACKEND=FLASHINFER
+
+```
+目前的 LMCache v1 稳定版中，CacheBlend 机制仅支持 LlamaForCausalLM 和 Qwen2ForCausalLM 架构，官方尚未为 MistralForCausalLM 编写对应的适配器，采用qwen2.5-0.5b，Qwen2-7B-Beta / Qwen2.5-7B 或者 LLaMA-3-8B    
+```
+vllm serve /models/qwen2.5-0.5b  --port 8000   --enforce-eager   --max-model-len 4096   --no-enable-prefix-caching   --gpu-memory-utilization 0.90   --attention-backend flash_attn  --kv-transfer-config '{"kv_connector":"LMCacheConnectorV1", "kv_role":"kv_both"}'
+
+```
+
+关键系统参数解析：
+--no-enable-prefix-caching：必须关闭 vLLM 原生的前缀缓存。因为原生缓存只支持头部对齐匹配，开启后会与 CacheBlend 的任意位置匹配逻辑产生致命冲突。
+--enforce-eager：必须使用 Eager 执行模式。目前 LMCache 官方指出 CacheBlend 暂不支持 CUDA Graph 模式（由于动态生成的 Attention Mask 和张量形状在每轮选择性重算时都会发生改变，Graph 捕获会直接报错崩溃）。
+--kv-transfer-config：声明调用 LMCacheConnectorV1 适配层，使 vLLM 底层 Worker 与 LMCache 守护进程建立双向的 KV 块传输通道
+
+
+```
+cacheblend# python3 test.py 
+
+🚀 === 正在执行: 第一次请求（冷启动 / 写入 KV 缓存） ===
+⏱️ 首字延迟 (TTFT): 0.2410 秒
+核心内容包括：
+1. CacheBlend 是一种针对大语言模型（LLM）的先进
+✅ 请求完成。总耗时: 0.3204 秒
+
+🚀 === 正在执行: 第二次请求（改变前缀 / 测试 CacheBlend 命中） ===
+⏱️ 首字延迟 (TTFT): 0.0378 秒
+ 
+1. CacheBlend 是一种针对大语言模型（LLM）的先进 KV Cache 
+✅ 请求完成。总耗时: 0.1167 秒
+
+📊 ===== CacheBlend 性能对比 =====
+第一次请求 (冷启动 TTFT): 0.2410 秒
+第二次请求 (混合复用 TTFT): 0.0378 秒
+```
+
+
+重启
+```
+for var in $(env | grep ^VLLM_ | cut -d= -f1); do echo "$var"; done
+for var in $(env | grep ^VLLM_ | cut -d= -f1); do unset "$var"; done
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+pkill -f vllm
+pkill -f lmcache
+
+```
+
+
+# lmcache -test_cache
+
+`LMCache-arXiv25`
+
+
+
+```
+ /usr/bin/python3 -m pip install pandas openpyxl --break-system-packages
+ /usr/bin/python3 -m pip install pytest --break-system-packages
+ /usr/bin/python3 -m pip install PyYAML openai --break-system-packages
+ /usr/bin/python3 -m pip install transformers  --break-system-packages
+```
+
+```
+cd /workspace/lmcache/lmcache-tests
+find . -type f -name "*.py" -exec sed -i 's|mistralai/Mistral-7B-Instruct-v0.2|/models/Mistral-7B-v0.1/AI-ModelScope/Mistral-7B-v0___1/|g' {} +
+
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+/usr/bin/python3 -m pytest tests/tests.py -k "test_lmcache_local_cpu" -s
+
+```
+
+```
+/usr/bin/python3 -m pytest tests/tests.py -k "test_lmcache_local_cpu" -s 
+```
+
+> ## oom 
+
+```
+tests/tests.py::test_lmcache_local_cpu - ValueError: No objects to concatenate==================================================================== 1 failed, 15 deselected, 1 warning in 901.80s (0:15:01) ====================================================================
+```
+
+步骤 1：大幅调小压测的上下文长度（防 OOM 崩溃）由于你使用的是 7B 模型（Mistral-7B），在单卡上同时拉起两个实例跑 24K 极其容易导致显存溢出。通过修改 tests/tests.py，把压测长度降低到更安全的范围（例如 2K 到 8K）。
+
+```
+# 将原本的 8K, 16K, 24K 压测长度，安全地降低为 2048, 4096, 8192
+sed -i 's/lengths = \[8192, 16384, 24576\]/lengths = \[2048, 4096, 8192\]/g' tests/tests.py
+
+```
+
+步骤 2：优化 vLLM 显存分配权重（GPU Memory Utilization）LMCache 测试脚本内部在创建 vLLM 实例时，默认会占用很高的 GPU 显存比例。我们需要去修改 LMCache 专门针对本地 CPU 存储的配置文件，限制每个 vLLM 实例的物理显存占用。检查项目的配置文件 configs/lmcache_local_cpu.yaml。可以通过设置环境变量，强制 vLLM 在加载时只吃 40% 的显存：
+```
+# 限制单个 vLLM 实例最多占用 40% 显存，给另一个实例留出空间
+export VLLM_GPU_MEMORY_UTILIZATION=0.40
+
+```
+
+重启
+
+```
+# 1. 强行清理掉可能卡在后台、占用显存的旧 vLLM 僵尸进程
+pkill -f vllm
+pkill -f lmcache
+
+# 2. 注入离线变量与显存控制，重新轰击压测
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export VLLM_GPU_MEMORY_UTILIZATION=0.35
+/usr/bin/python3 -m pytest tests/tests.py -k "test_lmcache_local_cpu" -s
+
+```
+
+> ##  test_multi_turn
+

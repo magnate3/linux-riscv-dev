@@ -95,3 +95,87 @@ Generation took 0.11 seconds, third request done.
 du -sh local_disk/
 334M    local_disk/
 ```
+
++ 修改 second_prompt 中某个 chunk   
+
+
+```
+python3 blend_v2.py  --model /models/qwen2.5-0.5b   --use-disk
+```
+
+```
+Processed prompts: 100%|█████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 19.71it/s, est. speed input: 39482.08 toks/s, output: 19.75 toks/s]
+--------------------------------------------------
+Generated text: 'Nice'
+Generation took 0.06 seconds, warmup request done.
+--------------------------------------------------
+Rendering prompts: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 2664.74it/s]
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  4.44it/s, est. speed input: 44579.15 toks/s, output: 4.45 toks/s]
+--------------------------------------------------
+Generated text: 'You'
+Generation took 0.23 seconds, first request done.
+--------------------------------------------------
+Rendering prompts: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 2131.25it/s]
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  4.55it/s, est. speed input: 45704.55 toks/s, output: 4.56 toks/s]
+--------------------------------------------------
+Generated text: 'You'
+Generation took 0.22 seconds, second (warming up blend code path) request done.
+--------------------------------------------------
+Rendering prompts: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00, 2757.60it/s]
+Processed prompts: 100%|██████████████████████████████████████████████████████████████████████████████████| 1/1 [00:00<00:00,  9.36it/s, est. speed input: 94081.99 toks/s, output: 9.38 toks/s]
+--------------------------------------------------
+Generated text: 'You'
+Generation took 0.11 seconds, third request done.
+--------------------------------------------------
+```
+
+![images](b1.png)
+
+
+> ##  os.environ["LMCACHE_CHUNK_SIZE"] = "128"
+
+
+
+#    cpu-offloading.py
+  
+
+ 
+
+ 
+
+ 
+
+
+Running the Example
+~~~~~~~~~~~~~~~~~~~
+
+1. First, run the script without LMCache:
+
+   .. code-block:: bash
+
+       python cpu-offloading.py 
+
+   You'll see output like:
+
+   .. code-block:: text
+
+       Speedup (first run / second run): 1.11x
+
+   Without LMCache, there's no speedup between runs even if vLLM has prefix caching enabled.
+   This is because the KV cache exceeds GPU memory and can't be reused.
+
+2. Now, run with LMCache enabled:
+
+   .. code-block:: bash
+
+       python cpu-offloading.py --enable-lmcache
+
+   You'll see output like:
+
+   .. code-block:: text
+
+       Speedup (first run / second run): 16.62x
+
+The significant speedup in the second case demonstrates how LMCache effectively manages KV cache offloading to CPU memory. 
+When the total size of KV cache exceeds GPU memory, LMCache allows you to store and reuse the cache from CPU memory, 
+resulting in much faster subsequent generations for prompts with shared prefixes.

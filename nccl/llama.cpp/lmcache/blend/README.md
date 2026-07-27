@@ -146,36 +146,33 @@ Generation took 0.11 seconds, third request done.
  
 
 
-Running the Example
-~~~~~~~~~~~~~~~~~~~
+
 
 1. First, run the script without LMCache:
 
-   .. code-block:: bash
+```
 
        python cpu-offloading.py 
-
+```
    You'll see output like:
-
-   .. code-block:: text
-
+```
        Speedup (first run / second run): 1.11x
-
+```
    Without LMCache, there's no speedup between runs even if vLLM has prefix caching enabled.
    This is because the KV cache exceeds GPU memory and can't be reused.
 
 2. Now, run with LMCache enabled:
 
-   .. code-block:: bash
+```
 
        python cpu-offloading.py --enable-lmcache
-
+```
    You'll see output like:
 
-   .. code-block:: text
+```
 
        Speedup (first run / second run): 16.62x
-
+```
 The significant speedup in the second case demonstrates how LMCache effectively manages KV cache offloading to CPU memory. 
 When the total size of KV cache exceeds GPU memory, LMCache allows you to store and reuse the cache from CPU memory, 
 resulting in much faster subsequent generations for prompts with shared prefixes.

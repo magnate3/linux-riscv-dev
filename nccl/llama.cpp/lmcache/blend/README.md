@@ -11,6 +11,16 @@
 
 [CacheBlend/example](https://github.com/YaoJiayi/CacheBlend/blob/main/README.md)
 
+  ChunkedTokenDatabase、  SegmentTokenDatabase、BlobBlockHashes
+  
+  
+  
+```
+CacheBlend 高阶复合场景测试脚本这个测试模拟了两个用户的乱序请求，通过 segment_lengths 策略来验证哈希的一致性：
+用户 1 的请求：[文档 A](512) + [文档 B](512) + [问题 1](256) -> 传入 segment_lengths=[512, 512, 256]。
+用户 2 的请求：[文档 C](256) + [文档 B](512) + [问题 1](256) -> 传入 segment_lengths=[256, 512, 256]。
+终极预期：虽然 文档 B 前面的前缀完全不同（一个是A，一个是C），但两名用户计算出的 文档 B（2个块）以及紧随其后的 问题 1（1个块），这 3 个 Chunk 的哈希值必须完全相等！
+```
 
 # 补丁
 
@@ -176,3 +186,68 @@ Generation took 0.11 seconds, third request done.
 The significant speedup in the second case demonstrates how LMCache effectively manages KV cache offloading to CPU memory. 
 When the total size of KV cache exceeds GPU memory, LMCache allows you to store and reuse the cache from CPU memory, 
 resulting in much faster subsequent generations for prompts with shared prefixes.
+
+# backend
+
+```
+def CreateStorageBackends(
+    config: LMCacheEngineConfig,
+    metadata: LMCacheEngineMetadata,
+    loop: asyncio.AbstractEventLoop,
+    memory_allocator: MemoryAllocatorInterface,
+    dst_device: str = "cuda",
+    lmcache_worker: Optional["LMCacheWorker"] = None,
+    lookup_server: Optional[LookupServerInterface] = None,
+    layerwise: bool = False,
+) -> OrderedDict[str, StorageBackendInterface]:
+    # Replace 'cuda' with 'cuda:<device id>'
+    if dst_device == "cuda":
+        dst_device = f"cuda:{torch.cuda.current_device()}"
+
+    storage_backends: OrderedDict[str, StorageBackendInterface] = OrderedDict()
+
+    # TODO(Jiayi): The hierarchy is fixed for now
+    # NOTE(Jiayi): The local_cpu backend is always created because
+    # other backends might need it as a buffer.
+    local_cpu_backend = LocalCPUBackend(
+        config, memory_allocator, lookup_server, lmcache_worker, layerwise
+    )
+    backend_name = str(local_cpu_backend)
+    storage_backends[backend_name] = local_cpu_backend
+
+    if config.local_disk and config.max_local_disk_size > 0:
+        local_disk_backend = LocalDiskBackend(
+            config,
+            loop,
+            local_cpu_backend,
+            dst_device,
+            lmcache_worker,
+            lookup_server,
+        )
+        backend_name = str(local_disk_backend)
+        storage_backends[backend_name] = local_disk_backend
+
+    if config.remote_url is not None:
+        remote_backend = RemoteBackend(
+            config, metadata, loop, local_cpu_backend, dst_device, lookup_server
+        )
+        backend_name = str(remote_backend)
+        storage_backends[backend_name] = remote_backend
+
+    # TODO(Jiayi): Please support blending
+    config.enable_blending = False
+    assert config.enable_blending is False, "blending is not supported for now"
+
+    return storage_backends
+```
+
+# kv cache
+
+
+```
+python3 kv_cache_sharing_one_cuda_lmcache_v1.py  
+python3 kv_cache_sharing_one_cuda_lmcache_v2.py  
+python3 segment_hit.py --start-server  --chunk-size 10027
+python3 segment_hit_v2.py --start-server  --chunk-size 10027
+python3 kv_cache_sharing_one_cuda_lmcache_disk.py 
+```

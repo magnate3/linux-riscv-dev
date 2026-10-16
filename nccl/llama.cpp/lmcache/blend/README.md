@@ -11,7 +11,7 @@
 
 [CacheBlend/example](https://github.com/YaoJiayi/CacheBlend/blob/main/README.md)
 
-  ChunkedTokenDatabase、  SegmentTokenDatabase、BlobBlockHashes
+  ChunkedTokenDatabase、  SegmentTokenDatabase、BlobBlockHashes、LMCBlenderBuilder
   
   
   

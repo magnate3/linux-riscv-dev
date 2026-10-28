@@ -1,19 +1,23 @@
 
 
+
+
 ```
-docker run -d --gpus all \
+sudo docker run -d --gpus all \
            --shm-size 32g \
            -p 8001:8001 \
-           -v  /pytorch/models/:/models \
+           -v /pytorch/models/:/models \
            --ipc=host \
-		   --name sglang \
-           swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/lmsysorg/sglang:v0.4.6.post5-cu124  \
+           --name sglang \
+          swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/lmsysorg/sglang:v0.4.6.post5-cu124  \
     python3 -m sglang.launch_server \
            --model /models/qwen2.5-0.5b \
            --tp 1 \
            --trust-remote-code \
-           --port 8001 
-		    
+           --host 0.0.0.0 \
+           --port 8001 \
+           --mem-fraction-static 0.75
+
 ```
 
 
